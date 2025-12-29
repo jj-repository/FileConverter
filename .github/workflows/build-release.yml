@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false  # Continue other builds even if one fails
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
@@ -116,24 +117,24 @@ jobs:
           mkdir -p resources/bin/macos
 
           # Download FFmpeg (using static build)
-          wget -q https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip
-          unzip -q zip
+          curl -L -o ffmpeg.zip https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip
+          unzip -q ffmpeg.zip
           mv ffmpeg resources/bin/macos/
           chmod +x resources/bin/macos/ffmpeg
-          rm zip
+          rm ffmpeg.zip
 
-          wget -q https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip
-          unzip -q zip
+          curl -L -o ffprobe.zip https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip
+          unzip -q ffprobe.zip
           mv ffprobe resources/bin/macos/
           chmod +x resources/bin/macos/ffprobe
-          rm zip
+          rm ffprobe.zip
 
           # Download Pandoc
-          wget -q https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-macOS.zip
-          unzip -q pandoc-3.6.1-macOS.zip
+          curl -L -o pandoc.zip https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-macOS.zip
+          unzip -q pandoc.zip
           mv pandoc-3.6.1-macOS/bin/pandoc resources/bin/macos/
           chmod +x resources/bin/macos/pandoc
-          rm -rf pandoc-3.6.1-macOS*
+          rm -rf pandoc.zip pandoc-3.6.1-macOS
 
       - name: Build Electron app (Linux)
         if: runner.os == 'Linux'

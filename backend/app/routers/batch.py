@@ -5,7 +5,7 @@ import uuid
 
 from app.services.batch_converter import BatchConverter
 from app.utils.file_handler import save_upload_file, cleanup_file
-from app.utils.validation import validate_file_size
+from app.utils.validation import validate_download_filename,  validate_file_size
 from app.config import settings
 
 
@@ -198,10 +198,9 @@ async def create_download_zip(
 @router.get("/download/{filename}")
 async def download_file(filename: str):
     """Download a converted file or ZIP archive"""
-    file_path = settings.UPLOAD_DIR / filename
+    # Validate filename to prevent path traversal
+    file_path = validate_download_filename(filename, settings.UPLOAD_DIR)
 
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(
         path=str(file_path),

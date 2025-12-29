@@ -8,6 +8,22 @@ from PIL import Image
 from app.config import settings
 
 
+def _parse_fps_safe(fps_str: str) -> float:
+    """Safely parse FPS from fraction string like '30000/1001'"""
+    try:
+        fps_str = str(fps_str).strip()
+        if "/" in fps_str:
+            parts = fps_str.split("/")
+            if len(parts) == 2:
+                numerator = float(parts[0])
+                denominator = float(parts[1])
+                if denominator != 0:
+                    return round(numerator / denominator, 2)
+        return float(fps_str)
+    except (ValueError, ZeroDivisionError, AttributeError):
+        return 0.0
+
+
 async def save_upload_file(upload_file: UploadFile, destination_dir: Path = settings.TEMP_DIR) -> Path:
     """Save uploaded file to destination directory with unique filename"""
     # Generate unique filename
@@ -53,7 +69,7 @@ async def get_video_info(file_path: Path) -> Dict[str, Any]:
             str(file_path)
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=settings.SUBPROCESS_TIMEOUT)
         if result.returncode == 0:
             data = json.loads(result.stdout)
 
@@ -70,7 +86,7 @@ async def get_video_info(file_path: Path) -> Dict[str, Any]:
                 "width": video_stream.get("width", 0),
                 "height": video_stream.get("height", 0),
                 "codec": video_stream.get("codec_name", ""),
-                "fps": eval(video_stream.get("r_frame_rate", "0/1")) if "/" in str(video_stream.get("r_frame_rate", "")) else 0,
+                "fps": _parse_fps_safe(video_stream.get("r_frame_rate", "0/1")),
             }
         else:
             return {"error": "Failed to probe video"}
@@ -93,7 +109,7 @@ async def get_audio_info(file_path: Path) -> Dict[str, Any]:
             str(file_path)
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=settings.SUBPROCESS_TIMEOUT)
         if result.returncode == 0:
             data = json.loads(result.stdout)
 

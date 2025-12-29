@@ -6,7 +6,7 @@ from typing import Optional
 
 from app.services.image_converter import ImageConverter
 from app.utils.file_handler import save_upload_file, cleanup_file
-from app.utils.validation import validate_file_size, validate_file_extension
+from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
 
@@ -94,10 +94,8 @@ async def convert_image(
 @router.get("/download/{filename}")
 async def download_image(filename: str):
     """Download converted image file"""
-    file_path = settings.UPLOAD_DIR / filename
-
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
+    # Validate filename to prevent path traversal
+    file_path = validate_download_filename(filename, settings.UPLOAD_DIR)
 
     return FileResponse(
         path=str(file_path),

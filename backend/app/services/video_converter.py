@@ -35,7 +35,7 @@ class VideoConverter(BaseConverter):
                 str(file_path)
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=settings.SUBPROCESS_TIMEOUT)
             if result.returncode == 0 and result.stdout.strip():
                 return float(result.stdout.strip())
             return 0.0
@@ -92,10 +92,18 @@ class VideoConverter(BaseConverter):
 
         await self.send_progress(session_id, 5, "converting", "Preparing conversion")
 
-        # Build FFmpeg command
+        # Build FFmpeg command - validate all user inputs
         codec = options.get('codec', 'libx264')
+        if codec not in settings.ALLOWED_VIDEO_CODECS:
+            raise ValueError(f"Invalid codec: {codec}. Allowed: {settings.ALLOWED_VIDEO_CODECS}")
+
         bitrate = options.get('bitrate', '2M')
+        if bitrate not in settings.ALLOWED_BITRATES:
+            raise ValueError(f"Invalid bitrate: {bitrate}. Allowed: {settings.ALLOWED_BITRATES}")
+
         resolution = options.get('resolution', 'original')
+        if resolution not in settings.ALLOWED_RESOLUTIONS:
+            raise ValueError(f"Invalid resolution: {resolution}. Allowed: {settings.ALLOWED_RESOLUTIONS}")
 
         cmd = [
             settings.FFMPEG_PATH,
@@ -138,25 +146,31 @@ class VideoConverter(BaseConverter):
 
             last_progress = 10
 
-            # Read output line by line
-            async for line in process.stdout:
-                line_str = line.decode('utf-8', errors='ignore')
+            try:
+                # Read output line by line with timeout
+                async with asyncio.timeout(settings.SUBPROCESS_TIMEOUT):
+                    async for line in process.stdout:
+                        line_str = line.decode('utf-8', errors='ignore')
 
-                # Parse progress
-                progress = self.parse_ffmpeg_progress(line_str, total_duration)
-                if progress is not None and progress > last_progress:
-                    # Map 0-100% to 10-95% to leave room for finalization
-                    mapped_progress = 10 + (progress * 0.85)
-                    last_progress = mapped_progress
-                    await self.send_progress(
-                        session_id,
-                        mapped_progress,
-                        "converting",
-                        f"Converting video: {int(progress)}%"
-                    )
+                        # Parse progress
+                        progress = self.parse_ffmpeg_progress(line_str, total_duration)
+                        if progress is not None and progress > last_progress:
+                            # Map 0-100% to 10-95% to leave room for finalization
+                            mapped_progress = 10 + (progress * 0.85)
+                            last_progress = mapped_progress
+                            await self.send_progress(
+                                session_id,
+                                mapped_progress,
+                                "converting",
+                                f"Converting video: {int(progress)}%"
+                            )
 
-            # Wait for process to complete
-            await process.wait()
+                    # Wait for process to complete
+                    await process.wait()
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+                raise Exception(f"Conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds")
 
             if process.returncode != 0:
                 stderr = await process.stderr.read()
@@ -189,7 +203,7 @@ class VideoConverter(BaseConverter):
                 str(file_path)
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=settings.SUBPROCESS_TIMEOUT)
 
             if result.returncode == 0:
                 import json

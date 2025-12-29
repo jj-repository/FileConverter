@@ -1,6 +1,7 @@
 from fastapi import UploadFile, HTTPException
 from pathlib import Path
 from typing import Set
+import os
 
 try:
     import magic
@@ -95,3 +96,51 @@ def get_file_type_from_format(file_format: str) -> str:
         return "document"
     else:
         raise HTTPException(status_code=400, detail=f"Unknown file format: {file_format}")
+
+
+def validate_download_filename(filename: str, base_dir: Path) -> Path:
+    """
+    Validate filename for download to prevent path traversal attacks.
+
+    Args:
+        filename: The requested filename
+        base_dir: The allowed base directory
+
+    Returns:
+        Validated absolute path
+
+    Raises:
+        HTTPException: If filename is invalid or contains path traversal
+    """
+    # Check for path separators and null bytes
+    if not filename or "/" in filename or "\\" in filename or "\x00" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    # Check for parent directory references
+    if ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    # Construct the full path
+    file_path = base_dir / filename
+
+    # Resolve to absolute path to handle any symlinks
+    try:
+        resolved_path = file_path.resolve()
+        resolved_base = base_dir.resolve()
+    except (OSError, RuntimeError):
+        raise HTTPException(status_code=400, detail="Invalid file path")
+
+    # Ensure the resolved path is within the base directory
+    try:
+        resolved_path.relative_to(resolved_base)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Check file exists and is a regular file
+    if not resolved_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    if not resolved_path.is_file():
+        raise HTTPException(status_code=400, detail="Not a file")
+
+    return resolved_path

@@ -36,6 +36,17 @@ class Settings(BaseSettings):
     AUDIO_FORMATS: Set[str] = {"mp3", "wav", "flac", "aac", "ogg", "m4a", "wma"}
     DOCUMENT_FORMATS: Set[str] = {"txt", "pdf", "docx", "md", "html", "rtf"}
 
+    # FFmpeg allowed options (whitelist for security)
+    ALLOWED_VIDEO_CODECS: Set[str] = {"libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4", "h264"}
+    ALLOWED_AUDIO_CODECS: Set[str] = {"aac", "libmp3lame", "libvorbis", "libopus", "flac", "pcm_s16le"}
+    ALLOWED_RESOLUTIONS: Set[str] = {"original", "480p", "720p", "1080p", "4k", "2k"}
+    ALLOWED_BITRATES: Set[str] = {"500k", "1M", "2M", "3M", "4M", "5M", "8M", "10M", "128k", "192k", "256k", "320k"}
+    ALLOWED_SAMPLE_RATES: Set[str] = {"44100", "48000", "96000", "22050"}
+    ALLOWED_AUDIO_CHANNELS: Set[str] = {"1", "2"}
+
+    # Subprocess timeout (in seconds)
+    SUBPROCESS_TIMEOUT: int = 600  # 10 minutes max for conversions
+
     # CORS settings
     ALLOWED_ORIGINS: list = [
         "http://localhost:5173",  # Vite default dev server

@@ -163,7 +163,18 @@ ipcMain.handle('select-folder-files', async () => {
 
 ipcMain.handle('show-item-in-folder', async (event, filePath) => {
   const { shell } = require('electron');
-  shell.showItemInFolder(filePath);
+  const fs = require('fs');
+
+  // Validate path exists and is safe
+  try {
+    const realPath = fs.realpathSync(filePath);
+    // Only allow if file actually exists
+    if (fs.existsSync(realPath)) {
+      shell.showItemInFolder(realPath);
+    }
+  } catch (err) {
+    console.error('Invalid file path:', err);
+  }
 });
 
 // Download file from URL and save to specified directory
@@ -173,15 +184,45 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
   const http = require('http');
 
   try {
-    // Determine output path
-    const outputPath = path.join(directory, filename);
+    // SECURITY: Validate URL is http/https and not localhost/internal
+    const parsedUrl = new URL(url);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new Error('Invalid URL protocol. Only http and https are allowed.');
+    }
+
+    // SECURITY: Prevent SSRF by blocking local/private IPs
+    const hostname = parsedUrl.hostname.toLowerCase();
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('172.')
+    ) {
+      throw new Error('Cannot download from local/private network addresses');
+    }
+
+    // SECURITY: Sanitize filename to prevent path traversal
+    const sanitizedFilename = path.basename(filename);
+    if (sanitizedFilename !== filename || sanitizedFilename.includes('..')) {
+      throw new Error('Invalid filename');
+    }
+
+    // SECURITY: Validate directory exists and resolve to absolute path
+    const realDirectory = fs.realpathSync(directory);
+    const outputPath = path.join(realDirectory, sanitizedFilename);
+
+    // SECURITY: Ensure output path is within the specified directory
+    if (!outputPath.startsWith(realDirectory)) {
+      throw new Error('Path traversal detected');
+    }
 
     // Create write stream
     const fileStream = fs.createWriteStream(outputPath);
 
     return new Promise((resolve, reject) => {
       // Use http or https based on URL
-      const protocol = url.startsWith('https') ? https : http;
+      const protocol = parsedUrl.protocol === 'https:' ? https : http;
 
       protocol.get(url, (response) => {
         if (response.statusCode !== 200) {

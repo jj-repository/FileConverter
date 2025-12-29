@@ -4,7 +4,11 @@
   "version": "1.0.0",
   "description": "Desktop file conversion application",
   "main": "electron/main.js",
-  "author": "FileConverter",
+  "homepage": "https://github.com/jj-repository/FileConverter",
+  "author": {
+    "name": "FileConverter",
+    "email": "noreply@fileconverter.app"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -82,7 +86,8 @@
         "deb"
       ],
       "category": "Utility",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "maintainer": "FileConverter <noreply@fileconverter.app>"
     }
   }
 }

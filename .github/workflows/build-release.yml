@@ -108,8 +108,8 @@ jobs:
           # Download Pandoc
           Invoke-WebRequest -Uri "https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-windows-x86_64.zip" -OutFile pandoc.zip
           Expand-Archive -Path pandoc.zip -DestinationPath .
-          Copy-Item "pandoc-3.6.1-windows-x86_64\pandoc.exe" resources\bin\windows\
-          Remove-Item -Recurse -Force pandoc-3.6.1-windows-x86_64, pandoc.zip
+          Copy-Item "pandoc-3.6.1\pandoc.exe" resources\bin\windows\
+          Remove-Item -Recurse -Force pandoc-3.6.1, pandoc.zip
 
       - name: Download FFmpeg and Pandoc (macOS)
         if: runner.os == 'macOS'
@@ -130,11 +130,11 @@ jobs:
           rm ffprobe.zip
 
           # Download Pandoc
-          curl -L -o pandoc.zip https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-macOS.zip
-          unzip -q pandoc.zip
-          mv pandoc-3.6.1-macOS/bin/pandoc resources/bin/macos/
+          curl -L -o pandoc.pkg https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-arm64-macOS.pkg
+          pkgutil --expand-full pandoc.pkg pandoc-expanded
+          mv pandoc-expanded/pandoc.pkg/Payload/usr/local/bin/pandoc resources/bin/macos/
           chmod +x resources/bin/macos/pandoc
-          rm -rf pandoc.zip pandoc-3.6.1-macOS
+          rm -rf pandoc.pkg pandoc-expanded
 
       - name: Build Electron app (Linux)
         if: runner.os == 'Linux'

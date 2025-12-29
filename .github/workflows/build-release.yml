@@ -1,0 +1,202 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'  # Use 3.11 for better compatibility
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Setup Python virtual environment (Linux/macOS)
+        if: runner.os != 'Windows'
+        working-directory: backend
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Setup Python virtual environment (Windows)
+        if: runner.os == 'Windows'
+        working-directory: backend
+        run: |
+          python -m venv venv
+          .\venv\Scripts\Activate.ps1
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build backend with PyInstaller (Linux/macOS)
+        if: runner.os != 'Windows'
+        working-directory: backend
+        run: |
+          source venv/bin/activate
+          pyinstaller backend-server.spec --clean
+
+      - name: Build backend with PyInstaller (Windows)
+        if: runner.os == 'Windows'
+        working-directory: backend
+        run: |
+          .\venv\Scripts\Activate.ps1
+          pyinstaller backend-server.spec --clean
+
+      - name: Download FFmpeg and Pandoc (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p resources/bin/linux
+
+          # Download FFmpeg static build
+          wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+          tar -xf ffmpeg-release-amd64-static.tar.xz
+          mv ffmpeg-*-amd64-static/ffmpeg resources/bin/linux/
+          mv ffmpeg-*-amd64-static/ffprobe resources/bin/linux/
+          chmod +x resources/bin/linux/ffmpeg resources/bin/linux/ffprobe
+          rm -rf ffmpeg-*-amd64-static*
+
+          # Download Pandoc
+          wget -q https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-linux-amd64.tar.gz
+          tar -xzf pandoc-3.6.1-linux-amd64.tar.gz
+          mv pandoc-3.6.1/bin/pandoc resources/bin/linux/
+          chmod +x resources/bin/linux/pandoc
+          rm -rf pandoc-3.6.1*
+
+      - name: Download FFmpeg and Pandoc (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Force -Path resources\bin\windows
+
+          # Download FFmpeg
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip" -OutFile ffmpeg.zip
+          Expand-Archive -Path ffmpeg.zip -DestinationPath .
+          Copy-Item "ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe" resources\bin\windows\
+          Copy-Item "ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe" resources\bin\windows\
+          Remove-Item -Recurse -Force ffmpeg-master-latest-win64-gpl, ffmpeg.zip
+
+          # Download Pandoc
+          Invoke-WebRequest -Uri "https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-windows-x86_64.zip" -OutFile pandoc.zip
+          Expand-Archive -Path pandoc.zip -DestinationPath .
+          Copy-Item "pandoc-3.6.1-windows-x86_64\pandoc.exe" resources\bin\windows\
+          Remove-Item -Recurse -Force pandoc-3.6.1-windows-x86_64, pandoc.zip
+
+      - name: Download FFmpeg and Pandoc (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p resources/bin/macos
+
+          # Download FFmpeg (using static build)
+          wget -q https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip
+          unzip -q zip
+          mv ffmpeg resources/bin/macos/
+          chmod +x resources/bin/macos/ffmpeg
+          rm zip
+
+          wget -q https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip
+          unzip -q zip
+          mv ffprobe resources/bin/macos/
+          chmod +x resources/bin/macos/ffprobe
+          rm zip
+
+          # Download Pandoc
+          wget -q https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-macOS.zip
+          unzip -q pandoc-3.6.1-macOS.zip
+          mv pandoc-3.6.1-macOS/bin/pandoc resources/bin/macos/
+          chmod +x resources/bin/macos/pandoc
+          rm -rf pandoc-3.6.1-macOS*
+
+      - name: Build Electron app (Linux)
+        if: runner.os == 'Linux'
+        working-directory: frontend
+        run: npx electron-builder --linux --publish never
+
+      - name: Build Electron app (Windows)
+        if: runner.os == 'Windows'
+        working-directory: frontend
+        run: npx electron-builder --win --publish never
+
+      - name: Build Electron app (macOS)
+        if: runner.os == 'macOS'
+        working-directory: frontend
+        run: npx electron-builder --mac --publish never
+
+      - name: Upload artifacts (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: |
+            frontend/dist-electron/*.AppImage
+            frontend/dist-electron/*.deb
+
+      - name: Upload artifacts (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            frontend/dist-electron/*.exe
+
+      - name: Upload artifacts (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: |
+            frontend/dist-electron/*.dmg
+            frontend/dist-electron/*.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            linux-release/*
+            windows-release/*
+            macos-release/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

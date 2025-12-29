@@ -1,0 +1,83 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+ENV/
+env/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Frontend build
+frontend/dist/
+frontend/dist-electron/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Testing
+.pytest_cache/
+coverage/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# OS
+Thumbs.db
+
+# Backend specific
+backend/app/static/uploads/*
+backend/app/static/temp/*
+!backend/app/static/uploads/.gitkeep
+!backend/app/static/temp/.gitkeep
+
+# Binaries (downloaded by CI, not committed)
+resources/bin/linux/ffmpeg
+resources/bin/linux/ffprobe
+resources/bin/linux/pandoc
+resources/bin/windows/ffmpeg.exe
+resources/bin/windows/ffprobe.exe
+resources/bin/windows/pandoc.exe
+resources/bin/macos/ffmpeg
+resources/bin/macos/ffprobe
+resources/bin/macos/pandoc

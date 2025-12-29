@@ -1,0 +1,210 @@
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi.responses import FileResponse
+from typing import List, Optional
+import uuid
+
+from app.services.batch_converter import BatchConverter
+from app.utils.file_handler import save_upload_file, cleanup_file
+from app.utils.validation import validate_file_size
+from app.config import settings
+
+
+router = APIRouter()
+batch_converter = BatchConverter()
+
+
+@router.post("/convert")
+async def convert_batch(
+    files: List[UploadFile] = File(...),
+    output_format: str = Form(...),
+    parallel: Optional[bool] = Form(True),
+    # Image options
+    quality: Optional[int] = Form(None),
+    width: Optional[int] = Form(None),
+    height: Optional[int] = Form(None),
+    # Video options
+    codec: Optional[str] = Form(None),
+    resolution: Optional[str] = Form(None),
+    bitrate: Optional[str] = Form(None),
+    # Audio options
+    sample_rate: Optional[int] = Form(None),
+    channels: Optional[int] = Form(None),
+    # Document options
+    preserve_formatting: Optional[bool] = Form(None),
+    toc: Optional[bool] = Form(None),
+):
+    """
+    Convert multiple files in batch
+
+    - **files**: List of files to convert
+    - **output_format**: Target format for all files
+    - **parallel**: Process files in parallel (default: True)
+    - Additional format-specific options are passed through to converters
+    """
+    session_id = str(uuid.uuid4())
+    input_paths = []
+    output_paths = []
+
+    try:
+        # Validate that we have files
+        if not files or len(files) == 0:
+            raise HTTPException(status_code=400, detail="No files provided")
+
+        # Limit batch size
+        max_batch_size = 100  # Increased from 20 to 100
+        if len(files) > max_batch_size:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Batch size exceeds maximum of {max_batch_size} files"
+            )
+
+        # Save all uploaded files
+        for file in files:
+            # Validate file size based on file type
+            input_format = file.filename.split('.')[-1].lower() if '.' in file.filename else ''
+
+            # Determine file type for size validation
+            if input_format in settings.IMAGE_FORMATS:
+                file_type = "image"
+            elif input_format in settings.VIDEO_FORMATS:
+                file_type = "video"
+            elif input_format in settings.AUDIO_FORMATS:
+                file_type = "audio"
+            elif input_format in settings.DOCUMENT_FORMATS:
+                file_type = "document"
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unsupported file format: {input_format}"
+                )
+
+            validate_file_size(file, file_type)
+
+            # Save file
+            input_path = await save_upload_file(file, settings.TEMP_DIR)
+            input_paths.append(input_path)
+
+        # Build options dict
+        options = {}
+
+        # Image options
+        if quality is not None:
+            options['quality'] = quality
+        if width is not None:
+            options['width'] = width
+        if height is not None:
+            options['height'] = height
+
+        # Video options
+        if codec is not None:
+            options['codec'] = codec
+        if resolution is not None:
+            options['resolution'] = resolution
+        if bitrate is not None:
+            options['bitrate'] = bitrate
+
+        # Audio options
+        if sample_rate is not None:
+            options['sample_rate'] = sample_rate
+        if channels is not None:
+            options['channels'] = channels
+
+        # Document options
+        if preserve_formatting is not None:
+            options['preserve_formatting'] = preserve_formatting
+        if toc is not None:
+            options['toc'] = toc
+
+        # Convert files
+        results = await batch_converter.convert_batch(
+            input_paths=input_paths,
+            output_format=output_format.lower(),
+            options=options,
+            session_id=session_id,
+            parallel=parallel
+        )
+
+        # Clean up input files
+        for input_path in input_paths:
+            cleanup_file(input_path)
+
+        # Collect successful output paths for potential ZIP creation
+        for result in results:
+            if result.get('success') and 'output_path' in result:
+                output_paths.append(result['output_path'])
+
+        # Calculate success statistics
+        total_files = len(results)
+        successful = sum(1 for r in results if r.get('success'))
+        failed = total_files - successful
+
+        return {
+            "session_id": session_id,
+            "total_files": total_files,
+            "successful": successful,
+            "failed": failed,
+            "results": results,
+            "message": f"Batch conversion completed: {successful}/{total_files} successful"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Clean up on error
+        for input_path in input_paths:
+            cleanup_file(input_path)
+        for output_path in output_paths:
+            cleanup_file(output_path)
+
+        raise HTTPException(status_code=500, detail=f"Batch conversion failed: {str(e)}")
+
+
+@router.post("/download-zip")
+async def create_download_zip(
+    session_id: str = Form(...),
+    filenames: List[str] = Form(...),
+):
+    """
+    Create a ZIP archive of converted files for download
+
+    - **session_id**: Batch session ID
+    - **filenames**: List of filenames to include in ZIP
+    """
+    try:
+        # Validate and collect file paths
+        file_paths = []
+        for filename in filenames:
+            file_path = settings.UPLOAD_DIR / filename
+            if file_path.exists():
+                file_paths.append(file_path)
+
+        if not file_paths:
+            raise HTTPException(status_code=404, detail="No files found")
+
+        # Create ZIP archive
+        zip_name = f"batch_{session_id}.zip"
+        zip_path = await batch_converter.create_zip_archive(file_paths, zip_name)
+
+        return {
+            "zip_file": zip_name,
+            "download_url": f"/api/batch/download/{zip_name}",
+            "file_count": len(file_paths)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create ZIP: {str(e)}")
+
+
+@router.get("/download/{filename}")
+async def download_file(filename: str):
+    """Download a converted file or ZIP archive"""
+    file_path = settings.UPLOAD_DIR / filename
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=filename,
+        media_type="application/octet-stream"
+    )

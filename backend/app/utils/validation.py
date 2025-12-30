@@ -55,6 +55,11 @@ def validate_file_size(file: UploadFile, file_type: str) -> None:
             status_code=413,
             detail=f"Subtitle file too large. Maximum size: {settings.SUBTITLE_MAX_SIZE / 1024 / 1024}MB"
         )
+    elif file_type == "ebook" and file_size > settings.EBOOK_MAX_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"eBook file too large. Maximum size: {settings.EBOOK_MAX_SIZE / 1024 / 1024}MB"
+        )
     elif file_size > settings.MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=413,

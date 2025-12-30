@@ -1,4 +1,4 @@
-export type FileType = 'image' | 'video' | 'audio' | 'document' | 'data' | 'archive' | 'spreadsheet' | 'subtitle' | 'batch';
+export type FileType = 'image' | 'video' | 'audio' | 'document' | 'data' | 'archive' | 'spreadsheet' | 'subtitle' | 'ebook' | 'batch';
 
 export type ConversionStatus = 'idle' | 'uploading' | 'converting' | 'completed' | 'failed';
 

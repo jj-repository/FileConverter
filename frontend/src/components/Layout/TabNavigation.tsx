@@ -16,6 +16,7 @@ const tabs: Tab[] = [
   { id: 'archive', label: 'Archives', icon: '🗜️' },
   { id: 'spreadsheet', label: 'Spreadsheets', icon: '📈' },
   { id: 'subtitle', label: 'Subtitles', icon: '💬' },
+  { id: 'ebook', label: 'eBooks', icon: '📚' },
   { id: 'batch', label: 'Batch', icon: '📦' },
 ];
 

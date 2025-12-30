@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     # Server settings
     HOST: str = "0.0.0.0"
     PORT: int = 8000
-    DEBUG: bool = True
+    DEBUG: bool = False
 
     # File storage paths
     BASE_DIR: Path = Path(__file__).resolve().parent
@@ -58,13 +58,15 @@ class Settings(BaseSettings):
     # Subprocess timeout (in seconds)
     SUBPROCESS_TIMEOUT: int = 600  # 10 minutes max for conversions
 
-    # CORS settings
-    ALLOWED_ORIGINS: list = [
-        "http://localhost:5173",  # Vite default dev server
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-    ]
+    # CORS settings (can be overridden via environment variable ALLOWED_ORIGINS as comma-separated list)
+    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+
+    @property
+    def cors_origins(self) -> list:
+        """Parse ALLOWED_ORIGINS string into list"""
+        if isinstance(self.ALLOWED_ORIGINS, str):
+            return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+        return self.ALLOWED_ORIGINS
 
     class Config:
         env_file = ".env"

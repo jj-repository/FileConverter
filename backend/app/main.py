@@ -3,9 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import asyncio
+import logging
 
 from app.config import settings
 from app.routers import image, video, audio, document, data, archive, spreadsheet, subtitle, ebook, font, batch, websocket
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -31,7 +34,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -94,7 +97,7 @@ async def cleanup_old_files():
                         file_path.unlink()
 
         except Exception as e:
-            print(f"Error during cleanup: {e}")
+            logger.error(f"Error during cleanup: {e}")
 
         # Wait 1 hour before next cleanup
         await asyncio.sleep(3600)

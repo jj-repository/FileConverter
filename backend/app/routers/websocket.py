@@ -1,7 +1,9 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import logging
+
 from app.services.base_converter import ws_manager
 
-
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -35,5 +37,5 @@ async def websocket_progress(websocket: WebSocket, session_id: str):
     except WebSocketDisconnect:
         ws_manager.disconnect(session_id)
     except Exception as e:
-        print(f"WebSocket error for session {session_id}: {e}")
+        logger.error(f"WebSocket error for session {session_id}: {e}")
         ws_manager.disconnect(session_id)

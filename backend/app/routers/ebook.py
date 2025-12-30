@@ -50,8 +50,10 @@ async def convert_ebook(
             )
 
         # Validate file size
+        validate_file_size(file, "ebook")
+
+        # Read file content after validation
         content = await file.read()
-        validate_file_size(len(content), settings.EBOOK_MAX_SIZE, "eBook")
 
         # Save uploaded file
         input_path = settings.TEMP_DIR / f"{session_id}_input.{input_format}"
@@ -148,8 +150,10 @@ async def get_ebook_info(file: UploadFile = File(...)):
         input_format = validate_file_extension(file.filename, settings.EBOOK_FORMATS)
 
         # Validate file size
+        validate_file_size(file, "ebook")
+
+        # Read file content after validation
         content = await file.read()
-        validate_file_size(len(content), settings.EBOOK_MAX_SIZE, "eBook")
 
         # Save temp file
         temp_path = settings.TEMP_DIR / f"temp_{uuid.uuid4()}.{input_format}"

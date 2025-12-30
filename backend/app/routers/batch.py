@@ -7,13 +7,14 @@ from app.services.batch_converter import BatchConverter
 from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_download_filename,  validate_file_size
 from app.config import settings
+from app.models.conversion import BatchConversionResponse, BatchZipResponse
 
 
 router = APIRouter()
 batch_converter = BatchConverter()
 
 
-@router.post("/convert")
+@router.post("/convert", response_model=BatchConversionResponse)
 async def convert_batch(
     files: List[UploadFile] = File(...),
     output_format: str = Form(...),
@@ -159,7 +160,7 @@ async def convert_batch(
         raise HTTPException(status_code=500, detail=f"Batch conversion failed: {str(e)}")
 
 
-@router.post("/download-zip")
+@router.post("/download-zip", response_model=BatchZipResponse)
 async def create_download_zip(
     session_id: str = Form(...),
     filenames: List[str] = Form(...),
@@ -174,7 +175,8 @@ async def create_download_zip(
         # Validate and collect file paths
         file_paths = []
         for filename in filenames:
-            file_path = settings.UPLOAD_DIR / filename
+            # Validate filename to prevent path traversal
+            file_path = validate_download_filename(filename, settings.UPLOAD_DIR)
             if file_path.exists():
                 file_paths.append(file_path)
 

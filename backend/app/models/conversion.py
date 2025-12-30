@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from enum import Enum
 
 
@@ -97,3 +97,28 @@ class FileInfo(BaseModel):
     size: int
     format: str
     metadata: Optional[Dict[str, Any]] = None
+
+
+class BatchFileResult(BaseModel):
+    """Result for a single file in batch conversion"""
+    filename: str
+    success: bool
+    output_path: Optional[str] = None
+    error: Optional[str] = None
+
+
+class BatchConversionResponse(BaseModel):
+    """Response for batch conversion endpoint"""
+    session_id: str
+    total_files: int
+    successful: int
+    failed: int
+    results: List[BatchFileResult]
+    message: str
+
+
+class BatchZipResponse(BaseModel):
+    """Response for batch ZIP creation endpoint"""
+    zip_file: str
+    download_url: str
+    file_count: int

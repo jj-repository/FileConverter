@@ -2,10 +2,13 @@ from fastapi import UploadFile
 from pathlib import Path
 import aiofiles
 import uuid
+import logging
 from typing import Dict, Any, Optional
 from PIL import Image
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_fps_safe(fps_str: str) -> float:
@@ -152,7 +155,8 @@ async def get_document_info(file_path: Path) -> Dict[str, Any]:
                 if reader.metadata:
                     info["title"] = reader.metadata.get("/Title", "")
                     info["author"] = reader.metadata.get("/Author", "")
-            except:
+            except Exception as e:
+                logger.warning(f"Failed to extract PDF metadata: {str(e)}")
                 pass
 
         elif file_extension == "docx":
@@ -160,7 +164,8 @@ async def get_document_info(file_path: Path) -> Dict[str, Any]:
                 from docx import Document
                 doc = Document(str(file_path))
                 info["paragraphs"] = len(doc.paragraphs)
-            except:
+            except Exception as e:
+                logger.warning(f"Failed to extract DOCX metadata: {str(e)}")
                 pass
 
         return info
@@ -188,4 +193,4 @@ def cleanup_file(file_path: Path) -> None:
         if file_path.exists() and file_path.is_file():
             file_path.unlink()
     except Exception as e:
-        print(f"Error deleting file {file_path}: {e}")
+        logger.error(f"Error deleting file {file_path}: {e}")

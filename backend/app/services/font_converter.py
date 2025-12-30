@@ -148,7 +148,8 @@ class FontConverter(BaseConverter):
                         try:
                             info['family_name'] = record.toUnicode()
                             break
-                        except:
+                        except (UnicodeDecodeError, AttributeError) as e:
+                            logger.debug(f"Failed to decode font family name: {str(e)}")
                             pass
 
                 # Get font subfamily (style) name (ID 2)
@@ -157,7 +158,8 @@ class FontConverter(BaseConverter):
                         try:
                             info['style_name'] = record.toUnicode()
                             break
-                        except:
+                        except (UnicodeDecodeError, AttributeError) as e:
+                            logger.debug(f"Failed to decode font style name: {str(e)}")
                             pass
 
                 # Get full font name (ID 4)
@@ -166,7 +168,8 @@ class FontConverter(BaseConverter):
                         try:
                             info['full_name'] = record.toUnicode()
                             break
-                        except:
+                        except (UnicodeDecodeError, AttributeError) as e:
+                            logger.debug(f"Failed to decode full font name: {str(e)}")
                             pass
 
                 # Get version (ID 5)
@@ -175,7 +178,8 @@ class FontConverter(BaseConverter):
                         try:
                             info['version'] = record.toUnicode()
                             break
-                        except:
+                        except (UnicodeDecodeError, AttributeError) as e:
+                            logger.debug(f"Failed to decode font version: {str(e)}")
                             pass
 
             # Get glyph count

@@ -2,6 +2,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Any, Optional
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class WebSocketManager:
@@ -30,7 +33,7 @@ class WebSocketManager:
                     "message": message,
                 })
             except Exception as e:
-                print(f"Error sending progress update: {e}")
+                logger.error(f"Error sending progress update: {e}")
                 self.disconnect(session_id)
 
 

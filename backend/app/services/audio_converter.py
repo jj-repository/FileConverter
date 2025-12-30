@@ -3,10 +3,13 @@ from typing import Dict, Any, Optional
 import subprocess
 import re
 import asyncio
+import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from app.services.base_converter import BaseConverter
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class AudioConverter(BaseConverter):
@@ -40,7 +43,7 @@ class AudioConverter(BaseConverter):
                 return float(result.stdout.strip())
             return 0.0
         except Exception as e:
-            print(f"Error getting audio duration: {e}")
+            logger.error(f"Error getting audio duration: {e}")
             return 0.0
 
     def parse_ffmpeg_progress(self, line: str, total_duration: float) -> Optional[float]:

@@ -2,10 +2,13 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import subprocess
 import asyncio
+import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from app.services.base_converter import BaseConverter
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentConverter(BaseConverter):
@@ -186,7 +189,7 @@ class DocumentConverter(BaseConverter):
                             "line_count": line_count,
                         })
                 except Exception as e:
-                    print(f"Error getting document stats: {e}")
+                    logger.warning(f"Error getting document stats: {e}")
 
             # Special handling for DOCX
             if input_format == "docx":
@@ -196,7 +199,7 @@ class DocumentConverter(BaseConverter):
                     metadata["paragraph_count"] = len(doc.paragraphs)
                     metadata["section_count"] = len(doc.sections)
                 except Exception as e:
-                    print(f"Error reading DOCX metadata: {e}")
+                    logger.warning(f"Error reading DOCX metadata: {e}")
 
             # Special handling for PDF
             if input_format == "pdf":
@@ -212,7 +215,7 @@ class DocumentConverter(BaseConverter):
                         if pdf.metadata.author:
                             metadata["author"] = pdf.metadata.author
                 except Exception as e:
-                    print(f"Error reading PDF metadata: {e}")
+                    logger.warning(f"Error reading PDF metadata: {e}")
 
             return metadata
 

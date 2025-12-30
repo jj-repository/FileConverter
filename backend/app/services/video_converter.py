@@ -3,10 +3,13 @@ from typing import Dict, Any, Optional
 import subprocess
 import re
 import asyncio
+import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from app.services.base_converter import BaseConverter
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class VideoConverter(BaseConverter):
@@ -40,7 +43,7 @@ class VideoConverter(BaseConverter):
                 return float(result.stdout.strip())
             return 0.0
         except Exception as e:
-            print(f"Error getting video duration: {e}")
+            logger.error(f"Error getting video duration: {e}")
             return 0.0
 
     def parse_ffmpeg_progress(self, line: str, total_duration: float) -> Optional[float]:
@@ -244,5 +247,6 @@ class VideoConverter(BaseConverter):
                 num, denom = fps_str.split("/")
                 return float(num) / float(denom) if float(denom) != 0 else 0
             return float(fps_str)
-        except:
+        except (ValueError, ZeroDivisionError, AttributeError) as e:
+            logger.warning(f"Failed to parse FPS '{fps_str}': {str(e)}")
             return 0.0

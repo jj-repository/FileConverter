@@ -1,6 +1,7 @@
 # FileConverter
 
 [![Backend Tests](https://github.com/jj-repository/FileConverter/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/jj-repository/FileConverter/actions/workflows/backend-tests.yml)
+[![Frontend Tests](https://github.com/jj-repository/FileConverter/actions/workflows/frontend-tests.yml/badge.svg)](https://github.com/jj-repository/FileConverter/actions/workflows/frontend-tests.yml)
 [![codecov](https://codecov.io/gh/jj-repository/FileConverter/branch/main/graph/badge.svg)](https://codecov.io/gh/jj-repository/FileConverter)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

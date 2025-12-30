@@ -117,6 +117,12 @@ class ImageConverter(BaseConverter):
             height = options.get('height')
 
             if width or height:
+                # Validate dimensions
+                if width is not None and (width <= 0 or width > 10000):
+                    raise ValueError(f"Invalid width: {width}. Must be between 1 and 10000")
+                if height is not None and (height <= 0 or height > 10000):
+                    raise ValueError(f"Invalid height: {height}. Must be between 1 and 10000")
+
                 await self.send_progress(session_id, 60, "converting", "Resizing image")
 
                 original_width, original_height = img.size
@@ -140,7 +146,11 @@ class ImageConverter(BaseConverter):
 
             # Quality setting for JPEG and WEBP
             if output_format.lower() in ['jpg', 'jpeg', 'webp']:
-                save_options['quality'] = options.get('quality', 95)
+                quality = options.get('quality', 95)
+                # Validate quality
+                if quality < 1 or quality > 100:
+                    raise ValueError(f"Invalid quality: {quality}. Must be between 1 and 100")
+                save_options['quality'] = quality
 
             # Optimize for all formats
             save_options['optimize'] = True
@@ -149,8 +159,13 @@ class ImageConverter(BaseConverter):
             if output_format.lower() in ['jpg', 'jpeg'] and img.mode != 'RGB':
                 img = img.convert('RGB')
 
+            # Map format names for PIL (PIL uses 'JPEG' not 'JPG')
+            pil_format = output_format.upper()
+            if pil_format == 'JPG':
+                pil_format = 'JPEG'
+
             # Save image
-            img.save(output_path, format=output_format.upper(), **save_options)
+            img.save(output_path, format=pil_format, **save_options)
 
         await self.send_progress(session_id, 100, "completed", "Image conversion completed")
 

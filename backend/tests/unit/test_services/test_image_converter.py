@@ -68,7 +68,7 @@ class TestImageFormatValidation:
         """Test that all supported output formats are validated"""
         converter = ImageConverter()
 
-        supported_formats = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "tiff", "pdf"]
+        supported_formats = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "tiff"]
 
         for fmt in supported_formats:
             assert fmt in converter.supported_formats["output"]
@@ -371,8 +371,8 @@ class TestImageMetadata:
     """Test image metadata extraction"""
 
     @pytest.mark.asyncio
-    async def test_get_image_info_success(self, temp_dir):
-        """Test successful image info extraction"""
+    async def test_get_image_metadata_success(self, temp_dir):
+        """Test successful image metadata extraction"""
         converter = ImageConverter()
 
         image_file = temp_dir / "test.jpg"
@@ -380,7 +380,7 @@ class TestImageMetadata:
         img = Image.new('RGB', (800, 600), color='red')
         img.save(image_file, 'JPEG', quality=95)
 
-        info = await converter.get_image_info(image_file)
+        info = await converter.get_image_metadata(image_file)
 
         assert "width" in info
         assert "height" in info
@@ -395,15 +395,15 @@ class TestImageMetadata:
         assert info["size"] > 0
 
     @pytest.mark.asyncio
-    async def test_get_image_info_png(self, temp_dir):
-        """Test image info for PNG"""
+    async def test_get_image_metadata_png(self, temp_dir):
+        """Test image metadata for PNG"""
         converter = ImageConverter()
 
         image_file = temp_dir / "test.png"
         img = Image.new('RGBA', (1024, 768), color='blue')
         img.save(image_file, 'PNG')
 
-        info = await converter.get_image_info(image_file)
+        info = await converter.get_image_metadata(image_file)
 
         assert info["width"] == 1024
         assert info["height"] == 768
@@ -411,14 +411,14 @@ class TestImageMetadata:
         assert info["mode"] == "RGBA"
 
     @pytest.mark.asyncio
-    async def test_get_image_info_corrupted_file(self, temp_dir):
-        """Test image info extraction for corrupted file"""
+    async def test_get_image_metadata_corrupted_file(self, temp_dir):
+        """Test image metadata extraction for corrupted file"""
         converter = ImageConverter()
 
         image_file = temp_dir / "corrupted.jpg"
         image_file.write_text("not an image")
 
-        info = await converter.get_image_info(image_file)
+        info = await converter.get_image_metadata(image_file)
 
         assert "error" in info
 

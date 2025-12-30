@@ -6,7 +6,7 @@ import { dataAPI } from '../../services/api';
 import { ConversionStatus } from '../../types/conversion';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
-const DATA_FORMATS = ['csv', 'json', 'xml'];
+const DATA_FORMATS = ['csv', 'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'jsonl'];
 
 const ENCODINGS = [
   { value: 'utf-8', label: 'UTF-8 (Default)' },

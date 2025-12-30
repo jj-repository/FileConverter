@@ -5,13 +5,16 @@ import json
 import xml.etree.ElementTree as ET
 import csv
 import asyncio
+import yaml
+import toml
+import configparser
 
 from app.services.base_converter import BaseConverter
 from app.config import settings
 
 
 class DataConverter(BaseConverter):
-    """Data conversion service for CSV, JSON, XML"""
+    """Data conversion service for CSV, JSON, XML, YAML, TOML, INI, JSONL"""
 
     def __init__(self, websocket_manager=None):
         super().__init__(websocket_manager)
@@ -36,11 +39,11 @@ class DataConverter(BaseConverter):
 
         Args:
             input_path: Path to input data file
-            output_format: Target format (csv, json, xml)
+            output_format: Target format (csv, json, xml, yaml, yml, toml, ini, jsonl)
             options: Conversion options
                 - encoding: str (default: utf-8)
                 - delimiter: str (for CSV, default: ,)
-                - pretty: bool (for JSON, default: True)
+                - pretty: bool (for JSON/YAML, default: True)
 
         Returns:
             Path to converted data file
@@ -84,6 +87,41 @@ class DataConverter(BaseConverter):
             elif input_format == 'xml':
                 # Parse XML (simple flat structure)
                 df = await self._xml_to_dataframe(input_path, encoding)
+            elif input_format in ['yaml', 'yml']:
+                with open(input_path, 'r', encoding=encoding) as f:
+                    data = yaml.safe_load(f)
+                    if isinstance(data, list):
+                        df = pd.DataFrame(data)
+                    elif isinstance(data, dict):
+                        df = pd.DataFrame([data])
+                    else:
+                        raise ValueError("Unsupported YAML structure")
+            elif input_format == 'toml':
+                data = toml.load(input_path)
+                # TOML is typically a dict
+                if isinstance(data, dict):
+                    # Flatten nested dict if needed
+                    df = pd.DataFrame([data])
+                else:
+                    raise ValueError("Unsupported TOML structure")
+            elif input_format == 'ini':
+                config = configparser.ConfigParser()
+                config.read(input_path, encoding=encoding)
+                # Convert INI sections to rows
+                data = []
+                for section in config.sections():
+                    row = {'section': section}
+                    row.update(dict(config.items(section)))
+                    data.append(row)
+                df = pd.DataFrame(data)
+            elif input_format == 'jsonl':
+                # Read JSONL (newline-delimited JSON)
+                data = []
+                with open(input_path, 'r', encoding=encoding) as f:
+                    for line in f:
+                        if line.strip():
+                            data.append(json.loads(line))
+                df = pd.DataFrame(data)
             else:
                 raise ValueError(f"Unsupported input format: {input_format}")
 
@@ -103,6 +141,38 @@ class DataConverter(BaseConverter):
             elif output_format == 'xml':
                 # Convert DataFrame to XML
                 await self._dataframe_to_xml(df, output_path, encoding)
+            elif output_format in ['yaml', 'yml']:
+                # Convert DataFrame to YAML
+                data = df.to_dict('records')
+                with open(output_path, 'w', encoding=encoding) as f:
+                    yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
+            elif output_format == 'toml':
+                # Convert DataFrame to TOML
+                # TOML is best for single dict, so take first row
+                if len(df) > 0:
+                    data = df.iloc[0].to_dict()
+                    with open(output_path, 'w', encoding=encoding) as f:
+                        toml.dump(data, f)
+                else:
+                    raise ValueError("Cannot convert empty DataFrame to TOML")
+            elif output_format == 'ini':
+                # Convert DataFrame to INI
+                config = configparser.ConfigParser()
+                for _, row in df.iterrows():
+                    section = str(row.get('section', 'DEFAULT'))
+                    if section not in config.sections() and section != 'DEFAULT':
+                        config.add_section(section)
+                    for col in df.columns:
+                        if col != 'section':
+                            config.set(section, col, str(row[col]))
+                with open(output_path, 'w', encoding=encoding) as f:
+                    config.write(f)
+            elif output_format == 'jsonl':
+                # Convert DataFrame to JSONL
+                with open(output_path, 'w', encoding=encoding) as f:
+                    for _, row in df.iterrows():
+                        json.dump(row.to_dict(), f, ensure_ascii=False)
+                        f.write('\n')
             else:
                 raise ValueError(f"Unsupported output format: {output_format}")
 

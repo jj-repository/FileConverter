@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     VIDEO_FORMATS: Set[str] = {"mp4", "avi", "mov", "mkv", "webm", "flv", "wmv", "m4v", "3gp", "3g2", "mts", "m2ts", "vob", "ts", "ogv"}
     AUDIO_FORMATS: Set[str] = {"mp3", "wav", "flac", "aac", "ogg", "m4a", "wma", "opus", "alac", "ape", "mka"}
     DOCUMENT_FORMATS: Set[str] = {"txt", "pdf", "docx", "md", "html", "rtf", "odt"}
-    DATA_FORMATS: Set[str] = {"csv", "json", "xml"}
+    DATA_FORMATS: Set[str] = {"csv", "json", "xml", "yaml", "yml", "toml", "ini", "jsonl"}
     ARCHIVE_FORMATS: Set[str] = {"zip", "tar", "tar.gz", "tgz", "tar.bz2", "tbz2", "gz", "7z"}
     SPREADSHEET_FORMATS: Set[str] = {"xlsx", "xls", "ods", "csv", "tsv"}
     SUBTITLE_FORMATS: Set[str] = {"srt", "vtt", "ass", "ssa", "sub"}

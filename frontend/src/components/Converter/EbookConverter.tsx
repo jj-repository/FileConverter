@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DropZone } from '../FileUpload/DropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
@@ -9,6 +10,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 const EBOOK_FORMATS = ['epub', 'txt', 'html', 'pdf'];
 
 export const EbookConverter: React.FC = () => {
+  const { t } = useTranslation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>('epub');
   const [outputDirectory, setOutputDirectory] = useState<string | null>(null);
@@ -151,7 +153,7 @@ export const EbookConverter: React.FC = () => {
     <div className="space-y-6">
       {/* Information Banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-blue-900 mb-2">eBook Converter</h3>
+        <h3 className="text-sm font-semibold text-blue-900 mb-2">{t('converter.ebook.title')}</h3>
         <p className="text-sm text-blue-800">
           Convert between eBook formats. Supports EPUB, TXT, HTML, and PDF.
         </p>

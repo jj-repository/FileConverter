@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DropZone } from '../FileUpload/DropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
@@ -23,6 +24,7 @@ const DELIMITERS = [
 ];
 
 export const SpreadsheetConverter: React.FC = () => {
+  const { t } = useTranslation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>('xlsx');
   const [encoding, setEncoding] = useState<string>('utf-8');
@@ -209,7 +211,7 @@ export const SpreadsheetConverter: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Card>
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Spreadsheet Converter</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('converter.spreadsheet.title')}</h2>
 
         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
@@ -248,7 +250,7 @@ export const SpreadsheetConverter: React.FC = () => {
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
               <p className="text-xs text-gray-500 mt-2">
-                💡 Drag and drop another file here to replace
+                💡 {t('dropzone.dragActive')}
               </p>
             </div>
 
@@ -343,12 +345,12 @@ export const SpreadsheetConverter: React.FC = () => {
                 type="text"
                 value={customFilename}
                 onChange={(e) => setCustomFilename(e.target.value)}
-                placeholder="Leave empty for default name"
+                placeholder={t('common.customFilenamePlaceholder')}
                 className="input w-full"
                 disabled={status === 'converting'}
               />
               <p className="text-xs text-gray-500 mt-1">
-                File extension will be added automatically
+                {t('common.customFilenameHint')}
               </p>
             </div>
 
@@ -360,7 +362,7 @@ export const SpreadsheetConverter: React.FC = () => {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={outputDirectory || 'Default (Downloads)'}
+                    value={outputDirectory || t('common.defaultDownloads')}
                     readOnly
                     className="input flex-1"
                     disabled={status === 'converting'}
@@ -382,7 +384,7 @@ export const SpreadsheetConverter: React.FC = () => {
             {status === 'converting' && showFeedback && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>{progress?.message || 'Processing...'}</span>
+                  <span>{progress?.message || t('common.processing')}</span>
                   <span>{progress?.progress.toFixed(0) || 0}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">

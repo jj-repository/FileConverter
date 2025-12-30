@@ -43,7 +43,15 @@
     "loading": "Loading...",
     "processing": "Processing...",
     "completed": "Completed",
-    "failed": "Failed"
+    "failed": "Failed",
+    "customFilename": "Custom Filename (Optional)",
+    "customFilenamePlaceholder": "Enter filename without extension",
+    "customFilenameHint": "Leave empty to use default filename",
+    "outputDirectory": "Output Directory (Optional)",
+    "outputDirectoryHint": "When set, files will be saved directly to this directory",
+    "defaultDownloads": "Default (Downloads)",
+    "convertAnother": "Convert Another",
+    "dropToReplace": "Drop to replace file"
   },
   "dropzone": {
     "title": "Drop files here or click to select",
@@ -58,27 +66,60 @@
       "qualityLabel": "Image Quality",
       "widthLabel": "Width (optional)",
       "heightLabel": "Height (optional)",
-      "maintainAspect": "Maintain aspect ratio"
+      "maintainAspect": "Maintain aspect ratio",
+      "convertImage": "Convert Image",
+      "preview": "Preview",
+      "dragToReplace": "Drag and drop another file here to replace",
+      "fileExtensionAuto": "File extension will be added automatically"
     },
     "video": {
       "title": "Video Converter",
       "description": "Convert videos between different formats",
       "codecLabel": "Video Codec",
       "resolutionLabel": "Resolution",
-      "bitrateLabel": "Bitrate"
+      "bitrateLabel": "Bitrate",
+      "convertVideo": "Convert Video"
     },
     "audio": {
       "title": "Audio Converter",
       "description": "Convert audio files between different formats",
       "bitrateLabel": "Audio Bitrate",
       "sampleRateLabel": "Sample Rate",
-      "channelsLabel": "Channels"
+      "channelsLabel": "Channels",
+      "convertAudio": "Convert Audio"
     },
     "document": {
       "title": "Document Converter",
       "description": "Convert documents between different formats",
       "preserveFormatting": "Preserve Formatting",
-      "tableOfContents": "Include Table of Contents"
+      "tableOfContents": "Include Table of Contents",
+      "convertDocument": "Convert Document"
+    },
+    "archive": {
+      "title": "Archive Converter",
+      "description": "Convert archives between different formats",
+      "compressionLevel": "Compression Level",
+      "convertArchive": "Convert Archive"
+    },
+    "spreadsheet": {
+      "title": "Spreadsheet Converter",
+      "description": "Convert spreadsheets between different formats",
+      "convertSpreadsheet": "Convert Spreadsheet"
+    },
+    "subtitle": {
+      "title": "Subtitle Converter",
+      "description": "Convert subtitles between different formats",
+      "convertSubtitle": "Convert Subtitle"
+    },
+    "ebook": {
+      "title": "eBook Converter",
+      "description": "Convert eBooks between different formats",
+      "convertEbook": "Convert eBook"
+    },
+    "font": {
+      "title": "Font Converter",
+      "description": "Convert fonts between different formats",
+      "convertFont": "Convert Font"
     },
     "data": {
       "title": "Data Converter",
@@ -86,7 +127,8 @@
       "delimiterLabel": "CSV Delimiter",
       "prettyPrint": "Pretty Print JSON",
       "delimiterHint": "Only used for CSV input/output",
-      "prettyHint": "Only used for JSON output"
+      "prettyHint": "Only used for JSON output",
+      "convertData": "Convert Data"
     },
     "batch": {
       "title": "Batch Converter",

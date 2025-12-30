@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BatchDropZone } from '../FileUpload/BatchDropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
@@ -9,6 +10,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 const ALL_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'ico', 'mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'txt', 'pdf', 'docx', 'md', 'html', 'rtf'];
 
 export const BatchConverter: React.FC = () => {
+  const { t } = useTranslation();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [outputFormat, setOutputFormat] = useState<string>('pdf');
   const [status, setStatus] = useState<ConversionStatus>('idle');

@@ -43,7 +43,15 @@
     "loading": "Ładowanie...",
     "processing": "Przetwarzanie...",
     "completed": "Ukończono",
-    "failed": "Nie powiodło się"
+    "failed": "Nie powiodło się",
+    "customFilename": "Niestandardowa nazwa pliku (Opcjonalnie)",
+    "customFilenamePlaceholder": "Wprowadź nazwę pliku bez rozszerzenia",
+    "customFilenameHint": "Pozostaw puste, aby użyć domyślnej nazwy",
+    "outputDirectory": "Katalog wyjściowy (Opcjonalnie)",
+    "outputDirectoryHint": "Po ustawieniu pliki będą zapisywane bezpośrednio do tego katalogu",
+    "defaultDownloads": "Domyślny (Pobrane)",
+    "convertAnother": "Konwertuj kolejny",
+    "dropToReplace": "Upuść, aby zastąpić plik"
   },
   "dropzone": {
     "title": "Upuść pliki tutaj lub kliknij, aby wybrać",
@@ -58,27 +66,60 @@
       "qualityLabel": "Jakość obrazu",
       "widthLabel": "Szerokość (opcjonalnie)",
       "heightLabel": "Wysokość (opcjonalnie)",
-      "maintainAspect": "Zachowaj proporcje"
+      "maintainAspect": "Zachowaj proporcje",
+      "convertImage": "Konwertuj obraz",
+      "preview": "Podgląd",
+      "dragToReplace": "Przeciągnij i upuść inny plik tutaj, aby zastąpić",
+      "fileExtensionAuto": "Rozszerzenie pliku zostanie dodane automatycznie"
     },
     "video": {
       "title": "Konwerter wideo",
       "description": "Konwertuj filmy między różnymi formatami",
       "codecLabel": "Kodek wideo",
       "resolutionLabel": "Rozdzielczość",
-      "bitrateLabel": "Bitrate"
+      "bitrateLabel": "Bitrate",
+      "convertVideo": "Konwertuj wideo"
     },
     "audio": {
       "title": "Konwerter audio",
       "description": "Konwertuj pliki audio między różnymi formatami",
       "bitrateLabel": "Bitrate audio",
       "sampleRateLabel": "Częstotliwość próbkowania",
-      "channelsLabel": "Kanały"
+      "channelsLabel": "Kanały",
+      "convertAudio": "Konwertuj audio"
     },
     "document": {
       "title": "Konwerter dokumentów",
       "description": "Konwertuj dokumenty między różnymi formatami",
       "preserveFormatting": "Zachowaj formatowanie",
-      "tableOfContents": "Dołącz spis treści"
+      "tableOfContents": "Dołącz spis treści",
+      "convertDocument": "Konwertuj dokument"
+    },
+    "archive": {
+      "title": "Konwerter archiwów",
+      "description": "Konwertuj archiwa między różnymi formatami",
+      "compressionLevel": "Poziom kompresji",
+      "convertArchive": "Konwertuj archiwum"
+    },
+    "spreadsheet": {
+      "title": "Konwerter arkuszy",
+      "description": "Konwertuj arkusze kalkulacyjne między różnymi formatami",
+      "convertSpreadsheet": "Konwertuj arkusz"
+    },
+    "subtitle": {
+      "title": "Konwerter napisów",
+      "description": "Konwertuj napisy między różnymi formatami",
+      "convertSubtitle": "Konwertuj napisy"
+    },
+    "ebook": {
+      "title": "Konwerter e-booków",
+      "description": "Konwertuj e-booki między różnymi formatami",
+      "convertEbook": "Konwertuj e-book"
+    },
+    "font": {
+      "title": "Konwerter czcionek",
+      "description": "Konwertuj czcionki między różnymi formatami",
+      "convertFont": "Konwertuj czcionkę"
     },
     "data": {
       "title": "Konwerter danych",
@@ -86,7 +127,8 @@
       "delimiterLabel": "Separator CSV",
       "prettyPrint": "Formatuj JSON",
       "delimiterHint": "Używany tylko dla CSV",
-      "prettyHint": "Używany tylko dla JSON"
+      "prettyHint": "Używany tylko dla JSON",
+      "convertData": "Konwertuj dane"
     },
     "batch": {
       "title": "Konwerter wsadowy",

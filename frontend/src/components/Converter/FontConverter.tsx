@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DropZone } from '../FileUpload/DropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
@@ -9,6 +10,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 const FONT_FORMATS = ['ttf', 'otf', 'woff', 'woff2'];
 
 export const FontConverter: React.FC = () => {
+  const { t } = useTranslation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>('woff2');
   const [subsetText, setSubsetText] = useState<string>('');
@@ -155,7 +157,7 @@ export const FontConverter: React.FC = () => {
     <div className="space-y-6">
       {/* Information Banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-blue-900 mb-2">Font Converter</h3>
+        <h3 className="text-sm font-semibold text-blue-900 mb-2">{t('converter.font.title')}</h3>
         <p className="text-sm text-blue-800">
           Convert between font formats for web and desktop use.
         </p>

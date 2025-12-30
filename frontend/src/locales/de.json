@@ -43,7 +43,15 @@
     "loading": "Lädt...",
     "processing": "Verarbeitung...",
     "completed": "Abgeschlossen",
-    "failed": "Fehlgeschlagen"
+    "failed": "Fehlgeschlagen",
+    "customFilename": "Benutzerdefinierter Dateiname (Optional)",
+    "customFilenamePlaceholder": "Dateiname ohne Erweiterung eingeben",
+    "customFilenameHint": "Leer lassen für Standard-Dateiname",
+    "outputDirectory": "Ausgabeverzeichnis (Optional)",
+    "outputDirectoryHint": "Wenn festgelegt, werden Dateien direkt in dieses Verzeichnis gespeichert",
+    "defaultDownloads": "Standard (Downloads)",
+    "convertAnother": "Weitere konvertieren",
+    "dropToReplace": "Ablegen zum Ersetzen der Datei"
   },
   "dropzone": {
     "title": "Dateien hier ablegen oder klicken zum Auswählen",
@@ -58,27 +66,60 @@
       "qualityLabel": "Bildqualität",
       "widthLabel": "Breite (optional)",
       "heightLabel": "Höhe (optional)",
-      "maintainAspect": "Seitenverhältnis beibehalten"
+      "maintainAspect": "Seitenverhältnis beibehalten",
+      "convertImage": "Bild konvertieren",
+      "preview": "Vorschau",
+      "dragToReplace": "Weitere Datei hier ablegen zum Ersetzen",
+      "fileExtensionAuto": "Dateierweiterung wird automatisch hinzugefügt"
     },
     "video": {
       "title": "Video-Konverter",
       "description": "Videos zwischen verschiedenen Formaten konvertieren",
       "codecLabel": "Video-Codec",
       "resolutionLabel": "Auflösung",
-      "bitrateLabel": "Bitrate"
+      "bitrateLabel": "Bitrate",
+      "convertVideo": "Video konvertieren"
     },
     "audio": {
       "title": "Audio-Konverter",
       "description": "Audiodateien zwischen verschiedenen Formaten konvertieren",
       "bitrateLabel": "Audio-Bitrate",
       "sampleRateLabel": "Abtastrate",
-      "channelsLabel": "Kanäle"
+      "channelsLabel": "Kanäle",
+      "convertAudio": "Audio konvertieren"
     },
     "document": {
       "title": "Dokument-Konverter",
       "description": "Dokumente zwischen verschiedenen Formaten konvertieren",
       "preserveFormatting": "Formatierung beibehalten",
-      "tableOfContents": "Inhaltsverzeichnis einschließen"
+      "tableOfContents": "Inhaltsverzeichnis einschließen",
+      "convertDocument": "Dokument konvertieren"
+    },
+    "archive": {
+      "title": "Archiv-Konverter",
+      "description": "Archive zwischen verschiedenen Formaten konvertieren",
+      "compressionLevel": "Kompressionsstufe",
+      "convertArchive": "Archiv konvertieren"
+    },
+    "spreadsheet": {
+      "title": "Tabellenkalkulations-Konverter",
+      "description": "Tabellenkalkulationen zwischen verschiedenen Formaten konvertieren",
+      "convertSpreadsheet": "Tabelle konvertieren"
+    },
+    "subtitle": {
+      "title": "Untertitel-Konverter",
+      "description": "Untertitel zwischen verschiedenen Formaten konvertieren",
+      "convertSubtitle": "Untertitel konvertieren"
+    },
+    "ebook": {
+      "title": "E-Book-Konverter",
+      "description": "E-Books zwischen verschiedenen Formaten konvertieren",
+      "convertEbook": "E-Book konvertieren"
+    },
+    "font": {
+      "title": "Schriftarten-Konverter",
+      "description": "Schriftarten zwischen verschiedenen Formaten konvertieren",
+      "convertFont": "Schriftart konvertieren"
     },
     "data": {
       "title": "Daten-Konverter",
@@ -86,7 +127,8 @@
       "delimiterLabel": "CSV-Trennzeichen",
       "prettyPrint": "JSON formatieren",
       "delimiterHint": "Nur für CSV-Ein-/Ausgabe verwendet",
-      "prettyHint": "Nur für JSON-Ausgabe verwendet"
+      "prettyHint": "Nur für JSON-Ausgabe verwendet",
+      "convertData": "Daten konvertieren"
     },
     "batch": {
       "title": "Stapelverarbeitung",

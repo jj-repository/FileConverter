@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DropZone } from '../FileUpload/DropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
@@ -23,6 +24,7 @@ const DELIMITERS = [
 ];
 
 export const DataConverter: React.FC = () => {
+  const { t } = useTranslation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>('csv');
   const [encoding, setEncoding] = useState<string>('utf-8');
@@ -209,7 +211,7 @@ export const DataConverter: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Card>
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Data Converter</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('converter.data.title')}</h2>
 
         {!selectedFile ? (
           <DropZone
@@ -227,28 +229,28 @@ export const DataConverter: React.FC = () => {
             {isDraggingOver && (
               <div className="absolute inset-0 z-10 bg-primary-500 bg-opacity-20 border-4 border-primary-500 border-dashed rounded-lg flex items-center justify-center">
                 <div className="bg-white px-6 py-4 rounded-lg shadow-lg">
-                  <p className="text-primary-600 font-semibold text-lg">Drop to replace file</p>
+                  <p className="text-primary-600 font-semibold text-lg">{t('common.dropToReplace')}</p>
                 </div>
               </div>
             )}
 
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">
-                <span className="font-medium">File:</span> {selectedFile.name}
+                <span className="font-medium">{t('common.file')}:</span> {selectedFile.name}
               </p>
               <p className="text-sm text-gray-600">
-                <span className="font-medium">Size:</span>{' '}
+                <span className="font-medium">{t('common.size')}:</span>{' '}
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
               <p className="text-xs text-gray-500 mt-2">
-                💡 Drag and drop another file here to replace
+                💡 {t('dropzone.dragActive')}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Output Format
+                  {t('common.outputFormat')}
                 </label>
                 <select
                   value={outputFormat}
@@ -266,7 +268,7 @@ export const DataConverter: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Encoding
+                  {t('common.encoding')}
                 </label>
                 <select
                   value={encoding}
@@ -284,7 +286,7 @@ export const DataConverter: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CSV Delimiter
+                  {t('converter.data.delimiterLabel')}
                 </label>
                 <select
                   value={delimiter}
@@ -299,13 +301,13 @@ export const DataConverter: React.FC = () => {
                   ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Only used for CSV input/output
+                  {t('converter.data.delimiterHint')}
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  JSON Pretty Print
+                  {t('converter.data.prettyPrint')}
                 </label>
                 <div className="flex items-center space-x-2">
                   <input
@@ -316,41 +318,41 @@ export const DataConverter: React.FC = () => {
                     disabled={status === 'converting'}
                   />
                   <span className="text-sm text-gray-600">
-                    Format JSON output with indentation
+                    {t('converter.data.prettyPrint')}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Only used for JSON output
+                  {t('converter.data.prettyHint')}
                 </p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Custom Filename (Optional)
+                {t('common.customFilename')}
               </label>
               <input
                 type="text"
                 value={customFilename}
                 onChange={(e) => setCustomFilename(e.target.value)}
-                placeholder="Leave empty for default name"
+                placeholder={t('common.customFilenamePlaceholder')}
                 className="input w-full"
                 disabled={status === 'converting'}
               />
               <p className="text-xs text-gray-500 mt-1">
-                File extension will be added automatically
+                {t('common.customFilenameHint')}
               </p>
             </div>
 
             {window.electron?.isElectron && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Output Directory (Optional)
+                  {t('common.outputDirectory')}
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={outputDirectory || 'Default (Downloads)'}
+                    value={outputDirectory || t('common.defaultDownloads')}
                     readOnly
                     className="input flex-1"
                     disabled={status === 'converting'}
@@ -360,11 +362,11 @@ export const DataConverter: React.FC = () => {
                     variant="secondary"
                     disabled={status === 'converting'}
                   >
-                    Browse
+                    {t('common.browse')}
                   </Button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  💡 When set, files will be saved directly to this directory
+                  💡 {t('common.outputDirectoryHint')}
                 </p>
               </div>
             )}
@@ -372,7 +374,7 @@ export const DataConverter: React.FC = () => {
             {status === 'converting' && showFeedback && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>{progress?.message || 'Processing...'}</span>
+                  <span>{progress?.message || t('common.processing')}</span>
                   <span>{progress?.progress.toFixed(0) || 0}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -392,7 +394,7 @@ export const DataConverter: React.FC = () => {
 
             {status === 'completed' && showFeedback && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-                Conversion completed successfully!
+                {t('messages.conversionSuccess')}
               </div>
             )}
 
@@ -400,23 +402,23 @@ export const DataConverter: React.FC = () => {
               {status === 'idle' || status === 'failed' ? (
                 <>
                   <Button onClick={handleConvert} className="flex-1">
-                    Convert Data
+                    {t('converter.data.convertData')}
                   </Button>
                   <Button onClick={handleReset} variant="secondary">
-                    Reset
+                    {t('common.reset')}
                   </Button>
                 </>
               ) : status === 'converting' ? (
                 <Button disabled loading className="flex-1">
-                  Converting...
+                  {t('common.converting')}
                 </Button>
               ) : status === 'completed' ? (
                 <>
                   <Button onClick={handleDownload} className="flex-1">
-                    Download
+                    {t('common.download')}
                   </Button>
                   <Button onClick={handleReset} variant="secondary">
-                    Convert Another
+                    {t('common.convertAnother')}
                   </Button>
                 </>
               ) : null}

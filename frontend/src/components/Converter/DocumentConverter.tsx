@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DropZone } from '../FileUpload/DropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
@@ -9,6 +10,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 const DOCUMENT_FORMATS = ['txt', 'pdf', 'docx', 'md', 'html', 'rtf', 'odt'];
 
 export const DocumentConverter: React.FC = () => {
+  const { t } = useTranslation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>('pdf');
   const [preserveFormatting, setPreserveFormatting] = useState<boolean>(true);
@@ -232,7 +234,7 @@ export const DocumentConverter: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Card>
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Document Converter</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('converter.document.title')}</h2>
 
         {!selectedFile ? (
           <DropZone
@@ -247,31 +249,30 @@ export const DocumentConverter: React.FC = () => {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* Drag and drop overlay */}
             {isDraggingOver && (
               <div className="absolute inset-0 z-10 bg-primary-500 bg-opacity-20 border-4 border-primary-500 border-dashed rounded-lg flex items-center justify-center">
                 <div className="bg-white px-6 py-4 rounded-lg shadow-lg">
-                  <p className="text-primary-600 font-semibold text-lg">Drop to replace file</p>
+                  <p className="text-primary-600 font-semibold text-lg">{t('common.dropToReplace')}</p>
                 </div>
               </div>
             )}
 
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">
-                <span className="font-medium">File:</span> {selectedFile.name}
+                <span className="font-medium">{t('common.file')}:</span> {selectedFile.name}
               </p>
               <p className="text-sm text-gray-600">
-                <span className="font-medium">Size:</span> {formatFileSize(selectedFile.size)}
+                <span className="font-medium">{t('common.size')}:</span> {formatFileSize(selectedFile.size)}
               </p>
               <p className="text-xs text-gray-500 mt-2">
-                💡 Drag and drop another file here to replace
+                💡 {t('dropzone.dragActive')}
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Output Format
+                  {t('common.outputFormat')}
                 </label>
                 <select
                   value={outputFormat}
@@ -298,7 +299,7 @@ export const DocumentConverter: React.FC = () => {
                     disabled={status === 'converting'}
                   />
                   <label htmlFor="preserveFormatting" className="ml-2 block text-sm text-gray-700">
-                    Preserve formatting (keep styles, fonts, and layout)
+                    {t('converter.document.preserveFormatting')}
                   </label>
                 </div>
 
@@ -312,10 +313,7 @@ export const DocumentConverter: React.FC = () => {
                     disabled={status === 'converting' || !supportsToc(outputFormat)}
                   />
                   <label htmlFor="toc" className="ml-2 block text-sm text-gray-700">
-                    Add table of contents
-                    {!supportsToc(outputFormat) && (
-                      <span className="text-xs text-gray-500 ml-2">(Only for PDF, HTML, DOCX)</span>
-                    )}
+                    {t('converter.document.tableOfContents')}
                   </label>
                 </div>
               </div>
@@ -323,30 +321,30 @@ export const DocumentConverter: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Custom Filename (Optional)
+                {t('common.customFilename')}
               </label>
               <input
                 type="text"
                 value={customFilename}
                 onChange={(e) => setCustomFilename(e.target.value)}
-                placeholder="Leave empty for default name"
+                placeholder={t('common.customFilenamePlaceholder')}
                 className="input w-full"
                 disabled={status === 'converting'}
               />
               <p className="text-xs text-gray-500 mt-1">
-                File extension will be added automatically
+                {t('common.customFilenameHint')}
               </p>
             </div>
 
             {window.electron?.isElectron && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Output Directory (Optional)
+                  {t('common.outputDirectory')}
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={outputDirectory || 'Default (Downloads)'}
+                    value={outputDirectory || t('common.defaultDownloads')}
                     readOnly
                     className="input flex-1"
                     disabled={status === 'converting'}
@@ -356,11 +354,11 @@ export const DocumentConverter: React.FC = () => {
                     variant="secondary"
                     disabled={status === 'converting'}
                   >
-                    Browse
+                    {t('common.browse')}
                   </Button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  💡 When set, files will be saved directly to this directory. Otherwise, uses browser download.
+                  💡 {t('common.outputDirectoryHint')}
                 </p>
               </div>
             )}
@@ -368,43 +366,27 @@ export const DocumentConverter: React.FC = () => {
             {status === 'converting' && showFeedback && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>{progress?.message || 'Processing...'}</span>
+                  <span>{progress?.message || t('common.processing')}</span>
                   <span>{progress?.progress.toFixed(0) || 0}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-primary-600 h-3 rounded-full transition-all duration-300 flex items-center justify-end px-2"
+                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${progress?.progress || 0}%` }}
-                  >
-                    {(progress?.progress || 0) > 10 && (
-                      <span className="text-xs text-white font-medium">
-                        {progress?.progress.toFixed(0) || 0}%
-                      </span>
-                    )}
-                  </div>
+                  />
                 </div>
-                <p className="text-xs text-gray-500 text-center">
-                  Document conversion is usually fast - most files complete in seconds
-                </p>
               </div>
             )}
 
             {error && showFeedback && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                <p className="font-medium">Conversion Failed</p>
-                <p className="text-sm mt-1">{error}</p>
-                {error.includes('Pandoc') && (
-                  <p className="text-sm mt-2">
-                    <strong>Note:</strong> Document conversion requires Pandoc to be installed on the server.
-                  </p>
-                )}
+                {error}
               </div>
             )}
 
             {status === 'completed' && showFeedback && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-                <p className="font-medium">Conversion completed successfully!</p>
-                <p className="text-sm mt-1">Your document is ready to download.</p>
+                {t('messages.conversionSuccess')}
               </div>
             )}
 
@@ -412,43 +394,29 @@ export const DocumentConverter: React.FC = () => {
               {status === 'idle' || status === 'failed' ? (
                 <>
                   <Button onClick={handleConvert} className="flex-1">
-                    Convert Document
+                    {t('converter.document.convertDocument')}
                   </Button>
                   <Button onClick={handleReset} variant="secondary">
-                    Reset
+                    {t('common.reset')}
                   </Button>
                 </>
               ) : status === 'converting' ? (
                 <Button disabled loading className="flex-1">
-                  Converting...
+                  {t('common.converting')}
                 </Button>
               ) : status === 'completed' ? (
                 <>
                   <Button onClick={handleDownload} className="flex-1">
-                    Download Document
+                    {t('common.download')}
                   </Button>
                   <Button onClick={handleReset} variant="secondary">
-                    Convert Another
+                    {t('common.convertAnother')}
                   </Button>
                 </>
               ) : null}
             </div>
           </div>
         )}
-      </Card>
-
-      <Card className="bg-blue-50 border border-blue-200">
-        <h3 className="font-semibold text-blue-900 mb-2">Document Conversion Tips</h3>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• <strong>PDF:</strong> Best for sharing final documents, preserves layout</li>
-          <li>• <strong>DOCX:</strong> Microsoft Word format, editable and widely compatible</li>
-          <li>• <strong>Markdown:</strong> Lightweight markup, great for documentation</li>
-          <li>• <strong>HTML:</strong> Web format, can be styled with CSS</li>
-          <li>• <strong>TXT:</strong> Plain text, universally readable but no formatting</li>
-          <li>• <strong>RTF:</strong> Rich text format, compatible with many word processors</li>
-          <li>• Preserve formatting keeps styles, fonts, and layout from the original</li>
-          <li>• Table of contents is useful for longer documents with headings</li>
-        </ul>
       </Card>
     </div>
   );

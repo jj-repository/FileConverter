@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DropZone } from '../FileUpload/DropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
@@ -9,6 +10,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 const ARCHIVE_FORMATS = ['zip', 'tar', 'tar.gz', 'tgz', 'tar.bz2', 'tbz2', 'gz', '7z'];
 
 export const ArchiveConverter: React.FC = () => {
+  const { t } = useTranslation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>('zip');
   const [compressionLevel, setCompressionLevel] = useState<number>(6);
@@ -191,7 +193,7 @@ export const ArchiveConverter: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Card>
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Archive Converter</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('converter.archive.title')}</h2>
 
         {!selectedFile ? (
           <DropZone
@@ -223,7 +225,7 @@ export const ArchiveConverter: React.FC = () => {
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
               <p className="text-xs text-gray-500 mt-2">
-                💡 Drag and drop another file here to replace
+                💡 {t('dropzone.dragActive')}
               </p>
             </div>
 
@@ -274,12 +276,12 @@ export const ArchiveConverter: React.FC = () => {
                 type="text"
                 value={customFilename}
                 onChange={(e) => setCustomFilename(e.target.value)}
-                placeholder="Leave empty for default name"
+                placeholder={t('common.customFilenamePlaceholder')}
                 className="input w-full"
                 disabled={status === 'converting'}
               />
               <p className="text-xs text-gray-500 mt-1">
-                File extension will be added automatically
+                {t('common.customFilenameHint')}
               </p>
             </div>
 
@@ -291,7 +293,7 @@ export const ArchiveConverter: React.FC = () => {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={outputDirectory || 'Default (Downloads)'}
+                    value={outputDirectory || t('common.defaultDownloads')}
                     readOnly
                     className="input flex-1"
                     disabled={status === 'converting'}
@@ -313,7 +315,7 @@ export const ArchiveConverter: React.FC = () => {
             {status === 'converting' && showFeedback && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>{progress?.message || 'Processing...'}</span>
+                  <span>{progress?.message || t('common.processing')}</span>
                   <span>{progress?.progress.toFixed(0) || 0}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">

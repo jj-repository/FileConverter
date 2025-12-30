@@ -5,15 +5,32 @@ from contextlib import asynccontextmanager
 import asyncio
 import logging
 
-from app.config import settings
-from app.routers import image, video, audio, document, data, archive, spreadsheet, subtitle, ebook, font, batch, websocket
+from app.config import settings, CACHE_DIR
+from app.routers import image, video, audio, document, data, archive, spreadsheet, subtitle, ebook, font, batch, websocket, cache
 from app.middleware.error_handler import register_exception_handlers
+from app.services.cache_service import initialize_cache_service, get_cache_service
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup: Initialize cache service
+    if settings.CACHE_ENABLED:
+        logger.info("Initializing cache service...")
+        initialize_cache_service(
+            cache_dir=CACHE_DIR,
+            expiration_hours=settings.CACHE_EXPIRATION_HOURS,
+            max_size_mb=settings.CACHE_MAX_SIZE_MB
+        )
+
+        # Clean up cache on startup
+        cache_service = get_cache_service()
+        if cache_service:
+            logger.info("Running cache cleanup on startup...")
+            cleanup_stats = cache_service.cleanup_all()
+            logger.info(f"Cache cleanup stats: {cleanup_stats}")
+
     # Startup: Start background cleanup task
     cleanup_task = asyncio.create_task(cleanup_old_files())
     yield
@@ -66,6 +83,7 @@ async def root():
             "subtitle": "/api/subtitle",
             "ebook": "/api/ebook",
             "font": "/api/font",
+            "cache": "/api/cache",
         }
     }
 
@@ -78,7 +96,7 @@ async def health_check():
 
 # Background task to cleanup old temporary files
 async def cleanup_old_files():
-    """Background task that runs every hour to cleanup old temporary files"""
+    """Background task that runs every hour to cleanup old temporary files and cache"""
     import time
     from pathlib import Path
 
@@ -93,12 +111,21 @@ async def cleanup_old_files():
                     if file_age > settings.TEMP_FILE_LIFETIME:
                         file_path.unlink()
 
-            # Cleanup upload directory
+            # Cleanup upload directory (excluding cache directory)
             for file_path in settings.UPLOAD_DIR.glob("*"):
                 if file_path.is_file():
                     file_age = current_time - file_path.stat().st_mtime
                     if file_age > settings.TEMP_FILE_LIFETIME:
                         file_path.unlink()
+
+            # Cleanup cache
+            if settings.CACHE_ENABLED:
+                cache_service = get_cache_service()
+                if cache_service:
+                    logger.debug("Running periodic cache cleanup...")
+                    cleanup_stats = cache_service.cleanup_all()
+                    if cleanup_stats['expired_removed'] > 0 or cleanup_stats['size_limit_removed'] > 0:
+                        logger.info(f"Periodic cache cleanup: {cleanup_stats}")
 
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
@@ -120,6 +147,7 @@ app.include_router(ebook.router, prefix="/api/ebook", tags=["eBook Conversion"])
 app.include_router(font.router, prefix="/api/font", tags=["Font Conversion"])
 app.include_router(batch.router, prefix="/api/batch", tags=["Batch Conversion"])
 app.include_router(websocket.router, prefix="/ws", tags=["WebSocket"])
+app.include_router(cache.router, prefix="/api/cache", tags=["Cache Management"])
 
 
 if __name__ == "__main__":

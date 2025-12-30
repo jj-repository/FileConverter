@@ -60,7 +60,7 @@ async def convert_subtitle(
             "keep_html_tags": keep_html_tags,
         }
 
-        output_path = await subtitle_converter.convert(
+        output_path = await subtitle_converter.convert_with_cache(
             input_path=input_path,
             output_format=output_format.lower(),
             options=options,

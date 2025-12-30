@@ -64,7 +64,7 @@ async def convert_font(
 
         # Convert
         converter = FontConverter()
-        output_path = await converter.convert(
+        output_path = await converter.convert_with_cache(
             input_path=input_path,
             output_format=output_format,
             options={

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import asyncio
 import logging
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,88 @@ class BaseConverter(ABC):
 
     def __init__(self, websocket_manager: Optional[WebSocketManager] = None):
         self.websocket_manager = websocket_manager or ws_manager
+        self._cache_enabled = True  # Can be disabled per converter if needed
+
+    async def convert_with_cache(
+        self,
+        input_path: Path,
+        output_format: str,
+        options: Dict[str, Any],
+        session_id: str
+    ) -> Path:
+        """
+        Convert file to target format with caching support
+
+        This method wraps the actual convert() implementation with cache logic.
+        It checks cache before conversion and stores results after conversion.
+
+        Args:
+            input_path: Path to input file
+            output_format: Target output format
+            options: Conversion options (quality, resolution, etc.)
+            session_id: Unique session ID for progress tracking
+
+        Returns:
+            Path to converted file
+        """
+        from app.services.cache_service import get_cache_service
+        from app.config import settings
+
+        cache_service = get_cache_service()
+
+        # If cache is disabled or not available, proceed with normal conversion
+        if not settings.CACHE_ENABLED or not self._cache_enabled or cache_service is None:
+            return await self.convert(input_path, output_format, options, session_id)
+
+        try:
+            # Generate cache key
+            cache_key = cache_service.generate_cache_key(input_path, output_format, options)
+            logger.debug(f"Cache key generated: {cache_key}")
+
+            # Check cache
+            cached_result = cache_service.get_cached_result(cache_key)
+
+            if cached_result is not None:
+                # Cache hit - return cached result
+                logger.info(f"Cache hit for {cache_key} (session: {session_id})")
+                await self.send_progress(session_id, 100, "completed", "Retrieved from cache")
+
+                # Copy cached file to output location
+                cached_file = Path(cached_result.output_file)
+                output_path = settings.UPLOAD_DIR / cached_file.name
+
+                # If cached file and output path are different, copy it
+                if cached_file != output_path:
+                    shutil.copy2(cached_file, output_path)
+
+                return output_path
+
+            # Cache miss - perform conversion
+            logger.debug(f"Cache miss for {cache_key} (session: {session_id})")
+
+            # Perform actual conversion
+            output_path = await self.convert(input_path, output_format, options, session_id)
+
+            # Store result in cache
+            try:
+                cache_service.store_result(
+                    cache_key=cache_key,
+                    original_filename=input_path.name,
+                    output_file_path=output_path,
+                    output_format=output_format,
+                    conversion_options=options
+                )
+                logger.debug(f"Cached conversion result: {cache_key}")
+            except Exception as cache_error:
+                # Log error but don't fail conversion if cache storage fails
+                logger.error(f"Failed to cache result for {cache_key}: {cache_error}")
+
+            return output_path
+
+        except Exception as e:
+            # If any cache operation fails, fall back to normal conversion
+            logger.error(f"Cache operation failed, falling back to normal conversion: {e}")
+            return await self.convert(input_path, output_format, options, session_id)
 
     @abstractmethod
     async def convert(
@@ -57,6 +140,10 @@ class BaseConverter(ABC):
     ) -> Path:
         """
         Convert file to target format
+
+        This is the actual conversion implementation that should be overridden
+        by subclasses. Use convert_with_cache() instead of calling this directly
+        to benefit from caching.
 
         Args:
             input_path: Path to input file

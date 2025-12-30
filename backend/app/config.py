@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     BASE_DIR: Path = Path(__file__).resolve().parent
     UPLOAD_DIR: Path = BASE_DIR / "static" / "uploads"
     TEMP_DIR: Path = BASE_DIR / "static" / "temp"
+    OUTPUT_DIR: Path = BASE_DIR / "static" / "uploads"  # Base output directory
 
     # File size limits (in bytes)
     MAX_UPLOAD_SIZE: int = 524288000  # 500MB
@@ -29,6 +30,11 @@ class Settings(BaseSettings):
 
     # Cleanup settings
     TEMP_FILE_LIFETIME: int = 3600  # 1 hour in seconds
+
+    # Cache settings
+    CACHE_ENABLED: bool = True
+    CACHE_EXPIRATION_HOURS: int = 1  # Default cache lifetime
+    CACHE_MAX_SIZE_MB: int = 1000  # Maximum cache size in MB
 
     # Binary paths (will be set after initialization to use bundled binaries)
     FFMPEG_PATH: str = ""
@@ -78,6 +84,10 @@ settings = Settings()
 # Ensure directories exist
 settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 settings.TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+# Cache directory
+CACHE_DIR: Path = settings.OUTPUT_DIR / "cache"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Set binary paths (bundled binaries take priority, fall back to system)
 settings.FFMPEG_PATH = get_ffmpeg_path()

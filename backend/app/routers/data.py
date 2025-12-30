@@ -60,7 +60,7 @@ async def convert_data(
             "pretty": pretty,
         }
 
-        output_path = await data_converter.convert(
+        output_path = await data_converter.convert_with_cache(
             input_path=input_path,
             output_format=output_format.lower(),
             options=options,

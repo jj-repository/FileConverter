@@ -63,7 +63,7 @@ async def convert_audio(
             "channels": channels,
         }
 
-        output_path = await audio_converter.convert(
+        output_path = await audio_converter.convert_with_cache(
             input_path=input_path,
             output_format=output_format.lower(),
             options=options,

@@ -63,7 +63,7 @@ async def convert_ebook(
 
         # Convert
         converter = EbookConverter()
-        output_path = await converter.convert(
+        output_path = await converter.convert_with_cache(
             input_path=input_path,
             output_format=output_format,
             options={},

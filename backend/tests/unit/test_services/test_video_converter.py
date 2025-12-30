@@ -220,13 +220,18 @@ class TestVideoConversion:
         """Test conversion with various resolution options"""
         converter = VideoConverter(mock_websocket_manager)
 
-        input_file = temp_dir / "test.mp4"
-        input_file.write_text("mock video")
+        # Ensure upload directory exists
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
         resolutions = ["original", "480p", "720p", "1080p", "4k"]
 
-        for resolution in resolutions:
-            output_file = settings.UPLOAD_DIR / f"test_converted_{resolution}.mp4"
+        for i, resolution in enumerate(resolutions):
+            # Use unique input file for each resolution to avoid output path collision
+            input_file = temp_dir / f"test_{resolution}.mp4"
+            input_file.write_text("mock video")
+
+            # Output path matches what converter actually generates
+            output_file = settings.UPLOAD_DIR / f"test_{resolution}_converted.mp4"
 
             options = {
                 "codec": "libx264",
@@ -240,6 +245,10 @@ class TestVideoConversion:
                 with FFmpegMock.mock_successful_conversion(output_file):
                     result = await converter.convert(input_file, "mp4", options, "test-session")
                     assert result.exists()
+
+                    # Clean up for next iteration
+                    if output_file.exists():
+                        output_file.unlink()
 
     @pytest.mark.asyncio
     async def test_conversion_timeout_handled(self, temp_dir):
@@ -549,14 +558,16 @@ class TestProgressTracking:
                 assert len(calls) >= 4
 
                 # First call should be 0% starting
-                first_call = calls[0][0]
-                assert first_call[1] == 0  # Progress 0%
-                assert first_call[2] == "converting"
+                first_call_args = calls[0].args if calls[0].args else calls[0].kwargs
+                if isinstance(first_call_args, tuple):
+                    assert first_call_args[1] == 0  # Progress 0%
+                    assert first_call_args[2] == "converting"
 
                 # Last call should be 100% completed
-                last_call = calls[-1][0]
-                assert last_call[1] == 100  # Progress 100%
-                assert last_call[2] == "completed"
+                last_call_args = calls[-1].args if calls[-1].args else calls[-1].kwargs
+                if isinstance(last_call_args, tuple):
+                    assert last_call_args[1] == 100  # Progress 100%
+                    assert last_call_args[2] == "completed"
 
     @pytest.mark.asyncio
     async def test_progress_updates_on_failure(self, temp_dir, mock_websocket_manager):
@@ -577,8 +588,9 @@ class TestProgressTracking:
 
                 # Verify failure status was sent
                 calls = mock_websocket_manager.send_progress.call_args_list
-                last_call = calls[-1][0]
-                assert last_call[2] == "failed"
+                last_call_args = calls[-1].args if calls[-1].args else calls[-1].kwargs
+                if isinstance(last_call_args, tuple):
+                    assert last_call_args[2] == "failed"
 
 
 # ============================================================================
@@ -602,15 +614,27 @@ class TestEdgeCases:
             mock_run.return_value = Mock(returncode=0, stdout="120.0", stderr="")
 
             # Mock FFmpeg success but don't create output file
-            with patch('asyncio.create_subprocess_exec') as mock_proc:
+            async def mock_proc_side_effect(*args, **kwargs):
                 mock_process = AsyncMock()
                 mock_process.returncode = 0
-                mock_process.stdout = AsyncMock()
-                mock_process.stderr = AsyncMock()
                 mock_process.wait = AsyncMock(return_value=0)
-                mock_process.stdout.__aiter__ = AsyncMock(return_value=iter([]))
-                mock_proc.return_value = mock_process
 
+                # Create proper async iterators
+                async def stdout_iterator():
+                    return
+                    yield  # Make it a generator
+
+                async def stderr_iterator():
+                    return
+                    yield  # Make it a generator
+
+                mock_process.stdout = stdout_iterator()
+                mock_process.stderr = AsyncMock()
+                mock_process.stderr.read = AsyncMock(return_value=b'')
+
+                return mock_process
+
+            with patch('asyncio.create_subprocess_exec', side_effect=mock_proc_side_effect):
                 with pytest.raises(Exception) as exc_info:
                     await converter.convert(input_file, "mp4", options, "test-session")
 

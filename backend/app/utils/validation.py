@@ -50,6 +50,11 @@ def validate_file_size(file: UploadFile, file_type: str) -> None:
             status_code=413,
             detail=f"Spreadsheet file too large. Maximum size: {settings.SPREADSHEET_MAX_SIZE / 1024 / 1024}MB"
         )
+    elif file_type == "subtitle" and file_size > settings.SUBTITLE_MAX_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Subtitle file too large. Maximum size: {settings.SUBTITLE_MAX_SIZE / 1024 / 1024}MB"
+        )
     elif file_size > settings.MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=413,

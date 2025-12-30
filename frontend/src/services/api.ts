@@ -205,6 +205,45 @@ export const spreadsheetAPI = {
   },
 };
 
+export const subtitleAPI = {
+  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('output_format', options.outputFormat);
+
+    if (options.encoding) {
+      formData.append('encoding', options.encoding);
+    }
+    if (options.fps !== undefined) {
+      formData.append('fps', options.fps.toString());
+    }
+    if (options.keepHtmlTags !== undefined) {
+      formData.append('keep_html_tags', options.keepHtmlTags.toString());
+    }
+
+    const response = await api.post<ConversionResponse>('/subtitle/convert', formData);
+    return response.data;
+  },
+
+  adjustTiming: async (file: File, offsetMs: number): Promise<ConversionResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('offset_ms', offsetMs.toString());
+
+    const response = await api.post<ConversionResponse>('/subtitle/adjust-timing', formData);
+    return response.data;
+  },
+
+  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
+    const response = await api.get('/subtitle/formats');
+    return response.data;
+  },
+
+  downloadFile: (filename: string): string => {
+    return `/api/subtitle/download/${filename}`;
+  },
+};
+
 export interface BatchConversionResult {
   filename: string;
   success: boolean;

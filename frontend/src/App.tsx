@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TabNavigation } from './components/Layout/TabNavigation';
+import { LanguageSelector } from './components/Common/LanguageSelector';
 import { ImageConverter } from './components/Converter/ImageConverter';
 import { VideoConverter } from './components/Converter/VideoConverter';
 import { AudioConverter } from './components/Converter/AudioConverter';
@@ -48,10 +49,16 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
-        <header className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            FileConverter
-          </h1>
+        <header className="mb-12">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex-1"></div>
+            <h1 className="text-5xl font-bold text-gray-900 text-center flex-1">
+              FileConverter
+            </h1>
+            <div className="flex-1 flex justify-end">
+              <LanguageSelector />
+            </div>
+          </div>
         </header>
 
         <div className="max-w-6xl mx-auto">

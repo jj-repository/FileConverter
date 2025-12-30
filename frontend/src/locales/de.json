@@ -1,0 +1,117 @@
+{
+  "app": {
+    "title": "FileConverter - Bilder, Videos, Audio & Dokumente konvertieren",
+    "tagline": "Eine moderne Dateikonvertierungsanwendung"
+  },
+  "nav": {
+    "images": "Bilder",
+    "videos": "Videos",
+    "audio": "Audio",
+    "documents": "Dokumente",
+    "batch": "Stapel",
+    "data": "Daten",
+    "archives": "Archive",
+    "spreadsheets": "Tabellen",
+    "subtitles": "Untertitel",
+    "ebooks": "E-Books",
+    "fonts": "Schriftarten"
+  },
+  "common": {
+    "convert": "Konvertieren",
+    "converting": "Konvertierung läuft...",
+    "download": "Herunterladen",
+    "reset": "Zurücksetzen",
+    "browse": "Durchsuchen",
+    "selectFile": "Datei auswählen",
+    "selectFiles": "Dateien auswählen",
+    "selectFolder": "Ordner auswählen",
+    "outputFormat": "Ausgabeformat",
+    "quality": "Qualität",
+    "encoding": "Kodierung",
+    "options": "Optionen",
+    "advanced": "Erweitert",
+    "file": "Datei",
+    "files": "Dateien",
+    "size": "Größe",
+    "format": "Format",
+    "success": "Erfolg",
+    "error": "Fehler",
+    "warning": "Warnung",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "save": "Speichern",
+    "loading": "Lädt...",
+    "processing": "Verarbeitung...",
+    "completed": "Abgeschlossen",
+    "failed": "Fehlgeschlagen"
+  },
+  "dropzone": {
+    "title": "Dateien hier ablegen oder klicken zum Auswählen",
+    "subtitle": "Unterstützte Formate: {{formats}}",
+    "dragActive": "Dateien hier ablegen...",
+    "or": "oder"
+  },
+  "converter": {
+    "image": {
+      "title": "Bild-Konverter",
+      "description": "Bilder zwischen verschiedenen Formaten konvertieren",
+      "qualityLabel": "Bildqualität",
+      "widthLabel": "Breite (optional)",
+      "heightLabel": "Höhe (optional)",
+      "maintainAspect": "Seitenverhältnis beibehalten"
+    },
+    "video": {
+      "title": "Video-Konverter",
+      "description": "Videos zwischen verschiedenen Formaten konvertieren",
+      "codecLabel": "Video-Codec",
+      "resolutionLabel": "Auflösung",
+      "bitrateLabel": "Bitrate"
+    },
+    "audio": {
+      "title": "Audio-Konverter",
+      "description": "Audiodateien zwischen verschiedenen Formaten konvertieren",
+      "bitrateLabel": "Audio-Bitrate",
+      "sampleRateLabel": "Abtastrate",
+      "channelsLabel": "Kanäle"
+    },
+    "document": {
+      "title": "Dokument-Konverter",
+      "description": "Dokumente zwischen verschiedenen Formaten konvertieren",
+      "preserveFormatting": "Formatierung beibehalten",
+      "tableOfContents": "Inhaltsverzeichnis einschließen"
+    },
+    "data": {
+      "title": "Daten-Konverter",
+      "description": "Datendateien zwischen verschiedenen Formaten konvertieren",
+      "delimiterLabel": "CSV-Trennzeichen",
+      "prettyPrint": "JSON formatieren",
+      "delimiterHint": "Nur für CSV-Ein-/Ausgabe verwendet",
+      "prettyHint": "Nur für JSON-Ausgabe verwendet"
+    },
+    "batch": {
+      "title": "Stapelverarbeitung",
+      "description": "Mehrere Dateien gleichzeitig konvertieren",
+      "filesSelected": "{{count}} Datei(en) ausgewählt",
+      "convertAll": "Alle konvertieren",
+      "parallel": "Parallel verarbeiten",
+      "results": "Ergebnisse"
+    }
+  },
+  "messages": {
+    "conversionSuccess": "Konvertierung erfolgreich abgeschlossen!",
+    "conversionFailed": "Konvertierung fehlgeschlagen: {{error}}",
+    "uploadingFile": "Datei wird hochgeladen...",
+    "selectOutputDir": "Ausgabeverzeichnis auswählen",
+    "fileTooBig": "Datei ist zu groß. Maximale Größe: {{size}}MB",
+    "unsupportedFormat": "Nicht unterstütztes Dateiformat: {{format}}",
+    "noFilesSelected": "Keine Dateien ausgewählt",
+    "downloadComplete": "Download abgeschlossen",
+    "savedTo": "Datei gespeichert in: {{path}}"
+  },
+  "settings": {
+    "language": "Sprache",
+    "selectLanguage": "Sprache auswählen",
+    "theme": "Design",
+    "notifications": "Benachrichtigungen"
+  }
+}

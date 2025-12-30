@@ -1,0 +1,117 @@
+{
+  "app": {
+    "title": "FileConverter - Konwertuj obrazy, filmy, audio i dokumenty",
+    "tagline": "Nowoczesna aplikacja do konwersji plików"
+  },
+  "nav": {
+    "images": "Obrazy",
+    "videos": "Filmy",
+    "audio": "Audio",
+    "documents": "Dokumenty",
+    "batch": "Wsadowe",
+    "data": "Dane",
+    "archives": "Archiwa",
+    "spreadsheets": "Arkusze",
+    "subtitles": "Napisy",
+    "ebooks": "E-booki",
+    "fonts": "Czcionki"
+  },
+  "common": {
+    "convert": "Konwertuj",
+    "converting": "Konwertowanie...",
+    "download": "Pobierz",
+    "reset": "Resetuj",
+    "browse": "Przeglądaj",
+    "selectFile": "Wybierz plik",
+    "selectFiles": "Wybierz pliki",
+    "selectFolder": "Wybierz folder",
+    "outputFormat": "Format wyjściowy",
+    "quality": "Jakość",
+    "encoding": "Kodowanie",
+    "options": "Opcje",
+    "advanced": "Zaawansowane",
+    "file": "Plik",
+    "files": "Pliki",
+    "size": "Rozmiar",
+    "format": "Format",
+    "success": "Sukces",
+    "error": "Błąd",
+    "warning": "Ostrzeżenie",
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "save": "Zapisz",
+    "loading": "Ładowanie...",
+    "processing": "Przetwarzanie...",
+    "completed": "Ukończono",
+    "failed": "Nie powiodło się"
+  },
+  "dropzone": {
+    "title": "Upuść pliki tutaj lub kliknij, aby wybrać",
+    "subtitle": "Obsługiwane formaty: {{formats}}",
+    "dragActive": "Upuść pliki tutaj...",
+    "or": "lub"
+  },
+  "converter": {
+    "image": {
+      "title": "Konwerter obrazów",
+      "description": "Konwertuj obrazy między różnymi formatami",
+      "qualityLabel": "Jakość obrazu",
+      "widthLabel": "Szerokość (opcjonalnie)",
+      "heightLabel": "Wysokość (opcjonalnie)",
+      "maintainAspect": "Zachowaj proporcje"
+    },
+    "video": {
+      "title": "Konwerter wideo",
+      "description": "Konwertuj filmy między różnymi formatami",
+      "codecLabel": "Kodek wideo",
+      "resolutionLabel": "Rozdzielczość",
+      "bitrateLabel": "Bitrate"
+    },
+    "audio": {
+      "title": "Konwerter audio",
+      "description": "Konwertuj pliki audio między różnymi formatami",
+      "bitrateLabel": "Bitrate audio",
+      "sampleRateLabel": "Częstotliwość próbkowania",
+      "channelsLabel": "Kanały"
+    },
+    "document": {
+      "title": "Konwerter dokumentów",
+      "description": "Konwertuj dokumenty między różnymi formatami",
+      "preserveFormatting": "Zachowaj formatowanie",
+      "tableOfContents": "Dołącz spis treści"
+    },
+    "data": {
+      "title": "Konwerter danych",
+      "description": "Konwertuj pliki danych między różnymi formatami",
+      "delimiterLabel": "Separator CSV",
+      "prettyPrint": "Formatuj JSON",
+      "delimiterHint": "Używany tylko dla CSV",
+      "prettyHint": "Używany tylko dla JSON"
+    },
+    "batch": {
+      "title": "Konwerter wsadowy",
+      "description": "Konwertuj wiele plików jednocześnie",
+      "filesSelected": "Wybrano {{count}} plik(ów)",
+      "convertAll": "Konwertuj wszystkie",
+      "parallel": "Przetwarzaj równolegle",
+      "results": "Wyniki"
+    }
+  },
+  "messages": {
+    "conversionSuccess": "Konwersja zakończona pomyślnie!",
+    "conversionFailed": "Konwersja nie powiodła się: {{error}}",
+    "uploadingFile": "Przesyłanie pliku...",
+    "selectOutputDir": "Wybierz katalog wyjściowy",
+    "fileTooBig": "Plik jest za duży. Maksymalny rozmiar: {{size}}MB",
+    "unsupportedFormat": "Nieobsługiwany format pliku: {{format}}",
+    "noFilesSelected": "Nie wybrano plików",
+    "downloadComplete": "Pobieranie zakończone",
+    "savedTo": "Plik zapisany w: {{path}}"
+  },
+  "settings": {
+    "language": "Język",
+    "selectLanguage": "Wybierz język",
+    "theme": "Motyw",
+    "notifications": "Powiadomienia"
+  }
+}

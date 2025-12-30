@@ -1,24 +1,25 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { FileType } from '../../types/conversion';
 
 interface Tab {
   id: FileType;
-  label: string;
+  translationKey: string;
   icon: string;
 }
 
 const tabs: Tab[] = [
-  { id: 'image', label: 'Images', icon: '🖼️' },
-  { id: 'video', label: 'Videos', icon: '🎥' },
-  { id: 'audio', label: 'Audio', icon: '🎵' },
-  { id: 'document', label: 'Documents', icon: '📄' },
-  { id: 'batch', label: 'Batch', icon: '📦' },
-  { id: 'data', label: 'Data', icon: '📊' },
-  { id: 'archive', label: 'Archives', icon: '🗜️' },
-  { id: 'spreadsheet', label: 'Spreadsheets', icon: '📈' },
-  { id: 'subtitle', label: 'Subtitles', icon: '💬' },
-  { id: 'ebook', label: 'eBooks', icon: '📚' },
-  { id: 'font', label: 'Fonts', icon: '🔤' },
+  { id: 'image', translationKey: 'nav.images', icon: '🖼️' },
+  { id: 'video', translationKey: 'nav.videos', icon: '🎥' },
+  { id: 'audio', translationKey: 'nav.audio', icon: '🎵' },
+  { id: 'document', translationKey: 'nav.documents', icon: '📄' },
+  { id: 'batch', translationKey: 'nav.batch', icon: '📦' },
+  { id: 'data', translationKey: 'nav.data', icon: '📊' },
+  { id: 'archive', translationKey: 'nav.archives', icon: '🗜️' },
+  { id: 'spreadsheet', translationKey: 'nav.spreadsheets', icon: '📈' },
+  { id: 'subtitle', translationKey: 'nav.subtitles', icon: '💬' },
+  { id: 'ebook', translationKey: 'nav.ebooks', icon: '📚' },
+  { id: 'font', translationKey: 'nav.fonts', icon: '🔤' },
 ];
 
 interface TabNavigationProps {
@@ -27,6 +28,8 @@ interface TabNavigationProps {
 }
 
 export const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="border-b border-gray-200 mb-8 overflow-x-auto">
       <nav className="flex space-x-8 min-w-min" aria-label="Tabs">
@@ -45,7 +48,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabCh
           >
             <span className="flex items-center gap-2">
               <span className="text-xl">{tab.icon}</span>
-              {tab.label}
+              {t(tab.translationKey)}
             </span>
           </button>
         ))}

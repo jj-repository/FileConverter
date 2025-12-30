@@ -1,0 +1,117 @@
+{
+  "app": {
+    "title": "FileConverter - Convert Images, Videos, Audio & Documents",
+    "tagline": "A modern file conversion application"
+  },
+  "nav": {
+    "images": "Images",
+    "videos": "Videos",
+    "audio": "Audio",
+    "documents": "Documents",
+    "batch": "Batch",
+    "data": "Data",
+    "archives": "Archives",
+    "spreadsheets": "Spreadsheets",
+    "subtitles": "Subtitles",
+    "ebooks": "eBooks",
+    "fonts": "Fonts"
+  },
+  "common": {
+    "convert": "Convert",
+    "converting": "Converting...",
+    "download": "Download",
+    "reset": "Reset",
+    "browse": "Browse",
+    "selectFile": "Select File",
+    "selectFiles": "Select Files",
+    "selectFolder": "Select Folder",
+    "outputFormat": "Output Format",
+    "quality": "Quality",
+    "encoding": "Encoding",
+    "options": "Options",
+    "advanced": "Advanced",
+    "file": "File",
+    "files": "Files",
+    "size": "Size",
+    "format": "Format",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "loading": "Loading...",
+    "processing": "Processing...",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "dropzone": {
+    "title": "Drop files here or click to select",
+    "subtitle": "Supported formats: {{formats}}",
+    "dragActive": "Drop the files here...",
+    "or": "or"
+  },
+  "converter": {
+    "image": {
+      "title": "Image Converter",
+      "description": "Convert images between different formats",
+      "qualityLabel": "Image Quality",
+      "widthLabel": "Width (optional)",
+      "heightLabel": "Height (optional)",
+      "maintainAspect": "Maintain aspect ratio"
+    },
+    "video": {
+      "title": "Video Converter",
+      "description": "Convert videos between different formats",
+      "codecLabel": "Video Codec",
+      "resolutionLabel": "Resolution",
+      "bitrateLabel": "Bitrate"
+    },
+    "audio": {
+      "title": "Audio Converter",
+      "description": "Convert audio files between different formats",
+      "bitrateLabel": "Audio Bitrate",
+      "sampleRateLabel": "Sample Rate",
+      "channelsLabel": "Channels"
+    },
+    "document": {
+      "title": "Document Converter",
+      "description": "Convert documents between different formats",
+      "preserveFormatting": "Preserve Formatting",
+      "tableOfContents": "Include Table of Contents"
+    },
+    "data": {
+      "title": "Data Converter",
+      "description": "Convert data files between different formats",
+      "delimiterLabel": "CSV Delimiter",
+      "prettyPrint": "Pretty Print JSON",
+      "delimiterHint": "Only used for CSV input/output",
+      "prettyHint": "Only used for JSON output"
+    },
+    "batch": {
+      "title": "Batch Converter",
+      "description": "Convert multiple files at once",
+      "filesSelected": "{{count}} file(s) selected",
+      "convertAll": "Convert All",
+      "parallel": "Process in Parallel",
+      "results": "Results"
+    }
+  },
+  "messages": {
+    "conversionSuccess": "Conversion completed successfully!",
+    "conversionFailed": "Conversion failed: {{error}}",
+    "uploadingFile": "Uploading file...",
+    "selectOutputDir": "Select output directory",
+    "fileTooBig": "File is too large. Maximum size: {{size}}MB",
+    "unsupportedFormat": "Unsupported file format: {{format}}",
+    "noFilesSelected": "No files selected",
+    "downloadComplete": "Download completed",
+    "savedTo": "File saved to: {{path}}"
+  },
+  "settings": {
+    "language": "Language",
+    "selectLanguage": "Select Language",
+    "theme": "Theme",
+    "notifications": "Notifications"
+  }
+}

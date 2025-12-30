@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     SPREADSHEET_MAX_SIZE: int = 104857600  # 100MB
     SUBTITLE_MAX_SIZE: int = 10485760  # 10MB
     EBOOK_MAX_SIZE: int = 52428800  # 50MB
+    FONT_MAX_SIZE: int = 20971520  # 20MB
 
     # Cleanup settings
     TEMP_FILE_LIFETIME: int = 3600  # 1 hour in seconds
@@ -44,6 +45,7 @@ class Settings(BaseSettings):
     SPREADSHEET_FORMATS: Set[str] = {"xlsx", "xls", "ods", "csv", "tsv"}
     SUBTITLE_FORMATS: Set[str] = {"srt", "vtt", "ass", "ssa", "sub"}
     EBOOK_FORMATS: Set[str] = {"epub", "txt", "html", "pdf"}
+    FONT_FORMATS: Set[str] = {"ttf", "otf", "woff", "woff2"}
 
     # FFmpeg allowed options (whitelist for security)
     ALLOWED_VIDEO_CODECS: Set[str] = {"libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4", "h264"}

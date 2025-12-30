@@ -1,4 +1,4 @@
-export type FileType = 'image' | 'video' | 'audio' | 'document' | 'data' | 'archive' | 'spreadsheet' | 'subtitle' | 'ebook' | 'batch';
+export type FileType = 'image' | 'video' | 'audio' | 'document' | 'data' | 'archive' | 'spreadsheet' | 'subtitle' | 'ebook' | 'font' | 'batch';
 
 export type ConversionStatus = 'idle' | 'uploading' | 'converting' | 'completed' | 'failed';
 
@@ -23,6 +23,8 @@ export interface ConversionOptions {
   fps?: number;
   keepHtmlTags?: boolean;
   offsetMs?: number;
+  subsetText?: string;
+  optimize?: boolean;
 }
 
 export interface ConversionResponse {

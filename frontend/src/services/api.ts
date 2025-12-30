@@ -264,6 +264,33 @@ export const ebookAPI = {
   },
 };
 
+export const fontAPI = {
+  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('output_format', options.outputFormat);
+
+    if (options.subsetText) {
+      formData.append('subset_text', options.subsetText);
+    }
+    if (options.optimize !== undefined) {
+      formData.append('optimize', options.optimize.toString());
+    }
+
+    const response = await api.post<ConversionResponse>('/font/convert', formData);
+    return response.data;
+  },
+
+  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
+    const response = await api.get('/font/formats');
+    return response.data;
+  },
+
+  downloadFile: (filename: string): string => {
+    return `/api/font/download/${filename}`;
+  },
+};
+
 export interface BatchConversionResult {
   filename: string;
   success: boolean;

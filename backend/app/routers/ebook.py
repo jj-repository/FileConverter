@@ -11,7 +11,7 @@ import logging
 from app.config import settings
 from app.services.ebook_converter import EbookConverter
 from app.utils.validation import validate_file_size, validate_file_extension
-from app.models.response import ConversionResponse
+from app.models.conversion import ConversionResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

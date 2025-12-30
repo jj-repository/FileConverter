@@ -60,6 +60,11 @@ def validate_file_size(file: UploadFile, file_type: str) -> None:
             status_code=413,
             detail=f"eBook file too large. Maximum size: {settings.EBOOK_MAX_SIZE / 1024 / 1024}MB"
         )
+    elif file_type == "font" and file_size > settings.FONT_MAX_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Font file too large. Maximum size: {settings.FONT_MAX_SIZE / 1024 / 1024}MB"
+        )
     elif file_size > settings.MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=413,

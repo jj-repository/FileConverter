@@ -9,6 +9,7 @@ import { ArchiveConverter } from './components/Converter/ArchiveConverter';
 import { SpreadsheetConverter } from './components/Converter/SpreadsheetConverter';
 import { SubtitleConverter } from './components/Converter/SubtitleConverter';
 import { EbookConverter } from './components/Converter/EbookConverter';
+import { FontConverter } from './components/Converter/FontConverter';
 import { BatchConverter } from './components/Converter/BatchConverterImproved';
 import { FileType } from './types/conversion';
 
@@ -35,6 +36,8 @@ function App() {
         return <SubtitleConverter />;
       case 'ebook':
         return <EbookConverter />;
+      case 'font':
+        return <FontConverter />;
       case 'batch':
         return <BatchConverter />;
       default:

@@ -17,6 +17,7 @@ const tabs: Tab[] = [
   { id: 'spreadsheet', label: 'Spreadsheets', icon: '📈' },
   { id: 'subtitle', label: 'Subtitles', icon: '💬' },
   { id: 'ebook', label: 'eBooks', icon: '📚' },
+  { id: 'font', label: 'Fonts', icon: '🔤' },
   { id: 'batch', label: 'Batch', icon: '📦' },
 ];
 

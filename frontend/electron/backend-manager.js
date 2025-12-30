@@ -148,7 +148,8 @@ class BackendManager {
         env: {
           ...process.env,
           PYTHONUNBUFFERED: '1'
-        }
+        },
+        windowsHide: true // Hide console window on Windows
       });
     } else {
       // Development mode - use Python + uvicorn
@@ -177,7 +178,8 @@ class BackendManager {
         env: {
           ...process.env,
           PYTHONUNBUFFERED: '1'
-        }
+        },
+        windowsHide: true // Hide console window on Windows
       });
     }
 

@@ -184,22 +184,31 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
   const http = require('http');
 
   try {
-    // SECURITY: Validate URL is http/https and not localhost/internal
+    // SECURITY: Validate URL is http/https
     const parsedUrl = new URL(url);
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
       throw new Error('Invalid URL protocol. Only http and https are allowed.');
     }
 
-    // SECURITY: Prevent SSRF by blocking local/private IPs
+    // SECURITY: Only allow localhost (internal backend API) or external HTTPS
+    // Block private network ranges to prevent SSRF attacks
     const hostname = parsedUrl.hostname.toLowerCase();
-    if (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isPrivateNetwork =
       hostname.startsWith('192.168.') ||
       hostname.startsWith('10.') ||
-      hostname.startsWith('172.')
-    ) {
-      throw new Error('Cannot download from local/private network addresses');
+      hostname.startsWith('172.16.') || hostname.startsWith('172.17.') ||
+      hostname.startsWith('172.18.') || hostname.startsWith('172.19.') ||
+      hostname.startsWith('172.20.') || hostname.startsWith('172.21.') ||
+      hostname.startsWith('172.22.') || hostname.startsWith('172.23.') ||
+      hostname.startsWith('172.24.') || hostname.startsWith('172.25.') ||
+      hostname.startsWith('172.26.') || hostname.startsWith('172.27.') ||
+      hostname.startsWith('172.28.') || hostname.startsWith('172.29.') ||
+      hostname.startsWith('172.30.') || hostname.startsWith('172.31.');
+
+    // Allow localhost for internal API, but block other private IPs
+    if (isPrivateNetwork) {
+      throw new Error('Cannot download from private network addresses');
     }
 
     // SECURITY: Sanitize filename to prevent path traversal

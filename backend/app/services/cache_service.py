@@ -484,7 +484,7 @@ class CacheService:
 
     def clear_all(self) -> None:
         """
-        Remove all cache entries (for testing/maintenance)
+        Remove all cache entries and reset statistics (for testing/maintenance)
         """
         logger.warning("Clearing entire cache...")
         removed = 0
@@ -494,7 +494,14 @@ class CacheService:
                 self._remove_cache_entry(cache_path.name)
                 removed += 1
 
-        logger.info(f"Cleared {removed} cache entries")
+        # Reset statistics
+        self.stats = {
+            "hits": 0,
+            "misses": 0,
+            "total_requests": 0
+        }
+
+        logger.info(f"Cleared {removed} cache entries and reset statistics")
 
 
 # Global cache service instance (will be initialized in main.py)

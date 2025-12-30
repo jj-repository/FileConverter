@@ -48,6 +48,10 @@ class TestCacheServiceBasics:
         assert cache_dir.exists()
         assert cache_dir.is_dir()
 
+        # Clean up
+        import shutil
+        shutil.rmtree(cache_dir, ignore_errors=True)
+
 
 # ============================================================================
 # CACHE KEY GENERATION TESTS

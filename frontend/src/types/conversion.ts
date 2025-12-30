@@ -1,4 +1,4 @@
-export type FileType = 'image' | 'video' | 'audio' | 'document' | 'data' | 'archive' | 'batch';
+export type FileType = 'image' | 'video' | 'audio' | 'document' | 'data' | 'archive' | 'spreadsheet' | 'batch';
 
 export type ConversionStatus = 'idle' | 'uploading' | 'converting' | 'completed' | 'failed';
 
@@ -18,6 +18,8 @@ export interface ConversionOptions {
   delimiter?: string;
   pretty?: boolean;
   compressionLevel?: number;
+  sheetName?: string;
+  includeAllSheets?: boolean;
 }
 
 export interface ConversionResponse {

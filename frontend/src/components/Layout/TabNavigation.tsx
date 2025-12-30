@@ -14,6 +14,7 @@ const tabs: Tab[] = [
   { id: 'document', label: 'Documents', icon: '📄' },
   { id: 'data', label: 'Data', icon: '📊' },
   { id: 'archive', label: 'Archives', icon: '🗜️' },
+  { id: 'spreadsheet', label: 'Spreadsheets', icon: '📈' },
   { id: 'batch', label: 'Batch', icon: '📦' },
 ];
 

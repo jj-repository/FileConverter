@@ -45,6 +45,11 @@ def validate_file_size(file: UploadFile, file_type: str) -> None:
             status_code=413,
             detail=f"Archive file too large. Maximum size: {settings.ARCHIVE_MAX_SIZE / 1024 / 1024}MB"
         )
+    elif file_type == "spreadsheet" and file_size > settings.SPREADSHEET_MAX_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Spreadsheet file too large. Maximum size: {settings.SPREADSHEET_MAX_SIZE / 1024 / 1024}MB"
+        )
     elif file_size > settings.MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=413,

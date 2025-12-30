@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import asyncio
 
 from app.config import settings
-from app.routers import image, video, audio, document, data, archive, batch, websocket
+from app.routers import image, video, audio, document, data, archive, spreadsheet, batch, websocket
 
 
 @asynccontextmanager
@@ -55,6 +55,7 @@ async def root():
             "document": "/api/document",
             "data": "/api/data",
             "archive": "/api/archive",
+            "spreadsheet": "/api/spreadsheet",
         }
     }
 
@@ -103,6 +104,7 @@ app.include_router(audio.router, prefix="/api/audio", tags=["Audio Conversion"])
 app.include_router(document.router, prefix="/api/document", tags=["Document Conversion"])
 app.include_router(data.router, prefix="/api/data", tags=["Data Conversion"])
 app.include_router(archive.router, prefix="/api/archive", tags=["Archive Conversion"])
+app.include_router(spreadsheet.router, prefix="/api/spreadsheet", tags=["Spreadsheet Conversion"])
 app.include_router(batch.router, prefix="/api/batch", tags=["Batch Conversion"])
 app.include_router(websocket.router, prefix="/ws", tags=["WebSocket"])
 

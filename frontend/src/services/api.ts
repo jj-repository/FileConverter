@@ -172,6 +172,39 @@ export const archiveAPI = {
   },
 };
 
+export const spreadsheetAPI = {
+  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('output_format', options.outputFormat);
+
+    if (options.sheetName) {
+      formData.append('sheet_name', options.sheetName);
+    }
+    if (options.includeAllSheets !== undefined) {
+      formData.append('include_all_sheets', options.includeAllSheets.toString());
+    }
+    if (options.encoding) {
+      formData.append('encoding', options.encoding);
+    }
+    if (options.delimiter) {
+      formData.append('delimiter', options.delimiter);
+    }
+
+    const response = await api.post<ConversionResponse>('/spreadsheet/convert', formData);
+    return response.data;
+  },
+
+  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
+    const response = await api.get('/spreadsheet/formats');
+    return response.data;
+  },
+
+  downloadFile: (filename: string): string => {
+    return `/api/spreadsheet/download/${filename}`;
+  },
+};
+
 export interface BatchConversionResult {
   filename: string;
   success: boolean;

@@ -233,6 +233,7 @@ export const BatchConverter: React.FC = () => {
                       <button
                         onClick={() => handleRemoveFile(index)}
                         className="text-red-600 hover:text-red-700 p-1"
+                        aria-label={`Remove ${file.name} from batch`}
                       >
                         ✕
                       </button>
@@ -244,14 +245,16 @@ export const BatchConverter: React.FC = () => {
 
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="batch-output-format" className="block text-sm font-medium text-gray-700 mb-2">
                   Output Format (All files will be converted to this format)
                 </label>
                 <select
+                  id="batch-output-format"
                   value={outputFormat}
                   onChange={(e) => setOutputFormat(e.target.value)}
                   className="input"
                   disabled={status === 'converting'}
+                  aria-label="Select output format for batch conversion"
                 >
                   <optgroup label="Image">
                     <option value="png">PNG</option>
@@ -276,21 +279,24 @@ export const BatchConverter: React.FC = () => {
 
               {window.electron?.isElectron && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="batch-output-directory" className="block text-sm font-medium text-gray-700 mb-2">
                     Output Directory (Optional)
                   </label>
                   <div className="flex gap-2">
                     <input
+                      id="batch-output-directory"
                       type="text"
                       value={outputDirectory || t('common.defaultDownloads')}
                       readOnly
                       className="input flex-1"
                       disabled={status === 'converting'}
+                      aria-label="Output directory path"
                     />
                     <Button
                       onClick={handleSelectOutputDirectory}
                       variant="secondary"
                       disabled={status === 'converting'}
+                      aria-label="Browse for output directory"
                     >
                       Browse
                     </Button>
@@ -305,10 +311,18 @@ export const BatchConverter: React.FC = () => {
                   <span>{progress.message}</span>
                   <span>{progress.progress.toFixed(0)}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
+                <div
+                  role="progressbar"
+                  aria-valuenow={progress.progress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={progress.message || 'Batch conversion progress'}
+                  className="w-full bg-gray-200 rounded-full h-3"
+                >
                   <div
                     className="bg-primary-600 h-3 rounded-full transition-all duration-300"
                     style={{ width: `${progress.progress}%` }}
+                    aria-hidden="true"
                   />
                 </div>
                 <p className="text-xs text-gray-500 text-center">
@@ -318,7 +332,11 @@ export const BatchConverter: React.FC = () => {
             )}
 
             {error && showFeedback && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+              >
                 <p className="font-medium">Conversion Error</p>
                 <p className="text-sm mt-1">{error}</p>
               </div>
@@ -326,7 +344,11 @@ export const BatchConverter: React.FC = () => {
 
             {status === 'completed' && results.length > 0 && showFeedback && (
               <div className="space-y-3">
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
+                >
                   <p className="font-medium">Batch conversion completed!</p>
                   <p className="text-sm mt-1">
                     {results.filter(r => r.success).length} of {results.length} files converted successfully

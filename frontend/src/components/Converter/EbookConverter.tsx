@@ -89,13 +89,15 @@ export const EbookConverter: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
                   Output Format
                 </label>
                 <select
+                  id="output-format"
                   value={converter.outputFormat}
                   onChange={(e) => converter.setOutputFormat(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  aria-label="Select output format for ebook conversion"
                 >
                   {EBOOK_FORMATS.map((format) => (
                     <option key={format} value={format}>
@@ -107,10 +109,11 @@ export const EbookConverter: React.FC = () => {
 
               {window.electron && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
                     Custom Filename (optional)
                   </label>
                   <input
+                    id="custom-filename"
                     type="text"
                     value={converter.customFilename}
                     onChange={(e) => converter.setCustomFilename(e.target.value)}
@@ -122,17 +125,23 @@ export const EbookConverter: React.FC = () => {
 
               {window.electron && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
                     Output Directory
                   </label>
                   <div className="flex gap-2">
                     <input
+                      id="output-directory"
                       type="text"
                       value={converter.outputDirectory || 'Default Downloads folder'}
                       readOnly
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                      aria-label="Output directory path"
                     />
-                    <Button onClick={converter.handleSelectOutputDirectory} variant="secondary">
+                    <Button
+                      onClick={converter.handleSelectOutputDirectory}
+                      variant="secondary"
+                      aria-label="Browse for output directory"
+                    >
                       Browse
                     </Button>
                   </div>
@@ -152,10 +161,14 @@ export const EbookConverter: React.FC = () => {
                   <p className="font-medium">{getStatusText()}</p>
                   {converter.progress && (
                     <div className="mt-2">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        {...converter.getProgressAriaAttributes()}
+                        className="w-full bg-gray-200 rounded-full h-2"
+                      >
                         <div
                           className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${converter.progress.progress}%` }}
+                          aria-hidden="true"
                         />
                       </div>
                       <p className="text-sm mt-1">{converter.progress.progress}%</p>

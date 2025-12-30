@@ -86,14 +86,16 @@ export const SpreadsheetConverter: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
                   Output Format
                 </label>
                 <select
+                  id="output-format"
                   value={converter.outputFormat}
                   onChange={(e) => converter.setOutputFormat(e.target.value)}
                   className="input"
                   disabled={converter.status === 'converting'}
+                  aria-label="Select output format for spreadsheet conversion"
                 >
                   {SPREADSHEET_FORMATS.map((format) => (
                     <option key={format} value={format}>
@@ -109,14 +111,16 @@ export const SpreadsheetConverter: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="encoding" className="block text-sm font-medium text-gray-700 mb-2">
                   Encoding
                 </label>
                 <select
+                  id="encoding"
                   value={encoding}
                   onChange={(e) => setEncoding(e.target.value)}
                   className="input"
                   disabled={converter.status === 'converting'}
+                  aria-label="Select text encoding"
                 >
                   {ENCODINGS.map((enc) => (
                     <option key={enc.value} value={enc.value}>
@@ -128,14 +132,17 @@ export const SpreadsheetConverter: React.FC = () => {
 
               {(converter.outputFormat === 'csv' || converter.outputFormat === 'tsv') && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="delimiter" className="block text-sm font-medium text-gray-700 mb-2">
                     Delimiter
                   </label>
                   <select
+                    id="delimiter"
                     value={delimiter}
                     onChange={(e) => setDelimiter(e.target.value)}
                     className="input"
                     disabled={converter.status === 'converting'}
+                    aria-label="Select delimiter for CSV output"
+                    aria-describedby="delimiter-hint"
                   >
                     {DELIMITERS.map((delim) => (
                       <option key={delim.value} value={delim.value}>
@@ -143,70 +150,78 @@ export const SpreadsheetConverter: React.FC = () => {
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p id="delimiter-hint" className="text-xs text-gray-500 mt-1">
                     Used for CSV output
                   </p>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="sheet-name" className="block text-sm font-medium text-gray-700 mb-2">
                   Sheet Name (Optional)
                 </label>
                 <input
+                  id="sheet-name"
                   type="text"
                   value={sheetName}
                   onChange={(e) => setSheetName(e.target.value)}
                   placeholder="First sheet by default"
                   className="input"
                   disabled={converter.status === 'converting'}
+                  aria-describedby="sheet-name-hint"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p id="sheet-name-hint" className="text-xs text-gray-500 mt-1">
                   Leave empty to convert first sheet
                 </p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
                 Custom Filename (Optional)
               </label>
               <input
+                id="custom-filename"
                 type="text"
                 value={converter.customFilename}
                 onChange={(e) => converter.setCustomFilename(e.target.value)}
                 placeholder={t('common.customFilenamePlaceholder')}
                 className="input w-full"
                 disabled={converter.status === 'converting'}
+                aria-describedby="filename-hint"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p id="filename-hint" className="text-xs text-gray-500 mt-1">
                 {t('common.customFilenameHint')}
               </p>
             </div>
 
             {window.electron?.isElectron && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
                   Output Directory (Optional)
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="output-directory"
                     type="text"
                     value={converter.outputDirectory || t('common.defaultDownloads')}
                     readOnly
                     className="input flex-1"
                     disabled={converter.status === 'converting'}
+                    aria-describedby="output-directory-hint"
+                    aria-label="Output directory path"
                   />
                   <Button
                     onClick={converter.handleSelectOutputDirectory}
                     variant="secondary"
                     disabled={converter.status === 'converting'}
+                    aria-label="Browse for output directory"
                   >
                     Browse
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  💡 When set, files will be saved directly to this directory
+                <p id="output-directory-hint" className="text-xs text-gray-500 mt-1">
+                  When set, files will be saved directly to this directory
                 </p>
               </div>
             )}
@@ -217,23 +232,33 @@ export const SpreadsheetConverter: React.FC = () => {
                   <span>{converter.progress?.message || t('common.processing')}</span>
                   <span>{converter.progress?.progress.toFixed(0) || 0}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  {...converter.getProgressAriaAttributes()}
+                  className="w-full bg-gray-200 rounded-full h-2"
+                >
                   <div
                     className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${converter.progress?.progress || 0}%` }}
+                    aria-hidden="true"
                   />
                 </div>
               </div>
             )}
 
             {converter.error && converter.showFeedback && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div
+                {...converter.getStatusAriaAttributes()}
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+              >
                 {converter.error}
               </div>
             )}
 
             {converter.status === 'completed' && converter.showFeedback && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              <div
+                {...converter.getStatusAriaAttributes()}
+                className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
+              >
                 Spreadsheet conversion completed successfully!
               </div>
             )}

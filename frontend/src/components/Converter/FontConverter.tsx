@@ -87,13 +87,15 @@ export const FontConverter: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
                   Output Format
                 </label>
                 <select
+                  id="output-format"
                   value={converter.outputFormat}
                   onChange={(e) => converter.setOutputFormat(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  aria-label="Select output format for font conversion"
                 >
                   {FONT_FORMATS.map((format) => (
                     <option key={format} value={format}>
@@ -107,17 +109,19 @@ export const FontConverter: React.FC = () => {
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Advanced Options</h4>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="subset-text" className="block text-sm font-medium text-gray-700 mb-2">
                     Subset Text (Optional)
                   </label>
                   <input
+                    id="subset-text"
                     type="text"
                     value={subsetText}
                     onChange={(e) => setSubsetText(e.target.value)}
                     placeholder="e.g., ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    aria-describedby="subset-text-hint"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p id="subset-text-hint" className="text-xs text-gray-500 mt-1">
                     Include only these characters to reduce file size
                   </p>
                 </div>
@@ -138,10 +142,11 @@ export const FontConverter: React.FC = () => {
 
               {window.electron && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
                     Custom Filename (optional)
                   </label>
                   <input
+                    id="custom-filename"
                     type="text"
                     value={converter.customFilename}
                     onChange={(e) => converter.setCustomFilename(e.target.value)}
@@ -153,17 +158,23 @@ export const FontConverter: React.FC = () => {
 
               {window.electron && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
                     Output Directory
                   </label>
                   <div className="flex gap-2">
                     <input
+                      id="output-directory"
                       type="text"
                       value={converter.outputDirectory || 'Default Downloads folder'}
                       readOnly
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                      aria-label="Output directory path"
                     />
-                    <Button onClick={converter.handleSelectOutputDirectory} variant="secondary">
+                    <Button
+                      onClick={converter.handleSelectOutputDirectory}
+                      variant="secondary"
+                      aria-label="Browse for output directory"
+                    >
                       Browse
                     </Button>
                   </div>
@@ -183,10 +194,14 @@ export const FontConverter: React.FC = () => {
                   <p className="font-medium">{getStatusText()}</p>
                   {converter.progress && (
                     <div className="mt-2">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        {...converter.getProgressAriaAttributes()}
+                        className="w-full bg-gray-200 rounded-full h-2"
+                      >
                         <div
                           className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${converter.progress.progress}%` }}
+                          aria-hidden="true"
                         />
                       </div>
                       <p className="text-sm mt-1">{converter.progress.progress}%</p>

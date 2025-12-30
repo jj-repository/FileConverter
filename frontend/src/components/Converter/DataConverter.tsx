@@ -75,14 +75,16 @@ export const DataConverter: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
                   {t('common.outputFormat')}
                 </label>
                 <select
+                  id="output-format"
                   value={converter.outputFormat}
                   onChange={(e) => converter.setOutputFormat(e.target.value)}
                   className="input"
                   disabled={converter.status === 'converting'}
+                  aria-label="Select output format for data conversion"
                 >
                   {DATA_FORMATS.map((format) => (
                     <option key={format} value={format}>
@@ -93,14 +95,16 @@ export const DataConverter: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="encoding" className="block text-sm font-medium text-gray-700 mb-2">
                   {t('common.encoding')}
                 </label>
                 <select
+                  id="encoding"
                   value={encoding}
                   onChange={(e) => setEncoding(e.target.value)}
                   className="input"
                   disabled={converter.status === 'converting'}
+                  aria-label="Select text encoding"
                 >
                   {ENCODINGS.map((enc) => (
                     <option key={enc.value} value={enc.value}>
@@ -111,14 +115,17 @@ export const DataConverter: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="delimiter" className="block text-sm font-medium text-gray-700 mb-2">
                   {t('converter.data.delimiterLabel')}
                 </label>
                 <select
+                  id="delimiter"
                   value={delimiter}
                   onChange={(e) => setDelimiter(e.target.value)}
                   className="input"
                   disabled={converter.status === 'converting'}
+                  aria-label="Select delimiter for CSV output"
+                  aria-describedby="delimiter-hint"
                 >
                   {DELIMITERS.map((delim) => (
                     <option key={delim.value} value={delim.value}>
@@ -126,73 +133,81 @@ export const DataConverter: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
+                <p id="delimiter-hint" className="text-xs text-gray-500 mt-1">
                   {t('converter.data.delimiterHint')}
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="pretty-print" className="block text-sm font-medium text-gray-700 mb-2">
                   {t('converter.data.prettyPrint')}
                 </label>
                 <div className="flex items-center space-x-2">
                   <input
+                    id="pretty-print"
                     type="checkbox"
                     checked={pretty}
                     onChange={(e) => setPretty(e.target.checked)}
                     className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                     disabled={converter.status === 'converting'}
+                    aria-describedby="pretty-hint"
                   />
                   <span className="text-sm text-gray-600">
                     {t('converter.data.prettyPrint')}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p id="pretty-hint" className="text-xs text-gray-500 mt-1">
                   {t('converter.data.prettyHint')}
                 </p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
                 {t('common.customFilename')}
               </label>
               <input
+                id="custom-filename"
                 type="text"
                 value={converter.customFilename}
                 onChange={(e) => converter.setCustomFilename(e.target.value)}
                 placeholder={t('common.customFilenamePlaceholder')}
                 className="input w-full"
                 disabled={converter.status === 'converting'}
+                aria-describedby="filename-hint"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p id="filename-hint" className="text-xs text-gray-500 mt-1">
                 {t('common.customFilenameHint')}
               </p>
             </div>
 
             {window.electron?.isElectron && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
                   {t('common.outputDirectory')}
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="output-directory"
                     type="text"
                     value={converter.outputDirectory || t('common.defaultDownloads')}
                     readOnly
                     className="input flex-1"
                     disabled={converter.status === 'converting'}
+                    aria-describedby="output-directory-hint"
+                    aria-label="Output directory path"
                   />
                   <Button
                     onClick={converter.handleSelectOutputDirectory}
                     variant="secondary"
                     disabled={converter.status === 'converting'}
+                    aria-label="Browse for output directory"
                   >
                     {t('common.browse')}
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  💡 {t('common.outputDirectoryHint')}
+                <p id="output-directory-hint" className="text-xs text-gray-500 mt-1">
+                  {t('common.outputDirectoryHint')}
                 </p>
               </div>
             )}
@@ -203,23 +218,33 @@ export const DataConverter: React.FC = () => {
                   <span>{converter.progress?.message || t('common.processing')}</span>
                   <span>{converter.progress?.progress.toFixed(0) || 0}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  {...converter.getProgressAriaAttributes()}
+                  className="w-full bg-gray-200 rounded-full h-2"
+                >
                   <div
                     className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${converter.progress?.progress || 0}%` }}
+                    aria-hidden="true"
                   />
                 </div>
               </div>
             )}
 
             {converter.error && converter.showFeedback && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div
+                {...converter.getStatusAriaAttributes()}
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+              >
                 {converter.error}
               </div>
             )}
 
             {converter.status === 'completed' && converter.showFeedback && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              <div
+                {...converter.getStatusAriaAttributes()}
+                className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
+              >
                 {t('messages.conversionSuccess')}
               </div>
             )}

@@ -155,5 +155,17 @@
     "selectLanguage": "Sprache auswählen",
     "theme": "Design",
     "notifications": "Benachrichtigungen"
+  },
+  "errors": {
+    "conversionFailed": "Video/Audio-Konvertierung fehlgeschlagen. Die Datei ist möglicherweise beschädigt oder in einem nicht unterstützten Format.",
+    "fileNotFound": "Die Datei konnte nicht gefunden werden. Bitte versuchen Sie erneut hochzuladen.",
+    "timeout": "Die Konvertierung dauert länger als erwartet. Bitte versuchen Sie es mit einer kleineren Datei.",
+    "formatError": "Dieses Dateiformat wird nicht unterstützt. Bitte überprüfen Sie die Liste der unterstützten Formate.",
+    "networkError": "Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+    "fileTooLarge": "Die Datei ist zu groß. Maximale Größe beträgt 500MB.",
+    "permissionDenied": "Zugriff verweigert. Bitte überprüfen Sie die Dateiberechtigungen und versuchen Sie es erneut.",
+    "diskSpace": "Nicht genügend Speicherplatz. Bitte geben Sie Speicherplatz frei und versuchen Sie es erneut.",
+    "serverError": "Serverfehler aufgetreten. Bitte versuchen Sie es später erneut.",
+    "unknown": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
   }
 }

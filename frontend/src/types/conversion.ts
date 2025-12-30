@@ -3,7 +3,7 @@ export type FileType = 'image' | 'video' | 'audio' | 'document' | 'data' | 'arch
 export type ConversionStatus = 'idle' | 'uploading' | 'converting' | 'completed' | 'failed';
 
 export interface ConversionOptions {
-  outputFormat: string;
+  outputFormat?: string;
   quality?: number;
   width?: number;
   height?: number;

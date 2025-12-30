@@ -1,49 +1,64 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { TabNavigation } from './components/Layout/TabNavigation';
 import { LanguageSelector } from './components/Common/LanguageSelector';
-import { ImageConverter } from './components/Converter/ImageConverter';
-import { VideoConverter } from './components/Converter/VideoConverter';
-import { AudioConverter } from './components/Converter/AudioConverter';
-import { DocumentConverter } from './components/Converter/DocumentConverter';
-import { DataConverter } from './components/Converter/DataConverter';
-import { ArchiveConverter } from './components/Converter/ArchiveConverter';
-import { SpreadsheetConverter } from './components/Converter/SpreadsheetConverter';
-import { SubtitleConverter } from './components/Converter/SubtitleConverter';
-import { EbookConverter } from './components/Converter/EbookConverter';
-import { FontConverter } from './components/Converter/FontConverter';
-import { BatchConverter } from './components/Converter/BatchConverterImproved';
 import { FileType } from './types/conversion';
+
+// Lazy load all converter components
+const ImageConverter = lazy(() => import('./components/Converter/ImageConverter').then(module => ({ default: module.ImageConverter })));
+const VideoConverter = lazy(() => import('./components/Converter/VideoConverter').then(module => ({ default: module.VideoConverter })));
+const AudioConverter = lazy(() => import('./components/Converter/AudioConverter').then(module => ({ default: module.AudioConverter })));
+const DocumentConverter = lazy(() => import('./components/Converter/DocumentConverter').then(module => ({ default: module.DocumentConverter })));
+const DataConverter = lazy(() => import('./components/Converter/DataConverter').then(module => ({ default: module.DataConverter })));
+const ArchiveConverter = lazy(() => import('./components/Converter/ArchiveConverter').then(module => ({ default: module.ArchiveConverter })));
+const SpreadsheetConverter = lazy(() => import('./components/Converter/SpreadsheetConverter').then(module => ({ default: module.SpreadsheetConverter })));
+const SubtitleConverter = lazy(() => import('./components/Converter/SubtitleConverter').then(module => ({ default: module.SubtitleConverter })));
+const EbookConverter = lazy(() => import('./components/Converter/EbookConverter').then(module => ({ default: module.EbookConverter })));
+const FontConverter = lazy(() => import('./components/Converter/FontConverter').then(module => ({ default: module.FontConverter })));
+const BatchConverter = lazy(() => import('./components/Converter/BatchConverterImproved').then(module => ({ default: module.BatchConverter })));
 
 function App() {
   const [activeTab, setActiveTab] = useState<FileType>('image');
 
   const renderConverter = () => {
-    switch (activeTab) {
-      case 'image':
-        return <ImageConverter />;
-      case 'video':
-        return <VideoConverter />;
-      case 'audio':
-        return <AudioConverter />;
-      case 'document':
-        return <DocumentConverter />;
-      case 'data':
-        return <DataConverter />;
-      case 'archive':
-        return <ArchiveConverter />;
-      case 'spreadsheet':
-        return <SpreadsheetConverter />;
-      case 'subtitle':
-        return <SubtitleConverter />;
-      case 'ebook':
-        return <EbookConverter />;
-      case 'font':
-        return <FontConverter />;
-      case 'batch':
-        return <BatchConverter />;
-      default:
-        return <ImageConverter />;
-    }
+    return (
+      <Suspense fallback={
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+            <p className="text-gray-600 text-lg">Loading converter...</p>
+          </div>
+        </div>
+      }>
+        {(() => {
+          switch (activeTab) {
+            case 'image':
+              return <ImageConverter />;
+            case 'video':
+              return <VideoConverter />;
+            case 'audio':
+              return <AudioConverter />;
+            case 'document':
+              return <DocumentConverter />;
+            case 'data':
+              return <DataConverter />;
+            case 'archive':
+              return <ArchiveConverter />;
+            case 'spreadsheet':
+              return <SpreadsheetConverter />;
+            case 'subtitle':
+              return <SubtitleConverter />;
+            case 'ebook':
+              return <EbookConverter />;
+            case 'font':
+              return <FontConverter />;
+            case 'batch':
+              return <BatchConverter />;
+            default:
+              return <ImageConverter />;
+          }
+        })()}
+      </Suspense>
+    );
   };
 
   return (

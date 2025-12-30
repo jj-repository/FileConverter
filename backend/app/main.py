@@ -7,6 +7,7 @@ import logging
 
 from app.config import settings
 from app.routers import image, video, audio, document, data, archive, spreadsheet, subtitle, ebook, font, batch, websocket
+from app.middleware.error_handler import register_exception_handlers
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Register exception handlers
+register_exception_handlers(app)
 
 # CORS middleware
 app.add_middleware(

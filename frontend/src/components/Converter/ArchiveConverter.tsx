@@ -1,193 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DropZone } from '../FileUpload/DropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { archiveAPI } from '../../services/api';
-import { ConversionStatus } from '../../types/conversion';
-import { useWebSocket } from '../../hooks/useWebSocket';
+import { useConverter } from '../../hooks/useConverter';
 
 const ARCHIVE_FORMATS = ['zip', 'tar', 'tar.gz', 'tgz', 'tar.bz2', 'tbz2', 'gz', '7z'];
 
 export const ArchiveConverter: React.FC = () => {
   const { t } = useTranslation();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [outputFormat, setOutputFormat] = useState<string>('zip');
   const [compressionLevel, setCompressionLevel] = useState<number>(6);
-  const [outputDirectory, setOutputDirectory] = useState<string | null>(null);
-  const [status, setStatus] = useState<ConversionStatus>('idle');
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [customFilename, setCustomFilename] = useState<string>('');
 
-  const { progress } = useWebSocket(sessionId);
-
-  useEffect(() => {
-    if (progress) {
-      setStatus(progress.status);
-      setShowFeedback(true);
-    }
-  }, [progress]);
-
-  const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    setStatus('idle');
-    setError(null);
-    setDownloadUrl(null);
-    setShowFeedback(false);
-    setIsDraggingOver(false);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleFileSelect(files[0]);
-    }
-  };
-
-  const handleSelectOutputDirectory = async () => {
-    if (!window.electron?.selectOutputDirectory) {
-      alert('Output directory selection is only available in the desktop app');
-      return;
-    }
-
-    try {
-      const directory = await window.electron.selectOutputDirectory();
-      if (directory) {
-        setOutputDirectory(directory);
-      }
-    } catch (err) {
-      console.error('Error selecting output directory:', err);
-      setError('Failed to select output directory');
-    }
-  };
+  const converter = useConverter({ defaultOutputFormat: 'zip' });
 
   const handleConvert = async () => {
-    if (!selectedFile) return;
-
-    try {
-      setStatus('converting');
-      setError(null);
-      setShowFeedback(true);
-
-      const response = await archiveAPI.convert(selectedFile, {
-        outputFormat,
-        compressionLevel,
-      });
-
-      setSessionId(response.session_id);
-
-      if (response.status === 'completed' && response.download_url) {
-        setDownloadUrl(response.download_url);
-        setStatus('completed');
-        setShowFeedback(true);
-
-        // Auto-download if output directory is selected
-        if (outputDirectory && window.electron?.downloadFile && response.download_url) {
-          setTimeout(async () => {
-            await autoDownload(response.download_url!);
-          }, 200);
-        }
-      } else if (response.status === 'failed') {
-        setError(response.error || 'Conversion failed');
-        setStatus('failed');
-      }
-    } catch (err: any) {
-      console.error('Archive conversion error:', err);
-      setError(err.response?.data?.detail || err.message || 'Conversion failed');
-      setStatus('failed');
-      setShowFeedback(true);
-    }
-  };
-
-  const autoDownload = async (url: string) => {
-    if (!outputDirectory || !window.electron?.downloadFile) return;
-
-    try {
-      const urlParts = url.split('/');
-      const defaultFilename = urlParts[urlParts.length - 1] || `converted.${outputFormat}`;
-      const filename = customFilename ? `${customFilename}.${outputFormat}` : defaultFilename;
-
-      const result = await window.electron.downloadFile({
-        url: `http://localhost:8000${url}`,
-        directory: outputDirectory,
-        filename: filename
-      });
-
-      if (result.success) {
-        if (window.electron.showItemInFolder) {
-          const shouldShow = confirm(`✅ File saved to:\n${result.path}\n\nDo you want to show it in folder?`);
-          if (shouldShow) {
-            await window.electron.showItemInFolder(result.path);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Auto-download error:', err);
-      alert(`Failed to save file: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
-  };
-
-  const handleDownload = async () => {
-    if (!downloadUrl) return;
-
-    if (outputDirectory && window.electron?.downloadFile) {
-      try {
-        const urlParts = downloadUrl.split('/');
-        const defaultFilename = urlParts[urlParts.length - 1] || `converted.${outputFormat}`;
-        const filename = customFilename ? `${customFilename}.${outputFormat}` : defaultFilename;
-
-        const result = await window.electron.downloadFile({
-          url: `http://localhost:8000${downloadUrl}`,
-          directory: outputDirectory,
-          filename: filename
-        });
-
-        if (result.success) {
-          if (window.electron.showItemInFolder) {
-            const shouldShow = confirm(`File saved successfully to:\n${result.path}\n\nDo you want to show it in folder?`);
-            if (shouldShow) {
-              await window.electron.showItemInFolder(result.path);
-            }
-          } else {
-            alert(`File saved successfully to:\n${result.path}`);
-          }
-        }
-      } catch (err) {
-        console.error('Download error:', err);
-        alert(`Failed to download file: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      }
-    } else {
-      window.location.href = downloadUrl;
-    }
-  };
-
-  const handleReset = () => {
-    setSelectedFile(null);
-    setStatus('idle');
-    setDownloadUrl(null);
-    setError(null);
-    setSessionId(null);
-    setShowFeedback(false);
+    await converter.handleConvert(archiveAPI, { compressionLevel });
   };
 
   return (
@@ -195,20 +23,20 @@ export const ArchiveConverter: React.FC = () => {
       <Card>
         <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('converter.archive.title')}</h2>
 
-        {!selectedFile ? (
+        {!converter.selectedFile ? (
           <DropZone
-            onFileSelect={handleFileSelect}
+            onFileSelect={converter.handleFileSelect}
             acceptedFormats={ARCHIVE_FORMATS}
             fileType="archive"
           />
         ) : (
           <div
             className="space-y-6 relative"
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+            onDragOver={converter.handleDragOver}
+            onDragLeave={converter.handleDragLeave}
+            onDrop={converter.handleDrop}
           >
-            {isDraggingOver && (
+            {converter.isDraggingOver && (
               <div className="absolute inset-0 z-10 bg-primary-500 bg-opacity-20 border-4 border-primary-500 border-dashed rounded-lg flex items-center justify-center">
                 <div className="bg-white px-6 py-4 rounded-lg shadow-lg">
                   <p className="text-primary-600 font-semibold text-lg">Drop to replace file</p>
@@ -218,11 +46,11 @@ export const ArchiveConverter: React.FC = () => {
 
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">
-                <span className="font-medium">File:</span> {selectedFile.name}
+                <span className="font-medium">File:</span> {converter.selectedFile.name}
               </p>
               <p className="text-sm text-gray-600">
                 <span className="font-medium">Size:</span>{' '}
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                {(converter.selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
               <p className="text-xs text-gray-500 mt-2">
                 💡 {t('dropzone.dragActive')}
@@ -235,10 +63,10 @@ export const ArchiveConverter: React.FC = () => {
                   Output Format
                 </label>
                 <select
-                  value={outputFormat}
-                  onChange={(e) => setOutputFormat(e.target.value)}
+                  value={converter.outputFormat}
+                  onChange={(e) => converter.setOutputFormat(e.target.value)}
                   className="input"
-                  disabled={status === 'converting'}
+                  disabled={converter.status === 'converting'}
                 >
                   {ARCHIVE_FORMATS.map((format) => (
                     <option key={format} value={format}>
@@ -259,7 +87,7 @@ export const ArchiveConverter: React.FC = () => {
                   value={compressionLevel}
                   onChange={(e) => setCompressionLevel(Number(e.target.value))}
                   className="w-full"
-                  disabled={status === 'converting'}
+                  disabled={converter.status === 'converting'}
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>Faster</span>
@@ -274,11 +102,11 @@ export const ArchiveConverter: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={customFilename}
-                onChange={(e) => setCustomFilename(e.target.value)}
+                value={converter.customFilename}
+                onChange={(e) => converter.setCustomFilename(e.target.value)}
                 placeholder={t('common.customFilenamePlaceholder')}
                 className="input w-full"
-                disabled={status === 'converting'}
+                disabled={converter.status === 'converting'}
               />
               <p className="text-xs text-gray-500 mt-1">
                 {t('common.customFilenameHint')}
@@ -293,15 +121,15 @@ export const ArchiveConverter: React.FC = () => {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={outputDirectory || t('common.defaultDownloads')}
+                    value={converter.outputDirectory || t('common.defaultDownloads')}
                     readOnly
                     className="input flex-1"
-                    disabled={status === 'converting'}
+                    disabled={converter.status === 'converting'}
                   />
                   <Button
-                    onClick={handleSelectOutputDirectory}
+                    onClick={converter.handleSelectOutputDirectory}
                     variant="secondary"
-                    disabled={status === 'converting'}
+                    disabled={converter.status === 'converting'}
                   >
                     Browse
                   </Button>
@@ -312,53 +140,53 @@ export const ArchiveConverter: React.FC = () => {
               </div>
             )}
 
-            {status === 'converting' && showFeedback && (
+            {converter.status === 'converting' && converter.showFeedback && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>{progress?.message || t('common.processing')}</span>
-                  <span>{progress?.progress.toFixed(0) || 0}%</span>
+                  <span>{converter.progress?.message || t('common.processing')}</span>
+                  <span>{converter.progress?.progress.toFixed(0) || 0}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${progress?.progress || 0}%` }}
+                    style={{ width: `${converter.progress?.progress || 0}%` }}
                   />
                 </div>
               </div>
             )}
 
-            {error && showFeedback && (
+            {converter.error && converter.showFeedback && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                {error}
+                {converter.error}
               </div>
             )}
 
-            {status === 'completed' && showFeedback && (
+            {converter.status === 'completed' && converter.showFeedback && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
                 Archive conversion completed successfully!
               </div>
             )}
 
             <div className="flex gap-4">
-              {status === 'idle' || status === 'failed' ? (
+              {converter.status === 'idle' || converter.status === 'failed' ? (
                 <>
                   <Button onClick={handleConvert} className="flex-1">
                     Convert Archive
                   </Button>
-                  <Button onClick={handleReset} variant="secondary">
+                  <Button onClick={converter.handleReset} variant="secondary">
                     Reset
                   </Button>
                 </>
-              ) : status === 'converting' ? (
+              ) : converter.status === 'converting' ? (
                 <Button disabled loading className="flex-1">
                   Converting...
                 </Button>
-              ) : status === 'completed' ? (
+              ) : converter.status === 'completed' ? (
                 <>
-                  <Button onClick={handleDownload} className="flex-1">
+                  <Button onClick={converter.handleDownload} className="flex-1">
                     Download
                   </Button>
-                  <Button onClick={handleReset} variant="secondary">
+                  <Button onClick={converter.handleReset} variant="secondary">
                     Convert Another
                   </Button>
                 </>

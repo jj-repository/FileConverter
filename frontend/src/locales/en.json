@@ -155,5 +155,17 @@
     "selectLanguage": "Select Language",
     "theme": "Theme",
     "notifications": "Notifications"
+  },
+  "errors": {
+    "conversionFailed": "Video/Audio conversion failed. The file may be corrupted or in an unsupported format.",
+    "fileNotFound": "The file could not be found. Please try uploading again.",
+    "timeout": "The conversion is taking longer than expected. Please try with a smaller file.",
+    "formatError": "This file format is not supported. Please check the supported formats list.",
+    "networkError": "Connection error. Please check your internet connection and try again.",
+    "fileTooLarge": "The file is too large. Maximum size is 500MB.",
+    "permissionDenied": "Permission denied. Please check file permissions and try again.",
+    "diskSpace": "Not enough disk space. Please free up some space and try again.",
+    "serverError": "Server error occurred. Please try again later.",
+    "unknown": "An unexpected error occurred. Please try again."
   }
 }

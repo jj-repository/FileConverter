@@ -38,7 +38,7 @@ class AudioConverter(BaseConverter):
                 str(file_path)
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=settings.SUBPROCESS_TIMEOUT)
             if result.returncode == 0 and result.stdout.strip():
                 return float(result.stdout.strip())
             return 0.0
@@ -208,7 +208,7 @@ class AudioConverter(BaseConverter):
                 str(file_path)
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=settings.SUBPROCESS_TIMEOUT)
 
             if result.returncode == 0:
                 import json

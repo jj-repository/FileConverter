@@ -1,129 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DropZone } from '../FileUpload/DropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { fontAPI } from '../../services/api';
-import { ConversionStatus } from '../../types/conversion';
-import { useWebSocket } from '../../hooks/useWebSocket';
+import { useConverter } from '../../hooks/useConverter';
 
 const FONT_FORMATS = ['ttf', 'otf', 'woff', 'woff2'];
 
 export const FontConverter: React.FC = () => {
   const { t } = useTranslation();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [outputFormat, setOutputFormat] = useState<string>('woff2');
   const [subsetText, setSubsetText] = useState<string>('');
   const [optimize, setOptimize] = useState<boolean>(true);
-  const [outputDirectory, setOutputDirectory] = useState<string | null>(null);
-  const [status, setStatus] = useState<ConversionStatus>('idle');
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [customFilename, setCustomFilename] = useState<string>('');
 
-  const { progress } = useWebSocket(sessionId);
-
-  useEffect(() => {
-    if (progress) {
-      setStatus(progress.status);
-      setShowFeedback(true);
-    }
-  }, [progress]);
-
-  const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    setStatus('idle');
-    setError(null);
-    setDownloadUrl(null);
-    setShowFeedback(false);
-    setIsDraggingOver(false);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleFileSelect(files[0]);
-    }
-  };
-
-  const handleSelectOutputDirectory = async () => {
-    if (!window.electron?.selectOutputDirectory) {
-      alert('Output directory selection is only available in the desktop app');
-      return;
-    }
-
-    try {
-      const directory = await window.electron.selectOutputDirectory();
-      if (directory) {
-        setOutputDirectory(directory);
-      }
-    } catch (err) {
-      console.error('Failed to select output directory:', err);
-    }
-  };
+  const converter = useConverter({ defaultOutputFormat: 'woff2' });
 
   const handleConvert = async () => {
-    if (!selectedFile) return;
-
-    setStatus('uploading');
-    setError(null);
-    setShowFeedback(true);
-
-    try {
-      const response = await fontAPI.convert(selectedFile, {
-        outputFormat,
-        subsetText: subsetText || undefined,
-        optimize,
-      });
-
-      setSessionId(response.session_id);
-      setStatus(response.status);
-
-      if (response.download_url) {
-        setDownloadUrl(response.download_url);
-
-        // Auto-download for Electron app
-        if (window.electron?.downloadFile) {
-          const filename = customFilename || `${selectedFile.name.split('.')[0]}.${outputFormat}`;
-          await window.electron.downloadFile(
-            response.download_url,
-            filename,
-            outputDirectory || undefined
-          );
-        }
-      }
-
-      if (response.error) {
-        setError(response.error);
-        setStatus('failed');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Conversion failed');
-      setStatus('failed');
-    }
+    await converter.handleConvert(fontAPI, {
+      subsetText: subsetText || undefined,
+      optimize,
+    });
   };
 
   const getStatusColor = () => {
-    switch (status) {
+    switch (converter.status) {
       case 'completed':
         return 'text-green-600';
       case 'failed':
@@ -137,9 +37,9 @@ export const FontConverter: React.FC = () => {
   };
 
   const getStatusText = () => {
-    if (progress?.message) return progress.message;
+    if (converter.progress?.message) return converter.progress.message;
 
-    switch (status) {
+    switch (converter.status) {
       case 'uploading':
         return 'Uploading file...';
       case 'converting':
@@ -147,7 +47,7 @@ export const FontConverter: React.FC = () => {
       case 'completed':
         return 'Conversion completed!';
       case 'failed':
-        return error || 'Conversion failed';
+        return converter.error || 'Conversion failed';
       default:
         return 'Ready to convert';
     }
@@ -155,7 +55,6 @@ export const FontConverter: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Information Banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="text-sm font-semibold text-blue-900 mb-2">{t('converter.font.title')}</h3>
         <p className="text-sm text-blue-800">
@@ -171,38 +70,29 @@ export const FontConverter: React.FC = () => {
 
       <Card>
         <div className="space-y-6">
-          {/* File Upload */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <DropZone
-              onFileSelect={handleFileSelect}
-              acceptedFormats={FONT_FORMATS}
-              isDraggingOver={isDraggingOver}
-            />
-          </div>
+          <DropZone
+            onFileSelect={converter.handleFileSelect}
+            acceptedFormats={FONT_FORMATS}
+            fileType="font"
+          />
 
-          {selectedFile && (
+          {converter.selectedFile && (
             <>
-              {/* Selected File Info */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600">Selected file:</p>
-                <p className="font-medium">{selectedFile.name}</p>
+                <p className="font-medium">{converter.selectedFile.name}</p>
                 <p className="text-sm text-gray-500">
-                  {(selectedFile.size / 1024).toFixed(2)} KB
+                  {(converter.selectedFile.size / 1024).toFixed(2)} KB
                 </p>
               </div>
 
-              {/* Output Format Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Output Format
                 </label>
                 <select
-                  value={outputFormat}
-                  onChange={(e) => setOutputFormat(e.target.value)}
+                  value={converter.outputFormat}
+                  onChange={(e) => converter.setOutputFormat(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   {FONT_FORMATS.map((format) => (
@@ -213,11 +103,9 @@ export const FontConverter: React.FC = () => {
                 </select>
               </div>
 
-              {/* Advanced Options */}
               <div className="border-t pt-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Advanced Options</h4>
 
-                {/* Subset Text */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Subset Text (Optional)
@@ -234,7 +122,6 @@ export const FontConverter: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Optimize Checkbox */}
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -249,7 +136,6 @@ export const FontConverter: React.FC = () => {
                 </div>
               </div>
 
-              {/* Custom Filename (Electron Only) */}
               {window.electron && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -257,15 +143,14 @@ export const FontConverter: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={customFilename}
-                    onChange={(e) => setCustomFilename(e.target.value)}
-                    placeholder={`${selectedFile.name.split('.')[0]}.${outputFormat}`}
+                    value={converter.customFilename}
+                    onChange={(e) => converter.setCustomFilename(e.target.value)}
+                    placeholder={`${converter.selectedFile.name.split('.')[0]}.${converter.outputFormat}`}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
               )}
 
-              {/* Output Directory (Electron Only) */}
               {window.electron && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -274,49 +159,46 @@ export const FontConverter: React.FC = () => {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      value={outputDirectory || 'Default Downloads folder'}
+                      value={converter.outputDirectory || 'Default Downloads folder'}
                       readOnly
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
                     />
-                    <Button onClick={handleSelectOutputDirectory} variant="secondary">
+                    <Button onClick={converter.handleSelectOutputDirectory} variant="secondary">
                       Browse
                     </Button>
                   </div>
                 </div>
               )}
 
-              {/* Convert Button */}
               <Button
                 onClick={handleConvert}
-                disabled={status === 'uploading' || status === 'converting'}
+                disabled={converter.status === 'uploading' || converter.status === 'converting'}
                 className="w-full"
               >
-                {status === 'uploading' || status === 'converting' ? 'Converting...' : 'Convert Font'}
+                {converter.status === 'uploading' || converter.status === 'converting' ? 'Converting...' : 'Convert Font'}
               </Button>
 
-              {/* Status/Feedback */}
-              {showFeedback && (
+              {converter.showFeedback && (
                 <div className={`text-center ${getStatusColor()}`}>
                   <p className="font-medium">{getStatusText()}</p>
-                  {progress && (
+                  {converter.progress && (
                     <div className="mt-2">
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${progress.progress}%` }}
+                          style={{ width: `${converter.progress.progress}%` }}
                         />
                       </div>
-                      <p className="text-sm mt-1">{progress.progress}%</p>
+                      <p className="text-sm mt-1">{converter.progress.progress}%</p>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Download Link (Web Only) */}
-              {downloadUrl && status === 'completed' && !window.electron && (
+              {converter.downloadUrl && converter.status === 'completed' && !window.electron && (
                 <div className="text-center">
                   <a
-                    href={downloadUrl}
+                    href={converter.downloadUrl}
                     download
                     className="inline-block px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                   >

@@ -1,4 +1,4 @@
-export type FileType = 'image' | 'video' | 'audio' | 'document' | 'data' | 'batch';
+export type FileType = 'image' | 'video' | 'audio' | 'document' | 'data' | 'archive' | 'batch';
 
 export type ConversionStatus = 'idle' | 'uploading' | 'converting' | 'completed' | 'failed';
 
@@ -17,6 +17,7 @@ export interface ConversionOptions {
   encoding?: string;
   delimiter?: string;
   pretty?: boolean;
+  compressionLevel?: number;
 }
 
 export interface ConversionResponse {

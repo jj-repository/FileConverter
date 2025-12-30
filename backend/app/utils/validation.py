@@ -40,6 +40,11 @@ def validate_file_size(file: UploadFile, file_type: str) -> None:
             status_code=413,
             detail=f"Document file too large. Maximum size: {settings.DOCUMENT_MAX_SIZE / 1024 / 1024}MB"
         )
+    elif file_type == "archive" and file_size > settings.ARCHIVE_MAX_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Archive file too large. Maximum size: {settings.ARCHIVE_MAX_SIZE / 1024 / 1024}MB"
+        )
     elif file_size > settings.MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=413,
@@ -49,6 +54,19 @@ def validate_file_size(file: UploadFile, file_type: str) -> None:
 
 def validate_file_extension(filename: str, allowed_formats: Set[str]) -> str:
     """Validate file extension against allowed formats"""
+    filename_lower = filename.lower()
+
+    # Check for compound extensions (e.g., .tar.gz, .tar.bz2)
+    if filename_lower.endswith('.tar.gz') and 'tar.gz' in allowed_formats:
+        return 'tar.gz'
+    elif filename_lower.endswith('.tar.bz2') and 'tar.bz2' in allowed_formats:
+        return 'tar.bz2'
+    elif filename_lower.endswith('.tgz') and 'tgz' in allowed_formats:
+        return 'tgz'
+    elif filename_lower.endswith('.tbz2') and 'tbz2' in allowed_formats:
+        return 'tbz2'
+
+    # Standard single extension
     file_extension = Path(filename).suffix.lower().lstrip('.')
 
     if file_extension not in allowed_formats:

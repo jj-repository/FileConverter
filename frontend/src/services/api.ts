@@ -148,6 +148,30 @@ export const dataAPI = {
   },
 };
 
+export const archiveAPI = {
+  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('output_format', options.outputFormat);
+
+    if (options.compressionLevel !== undefined) {
+      formData.append('compression_level', options.compressionLevel.toString());
+    }
+
+    const response = await api.post<ConversionResponse>('/archive/convert', formData);
+    return response.data;
+  },
+
+  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
+    const response = await api.get('/archive/formats');
+    return response.data;
+  },
+
+  downloadFile: (filename: string): string => {
+    return `/api/archive/download/${filename}`;
+  },
+};
+
 export interface BatchConversionResult {
   filename: string;
   success: boolean;

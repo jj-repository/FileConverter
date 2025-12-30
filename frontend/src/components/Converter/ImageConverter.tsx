@@ -6,7 +6,7 @@ import { imageAPI } from '../../services/api';
 import { ConversionStatus } from '../../types/conversion';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
-const IMAGE_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'ico'];
+const IMAGE_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'ico', 'heic', 'heif', 'svg'];
 
 export const ImageConverter: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);

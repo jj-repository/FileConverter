@@ -3,6 +3,21 @@ from typing import Dict, Any
 from PIL import Image
 import asyncio
 
+# Register HEIC support for Pillow
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+    HEIF_AVAILABLE = True
+except ImportError:
+    HEIF_AVAILABLE = False
+
+# SVG support
+try:
+    import cairosvg
+    SVG_AVAILABLE = True
+except ImportError:
+    SVG_AVAILABLE = False
+
 from app.services.base_converter import BaseConverter
 from app.config import settings
 
@@ -53,6 +68,36 @@ class ImageConverter(BaseConverter):
         output_path = settings.UPLOAD_DIR / f"{input_path.stem}_converted.{output_format}"
 
         await self.send_progress(session_id, 20, "converting", "Loading image")
+
+        # Special handling for SVG input (rasterize first)
+        if input_format == 'svg':
+            if not SVG_AVAILABLE:
+                raise ValueError("SVG support not available. Install cairosvg.")
+
+            await self.send_progress(session_id, 30, "converting", "Rasterizing SVG")
+
+            # Rasterize SVG to PNG first
+            temp_png = settings.TEMP_DIR / f"{input_path.stem}_temp.png"
+
+            # Get dimensions from options or use default
+            width = options.get('width', 800)
+            height = options.get('height')
+
+            if output_format == 'svg':
+                # SVG to SVG just copies the file
+                import shutil
+                shutil.copy(input_path, output_path)
+                await self.send_progress(session_id, 100, "completed", "SVG file copied")
+                return output_path
+
+            # Convert SVG to PNG
+            cairosvg.svg2png(
+                url=str(input_path),
+                write_to=str(temp_png),
+                output_width=width,
+                output_height=height
+            )
+            input_path = temp_png
 
         # Open image
         with Image.open(input_path) as img:

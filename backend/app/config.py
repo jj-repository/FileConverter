@@ -31,10 +31,11 @@ class Settings(BaseSettings):
     PANDOC_PATH: str = ""
 
     # Supported formats
-    IMAGE_FORMATS: Set[str] = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "ico"}
-    VIDEO_FORMATS: Set[str] = {"mp4", "avi", "mov", "mkv", "webm", "flv", "wmv"}
-    AUDIO_FORMATS: Set[str] = {"mp3", "wav", "flac", "aac", "ogg", "m4a", "wma"}
+    IMAGE_FORMATS: Set[str] = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "ico", "heic", "heif", "svg"}
+    VIDEO_FORMATS: Set[str] = {"mp4", "avi", "mov", "mkv", "webm", "flv", "wmv", "m4v", "3gp", "3g2"}
+    AUDIO_FORMATS: Set[str] = {"mp3", "wav", "flac", "aac", "ogg", "m4a", "wma", "opus", "alac"}
     DOCUMENT_FORMATS: Set[str] = {"txt", "pdf", "docx", "md", "html", "rtf"}
+    DATA_FORMATS: Set[str] = {"csv", "json", "xml"}
 
     # FFmpeg allowed options (whitelist for security)
     ALLOWED_VIDEO_CODECS: Set[str] = {"libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4", "h264"}

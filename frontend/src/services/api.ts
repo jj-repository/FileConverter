@@ -118,6 +118,36 @@ export const documentAPI = {
   },
 };
 
+export const dataAPI = {
+  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('output_format', options.outputFormat);
+
+    if (options.encoding) {
+      formData.append('encoding', options.encoding);
+    }
+    if (options.delimiter) {
+      formData.append('delimiter', options.delimiter);
+    }
+    if (options.pretty !== undefined) {
+      formData.append('pretty', options.pretty.toString());
+    }
+
+    const response = await api.post<ConversionResponse>('/data/convert', formData);
+    return response.data;
+  },
+
+  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
+    const response = await api.get('/data/formats');
+    return response.data;
+  },
+
+  downloadFile: (filename: string): string => {
+    return `/api/data/download/${filename}`;
+  },
+};
+
 export interface BatchConversionResult {
   filename: string;
   success: boolean;

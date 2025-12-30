@@ -12,6 +12,7 @@ const tabs: Tab[] = [
   { id: 'video', label: 'Videos', icon: '🎥' },
   { id: 'audio', label: 'Audio', icon: '🎵' },
   { id: 'document', label: 'Documents', icon: '📄' },
+  { id: 'data', label: 'Data', icon: '📊' },
   { id: 'batch', label: 'Batch', icon: '📦' },
 ];
 

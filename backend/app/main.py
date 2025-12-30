@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import asyncio
 
 from app.config import settings
-from app.routers import image, video, audio, document, batch, websocket
+from app.routers import image, video, audio, document, data, batch, websocket
 
 
 @asynccontextmanager
@@ -53,6 +53,7 @@ async def root():
             "video": "/api/video",
             "audio": "/api/audio",
             "document": "/api/document",
+            "data": "/api/data",
         }
     }
 
@@ -99,6 +100,7 @@ app.include_router(image.router, prefix="/api/image", tags=["Image Conversion"])
 app.include_router(video.router, prefix="/api/video", tags=["Video Conversion"])
 app.include_router(audio.router, prefix="/api/audio", tags=["Audio Conversion"])
 app.include_router(document.router, prefix="/api/document", tags=["Document Conversion"])
+app.include_router(data.router, prefix="/api/data", tags=["Data Conversion"])
 app.include_router(batch.router, prefix="/api/batch", tags=["Batch Conversion"])
 app.include_router(websocket.router, prefix="/ws", tags=["WebSocket"])
 

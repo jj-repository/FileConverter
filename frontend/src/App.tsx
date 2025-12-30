@@ -4,6 +4,7 @@ import { ImageConverter } from './components/Converter/ImageConverter';
 import { VideoConverter } from './components/Converter/VideoConverter';
 import { AudioConverter } from './components/Converter/AudioConverter';
 import { DocumentConverter } from './components/Converter/DocumentConverter';
+import { DataConverter } from './components/Converter/DataConverter';
 import { BatchConverter } from './components/Converter/BatchConverterImproved';
 import { FileType } from './types/conversion';
 
@@ -20,6 +21,8 @@ function App() {
         return <AudioConverter />;
       case 'document':
         return <DocumentConverter />;
+      case 'data':
+        return <DataConverter />;
       case 'batch':
         return <BatchConverter />;
       default:

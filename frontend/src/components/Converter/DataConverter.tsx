@@ -2,40 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { DropZone } from '../FileUpload/DropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
-import { audioAPI } from '../../services/api';
+import { dataAPI } from '../../services/api';
 import { ConversionStatus } from '../../types/conversion';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
-const AUDIO_FORMATS = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'opus', 'alac'];
+const DATA_FORMATS = ['csv', 'json', 'xml'];
 
-const BITRATES = [
-  { value: '64k', label: '64 kbps (Low)' },
-  { value: '128k', label: '128 kbps (Standard)' },
-  { value: '192k', label: '192 kbps (Good)' },
-  { value: '256k', label: '256 kbps (High)' },
-  { value: '320k', label: '320 kbps (Highest)' },
+const ENCODINGS = [
+  { value: 'utf-8', label: 'UTF-8 (Default)' },
+  { value: 'utf-16', label: 'UTF-16' },
+  { value: 'ascii', label: 'ASCII' },
+  { value: 'latin-1', label: 'Latin-1' },
 ];
 
-const SAMPLE_RATES = [
-  { value: null, label: 'Original' },
-  { value: 22050, label: '22.05 kHz' },
-  { value: 44100, label: '44.1 kHz (CD Quality)' },
-  { value: 48000, label: '48 kHz (Studio)' },
-  { value: 96000, label: '96 kHz (Hi-Res)' },
+const DELIMITERS = [
+  { value: ',', label: 'Comma (,)' },
+  { value: ';', label: 'Semicolon (;)' },
+  { value: '\t', label: 'Tab' },
+  { value: '|', label: 'Pipe (|)' },
 ];
 
-const CHANNEL_OPTIONS = [
-  { value: null, label: 'Original' },
-  { value: 1, label: 'Mono' },
-  { value: 2, label: 'Stereo' },
-];
-
-export const AudioConverter: React.FC = () => {
+export const DataConverter: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [outputFormat, setOutputFormat] = useState<string>('mp3');
-  const [bitrate, setBitrate] = useState<string>('192k');
-  const [sampleRate, setSampleRate] = useState<number | null>(null);
-  const [channels, setChannels] = useState<number | null>(null);
+  const [outputFormat, setOutputFormat] = useState<string>('csv');
+  const [encoding, setEncoding] = useState<string>('utf-8');
+  const [delimiter, setDelimiter] = useState<string>(',');
+  const [pretty, setPretty] = useState<boolean>(true);
   const [outputDirectory, setOutputDirectory] = useState<string | null>(null);
   const [status, setStatus] = useState<ConversionStatus>('idle');
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -110,31 +102,17 @@ export const AudioConverter: React.FC = () => {
       setStatus('converting');
       setError(null);
       setShowFeedback(true);
-      setDownloadUrl(null);
 
-      const options: any = {
+      const response = await dataAPI.convert(selectedFile, {
         outputFormat,
-        bitrate,
-      };
-
-      if (sampleRate !== null) {
-        options.sampleRate = sampleRate;
-      }
-
-      if (channels !== null) {
-        options.channels = channels;
-      }
-
-      console.log('Starting audio conversion...', options);
-
-      const response = await audioAPI.convert(selectedFile, options);
-
-      console.log('Audio conversion response:', response);
+        encoding,
+        delimiter,
+        pretty,
+      });
 
       setSessionId(response.session_id);
 
       if (response.status === 'completed' && response.download_url) {
-        console.log('Audio conversion completed, download URL:', response.download_url);
         setDownloadUrl(response.download_url);
         setStatus('completed');
         setShowFeedback(true);
@@ -145,20 +123,12 @@ export const AudioConverter: React.FC = () => {
             await autoDownload(response.download_url!);
           }, 200);
         }
-
-        // Force re-render
-        setTimeout(() => {
-          setStatus('completed');
-          setShowFeedback(true);
-        }, 100);
       } else if (response.status === 'failed') {
         setError(response.error || 'Conversion failed');
         setStatus('failed');
-      } else {
-        console.log('Audio conversion in progress, status:', response.status);
       }
     } catch (err: any) {
-      console.error('Audio conversion error:', err);
+      console.error('Data conversion error:', err);
       setError(err.response?.data?.detail || err.message || 'Conversion failed');
       setStatus('failed');
       setShowFeedback(true);
@@ -173,15 +143,11 @@ export const AudioConverter: React.FC = () => {
       const defaultFilename = urlParts[urlParts.length - 1] || `converted.${outputFormat}`;
       const filename = customFilename ? `${customFilename}.${outputFormat}` : defaultFilename;
 
-      console.log('Auto-downloading to:', outputDirectory, filename);
-
       const result = await window.electron.downloadFile({
         url: `http://localhost:8000${url}`,
         directory: outputDirectory,
         filename: filename
       });
-
-      console.log('Auto-download result:', result);
 
       if (result.success) {
         if (window.electron.showItemInFolder) {
@@ -200,15 +166,11 @@ export const AudioConverter: React.FC = () => {
   const handleDownload = async () => {
     if (!downloadUrl) return;
 
-    // If user selected an output directory and we're in Electron, download to that directory
     if (outputDirectory && window.electron?.downloadFile) {
       try {
-        // Extract filename from download URL or generate one
         const urlParts = downloadUrl.split('/');
         const defaultFilename = urlParts[urlParts.length - 1] || `converted.${outputFormat}`;
         const filename = customFilename ? `${customFilename}.${outputFormat}` : defaultFilename;
-
-        console.log('Downloading to:', outputDirectory, filename);
 
         const result = await window.electron.downloadFile({
           url: `http://localhost:8000${downloadUrl}`,
@@ -216,10 +178,7 @@ export const AudioConverter: React.FC = () => {
           filename: filename
         });
 
-        console.log('Download result:', result);
-
         if (result.success) {
-          // Show success message and offer to show in folder
           if (window.electron.showItemInFolder) {
             const shouldShow = confirm(`File saved successfully to:\n${result.path}\n\nDo you want to show it in folder?`);
             if (shouldShow) {
@@ -234,7 +193,6 @@ export const AudioConverter: React.FC = () => {
         alert(`Failed to download file: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
     } else {
-      // Fall back to browser download
       window.location.href = downloadUrl;
     }
   };
@@ -248,27 +206,16 @@ export const AudioConverter: React.FC = () => {
     setShowFeedback(false);
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024 * 1024) {
-      return (bytes / 1024).toFixed(2) + ' KB';
-    }
-    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
-  };
-
-  const isLosslessFormat = (format: string) => {
-    return ['flac', 'wav'].includes(format);
-  };
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Card>
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Audio Converter</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Data Converter</h2>
 
         {!selectedFile ? (
           <DropZone
             onFileSelect={handleFileSelect}
-            acceptedFormats={AUDIO_FORMATS}
-            fileType="audio"
+            acceptedFormats={DATA_FORMATS}
+            fileType="data"
           />
         ) : (
           <div
@@ -277,7 +224,6 @@ export const AudioConverter: React.FC = () => {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* Drag and drop overlay */}
             {isDraggingOver && (
               <div className="absolute inset-0 z-10 bg-primary-500 bg-opacity-20 border-4 border-primary-500 border-dashed rounded-lg flex items-center justify-center">
                 <div className="bg-white px-6 py-4 rounded-lg shadow-lg">
@@ -291,7 +237,8 @@ export const AudioConverter: React.FC = () => {
                 <span className="font-medium">File:</span> {selectedFile.name}
               </p>
               <p className="text-sm text-gray-600">
-                <span className="font-medium">Size:</span> {formatFileSize(selectedFile.size)}
+                <span className="font-medium">Size:</span>{' '}
+                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
               <p className="text-xs text-gray-500 mt-2">
                 💡 Drag and drop another file here to replace
@@ -309,7 +256,7 @@ export const AudioConverter: React.FC = () => {
                   className="input"
                   disabled={status === 'converting'}
                 >
-                  {AUDIO_FORMATS.map((format) => (
+                  {DATA_FORMATS.map((format) => (
                     <option key={format} value={format}>
                       {format.toUpperCase()}
                     </option>
@@ -319,20 +266,17 @@ export const AudioConverter: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bitrate
-                  {isLosslessFormat(outputFormat) && (
-                    <span className="text-xs text-gray-500 ml-2">(N/A for lossless)</span>
-                  )}
+                  Encoding
                 </label>
                 <select
-                  value={bitrate}
-                  onChange={(e) => setBitrate(e.target.value)}
+                  value={encoding}
+                  onChange={(e) => setEncoding(e.target.value)}
                   className="input"
-                  disabled={status === 'converting' || isLosslessFormat(outputFormat)}
+                  disabled={status === 'converting'}
                 >
-                  {BITRATES.map((b) => (
-                    <option key={b.value} value={b.value}>
-                      {b.label}
+                  {ENCODINGS.map((enc) => (
+                    <option key={enc.value} value={enc.value}>
+                      {enc.label}
                     </option>
                   ))}
                 </select>
@@ -340,38 +284,44 @@ export const AudioConverter: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sample Rate
+                  CSV Delimiter
                 </label>
                 <select
-                  value={sampleRate?.toString() || ''}
-                  onChange={(e) => setSampleRate(e.target.value ? Number(e.target.value) : null)}
+                  value={delimiter}
+                  onChange={(e) => setDelimiter(e.target.value)}
                   className="input"
                   disabled={status === 'converting'}
                 >
-                  {SAMPLE_RATES.map((sr) => (
-                    <option key={sr.label} value={sr.value?.toString() || ''}>
-                      {sr.label}
+                  {DELIMITERS.map((delim) => (
+                    <option key={delim.value} value={delim.value}>
+                      {delim.label}
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Only used for CSV input/output
+                </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Channels
+                  JSON Pretty Print
                 </label>
-                <select
-                  value={channels?.toString() || ''}
-                  onChange={(e) => setChannels(e.target.value ? Number(e.target.value) : null)}
-                  className="input"
-                  disabled={status === 'converting'}
-                >
-                  {CHANNEL_OPTIONS.map((ch) => (
-                    <option key={ch.label} value={ch.value?.toString() || ''}>
-                      {ch.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={pretty}
+                    onChange={(e) => setPretty(e.target.checked)}
+                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    disabled={status === 'converting'}
+                  />
+                  <span className="text-sm text-gray-600">
+                    Format JSON output with indentation
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Only used for JSON output
+                </p>
               </div>
             </div>
 
@@ -414,7 +364,7 @@ export const AudioConverter: React.FC = () => {
                   </Button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  💡 When set, files will be saved directly to this directory. Otherwise, uses browser download.
+                  💡 When set, files will be saved directly to this directory
                 </p>
               </div>
             )}
@@ -425,35 +375,24 @@ export const AudioConverter: React.FC = () => {
                   <span>{progress?.message || 'Processing...'}</span>
                   <span>{progress?.progress.toFixed(0) || 0}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-primary-600 h-3 rounded-full transition-all duration-300 flex items-center justify-end px-2"
+                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${progress?.progress || 0}%` }}
-                  >
-                    {(progress?.progress || 0) > 10 && (
-                      <span className="text-xs text-white font-medium">
-                        {progress?.progress.toFixed(0) || 0}%
-                      </span>
-                    )}
-                  </div>
+                  />
                 </div>
-                <p className="text-xs text-gray-500 text-center">
-                  Audio conversion is usually fast - most files complete in seconds
-                </p>
               </div>
             )}
 
             {error && showFeedback && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                <p className="font-medium">Conversion Failed</p>
-                <p className="text-sm mt-1">{error}</p>
+                {error}
               </div>
             )}
 
             {status === 'completed' && showFeedback && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-                <p className="font-medium">Conversion completed successfully!</p>
-                <p className="text-sm mt-1">Your audio is ready to download.</p>
+                Conversion completed successfully!
               </div>
             )}
 
@@ -461,7 +400,7 @@ export const AudioConverter: React.FC = () => {
               {status === 'idle' || status === 'failed' ? (
                 <>
                   <Button onClick={handleConvert} className="flex-1">
-                    Convert Audio
+                    Convert Data
                   </Button>
                   <Button onClick={handleReset} variant="secondary">
                     Reset
@@ -469,50 +408,21 @@ export const AudioConverter: React.FC = () => {
                 </>
               ) : status === 'converting' ? (
                 <Button disabled loading className="flex-1">
-                  Converting... ({progress?.progress.toFixed(0) || 0}%)
+                  Converting...
                 </Button>
               ) : status === 'completed' ? (
                 <>
-                  <Button onClick={handleDownload} className="flex-1" disabled={!downloadUrl}>
-                    {downloadUrl ? 'Download Audio' : 'Processing...'}
+                  <Button onClick={handleDownload} className="flex-1">
+                    Download
                   </Button>
                   <Button onClick={handleReset} variant="secondary">
                     Convert Another
                   </Button>
                 </>
-              ) : (
-                // Fallback for unexpected states
-                <>
-                  <Button onClick={handleConvert} className="flex-1">
-                    Convert Audio (Status: {status})
-                  </Button>
-                  <Button onClick={handleReset} variant="secondary">
-                    Reset
-                  </Button>
-                </>
-              )}
-            </div>
-
-            {/* Debug info - remove later */}
-            <div className="text-xs text-gray-500 mt-2">
-              Debug: Status={status}, HasDownloadUrl={!!downloadUrl}, ShowFeedback={showFeedback}
+              ) : null}
             </div>
           </div>
         )}
-      </Card>
-
-      <Card className="bg-blue-50 border border-blue-200">
-        <h3 className="font-semibold text-blue-900 mb-2">Audio Conversion Tips</h3>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• <strong>MP3:</strong> Most compatible format, good compression</li>
-          <li>• <strong>AAC/M4A:</strong> Better quality than MP3 at same bitrate</li>
-          <li>• <strong>FLAC:</strong> Lossless compression, best for archiving</li>
-          <li>• <strong>WAV:</strong> Uncompressed, highest quality but large files</li>
-          <li>• <strong>OGG:</strong> Open format with good compression</li>
-          <li>• Higher bitrate = better quality but larger file size</li>
-          <li>• 44.1 kHz is CD quality, sufficient for most uses</li>
-          <li>• Use Mono for voice recordings to reduce file size</li>
-        </ul>
       </Card>
     </div>
   );

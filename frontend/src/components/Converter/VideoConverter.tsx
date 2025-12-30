@@ -6,7 +6,7 @@ import { videoAPI } from '../../services/api';
 import { ConversionStatus } from '../../types/conversion';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
-const VIDEO_FORMATS = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'm4v', '3gp', '3g2'];
+const VIDEO_FORMATS = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'm4v', '3gp', '3g2', 'mts', 'm2ts', 'vob', 'ts', 'ogv'];
 
 const CODECS = [
   { value: 'libx264', label: 'H.264 (Most Compatible)' },

@@ -34,10 +34,10 @@ class Settings(BaseSettings):
     PANDOC_PATH: str = ""
 
     # Supported formats
-    IMAGE_FORMATS: Set[str] = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "ico", "heic", "heif", "svg"}
-    VIDEO_FORMATS: Set[str] = {"mp4", "avi", "mov", "mkv", "webm", "flv", "wmv", "m4v", "3gp", "3g2"}
-    AUDIO_FORMATS: Set[str] = {"mp3", "wav", "flac", "aac", "ogg", "m4a", "wma", "opus", "alac"}
-    DOCUMENT_FORMATS: Set[str] = {"txt", "pdf", "docx", "md", "html", "rtf"}
+    IMAGE_FORMATS: Set[str] = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "ico", "heic", "heif", "svg", "tga"}
+    VIDEO_FORMATS: Set[str] = {"mp4", "avi", "mov", "mkv", "webm", "flv", "wmv", "m4v", "3gp", "3g2", "mts", "m2ts", "vob", "ts", "ogv"}
+    AUDIO_FORMATS: Set[str] = {"mp3", "wav", "flac", "aac", "ogg", "m4a", "wma", "opus", "alac", "ape", "mka"}
+    DOCUMENT_FORMATS: Set[str] = {"txt", "pdf", "docx", "md", "html", "rtf", "odt"}
     DATA_FORMATS: Set[str] = {"csv", "json", "xml"}
     ARCHIVE_FORMATS: Set[str] = {"zip", "tar", "tar.gz", "tgz", "tar.bz2", "tbz2", "gz", "7z"}
     SPREADSHEET_FORMATS: Set[str] = {"xlsx", "xls", "ods", "csv", "tsv"}

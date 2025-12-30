@@ -6,7 +6,7 @@ import { documentAPI } from '../../services/api';
 import { ConversionStatus } from '../../types/conversion';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
-const DOCUMENT_FORMATS = ['txt', 'pdf', 'docx', 'md', 'html', 'rtf'];
+const DOCUMENT_FORMATS = ['txt', 'pdf', 'docx', 'md', 'html', 'rtf', 'odt'];
 
 export const DocumentConverter: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);

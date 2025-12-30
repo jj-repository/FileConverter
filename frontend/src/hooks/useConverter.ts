@@ -34,6 +34,8 @@ export const useConverter = (options: UseConverterOptions) => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [customFilename, setCustomFilename] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   const { progress } = useWebSocket(sessionId);
 
@@ -53,6 +55,8 @@ export const useConverter = (options: UseConverterOptions) => {
     setDownloadUrl(null);
     setShowFeedback(false);
     setIsDraggingOver(false);
+    setUploadProgress(0);
+    setIsUploading(false);
   }, []);
 
   // Drag and drop handlers
@@ -125,6 +129,14 @@ export const useConverter = (options: UseConverterOptions) => {
     }
   }, [outputDirectory, outputFormat, customFilename]);
 
+  // Upload progress callback
+  const handleUploadProgress = useCallback((progress: number) => {
+    setUploadProgress(progress);
+    if (progress === 100) {
+      setIsUploading(false);
+    }
+  }, []);
+
   // Generic conversion handler
   const handleConvert = useCallback(async (
     converterAPI: { convert: (file: File, options: ConvertOptions) => Promise<ConversionResponse> },
@@ -136,10 +148,13 @@ export const useConverter = (options: UseConverterOptions) => {
       setStatus('converting');
       setError(null);
       setShowFeedback(true);
+      setUploadProgress(0);
+      setIsUploading(true);
 
       const response = await converterAPI.convert(selectedFile, {
         outputFormat,
         ...conversionOptions,
+        onUploadProgress: handleUploadProgress,
       });
 
       setSessionId(response.session_id);
@@ -176,8 +191,10 @@ export const useConverter = (options: UseConverterOptions) => {
       setError(getFriendlyErrorMessage(rawError));
       setStatus('failed');
       setShowFeedback(true);
+    } finally {
+      setIsUploading(false);
     }
-  }, [selectedFile, outputFormat, outputDirectory, autoDownload, onConversionComplete]);
+  }, [selectedFile, outputFormat, outputDirectory, autoDownload, onConversionComplete, handleUploadProgress]);
 
   // Download handler
   const handleDownload = useCallback(async () => {
@@ -223,6 +240,8 @@ export const useConverter = (options: UseConverterOptions) => {
     setError(null);
     setSessionId(null);
     setShowFeedback(false);
+    setUploadProgress(0);
+    setIsUploading(false);
   }, []);
 
   // Accessibility helpers
@@ -232,6 +251,14 @@ export const useConverter = (options: UseConverterOptions) => {
     'aria-valuemin': 0,
     'aria-valuemax': 100,
     'aria-label': progress?.message || 'Conversion progress',
+  });
+
+  const getUploadProgressAriaAttributes = () => ({
+    role: 'progressbar' as const,
+    'aria-valuenow': uploadProgress,
+    'aria-valuemin': 0,
+    'aria-valuemax': 100,
+    'aria-label': 'Upload progress',
   });
 
   const getStatusAriaAttributes = () => ({
@@ -253,6 +280,8 @@ export const useConverter = (options: UseConverterOptions) => {
     isDraggingOver,
     customFilename,
     progress,
+    uploadProgress,
+    isUploading,
 
     // Setters
     setOutputFormat,
@@ -270,6 +299,7 @@ export const useConverter = (options: UseConverterOptions) => {
 
     // Accessibility helpers
     getProgressAriaAttributes,
+    getUploadProgressAriaAttributes,
     getStatusAriaAttributes,
   };
 };

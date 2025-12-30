@@ -221,26 +221,53 @@ export const VideoConverter: React.FC = () => {
 
             {converter.status === 'converting' && converter.showFeedback && (
               <div className="space-y-2">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{converter.progress?.message || t('common.processing')}</span>
-                  <span>{converter.progress?.progress.toFixed(0) || 0}%</span>
-                </div>
-                <div
-                  {...converter.getProgressAriaAttributes()}
-                  className="w-full bg-gray-200 rounded-full h-3"
-                >
-                  <div
-                    className="bg-primary-600 h-3 rounded-full transition-all duration-300 flex items-center justify-end px-2"
-                    style={{ width: `${converter.progress?.progress || 0}%` }}
-                    aria-hidden="true"
-                  >
-                    {(converter.progress?.progress || 0) > 10 && (
-                      <span className="text-xs text-white font-medium">
-                        {converter.progress?.progress.toFixed(0) || 0}%
-                      </span>
-                    )}
-                  </div>
-                </div>
+                {converter.isUploading ? (
+                  <>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>{t('common.uploadingFile')}</span>
+                      <span>{converter.uploadProgress}%</span>
+                    </div>
+                    <div
+                      {...converter.getUploadProgressAriaAttributes()}
+                      className="w-full bg-gray-200 rounded-full h-3"
+                    >
+                      <div
+                        className="bg-primary-600 h-3 rounded-full transition-all duration-300 flex items-center justify-end px-2"
+                        style={{ width: `${converter.uploadProgress}%` }}
+                        aria-hidden="true"
+                      >
+                        {converter.uploadProgress > 10 && (
+                          <span className="text-xs text-white font-medium">
+                            {converter.uploadProgress}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>{converter.progress?.message || t('common.processing')}</span>
+                      <span>{converter.progress?.progress.toFixed(0) || 0}%</span>
+                    </div>
+                    <div
+                      {...converter.getProgressAriaAttributes()}
+                      className="w-full bg-gray-200 rounded-full h-3"
+                    >
+                      <div
+                        className="bg-primary-600 h-3 rounded-full transition-all duration-300 flex items-center justify-end px-2"
+                        style={{ width: `${converter.progress?.progress || 0}%` }}
+                        aria-hidden="true"
+                      >
+                        {(converter.progress?.progress || 0) > 10 && (
+                          <span className="text-xs text-white font-medium">
+                            {converter.progress?.progress.toFixed(0) || 0}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
                 <p className="text-xs text-gray-500 text-center">
                   Video conversion may take several minutes depending on file size and settings
                 </p>

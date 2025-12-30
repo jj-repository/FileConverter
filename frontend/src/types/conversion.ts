@@ -25,6 +25,7 @@ export interface ConversionOptions {
   offsetMs?: number;
   subsetText?: string;
   optimize?: boolean;
+  onUploadProgress?: (progress: number) => void;
 }
 
 export interface ConversionResponse {

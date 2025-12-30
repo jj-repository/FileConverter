@@ -184,20 +184,41 @@ export const DocumentConverter: React.FC = () => {
 
             {converter.status === 'converting' && converter.showFeedback && (
               <div className="space-y-2">
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{converter.progress?.message || t('common.processing')}</span>
-                  <span>{converter.progress?.progress.toFixed(0) || 0}%</span>
-                </div>
-                <div
-                  {...converter.getProgressAriaAttributes()}
-                  className="w-full bg-gray-200 rounded-full h-2"
-                >
-                  <div
-                    className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${converter.progress?.progress || 0}%` }}
-                    aria-hidden="true"
-                  />
-                </div>
+                {converter.isUploading ? (
+                  <>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>{t('common.uploadingFile')}</span>
+                      <span>{converter.uploadProgress}%</span>
+                    </div>
+                    <div
+                      {...converter.getUploadProgressAriaAttributes()}
+                      className="w-full bg-gray-200 rounded-full h-2"
+                    >
+                      <div
+                        className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${converter.uploadProgress}%` }}
+                        aria-hidden="true"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>{converter.progress?.message || t('common.processing')}</span>
+                      <span>{converter.progress?.progress.toFixed(0) || 0}%</span>
+                    </div>
+                    <div
+                      {...converter.getProgressAriaAttributes()}
+                      className="w-full bg-gray-200 rounded-full h-2"
+                    >
+                      <div
+                        className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${converter.progress?.progress || 0}%` }}
+                        aria-hidden="true"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

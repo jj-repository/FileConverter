@@ -28,6 +28,12 @@ export const imageAPI = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
     });
 
     return response.data;
@@ -59,7 +65,14 @@ export const videoAPI = {
       formData.append('bitrate', options.bitrate);
     }
 
-    const response = await api.post<ConversionResponse>('/video/convert', formData);
+    const response = await api.post<ConversionResponse>('/video/convert', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 
@@ -85,7 +98,14 @@ export const audioAPI = {
       formData.append('channels', options.channels.toString());
     }
 
-    const response = await api.post<ConversionResponse>('/audio/convert', formData);
+    const response = await api.post<ConversionResponse>('/audio/convert', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 
@@ -108,7 +128,14 @@ export const documentAPI = {
       formData.append('toc', options.toc.toString());
     }
 
-    const response = await api.post<ConversionResponse>('/document/convert', formData);
+    const response = await api.post<ConversionResponse>('/document/convert', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 
@@ -134,7 +161,14 @@ export const dataAPI = {
       formData.append('pretty', options.pretty.toString());
     }
 
-    const response = await api.post<ConversionResponse>('/data/convert', formData);
+    const response = await api.post<ConversionResponse>('/data/convert', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 
@@ -158,7 +192,14 @@ export const archiveAPI = {
       formData.append('compression_level', options.compressionLevel.toString());
     }
 
-    const response = await api.post<ConversionResponse>('/archive/convert', formData);
+    const response = await api.post<ConversionResponse>('/archive/convert', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 
@@ -191,7 +232,14 @@ export const spreadsheetAPI = {
       formData.append('delimiter', options.delimiter);
     }
 
-    const response = await api.post<ConversionResponse>('/spreadsheet/convert', formData);
+    const response = await api.post<ConversionResponse>('/spreadsheet/convert', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 
@@ -221,16 +269,30 @@ export const subtitleAPI = {
       formData.append('keep_html_tags', options.keepHtmlTags.toString());
     }
 
-    const response = await api.post<ConversionResponse>('/subtitle/convert', formData);
+    const response = await api.post<ConversionResponse>('/subtitle/convert', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 
-  adjustTiming: async (file: File, offsetMs: number): Promise<ConversionResponse> => {
+  adjustTiming: async (file: File, offsetMs: number, onUploadProgress?: (progress: number) => void): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('offset_ms', offsetMs.toString());
 
-    const response = await api.post<ConversionResponse>('/subtitle/adjust-timing', formData);
+    const response = await api.post<ConversionResponse>('/subtitle/adjust-timing', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 
@@ -250,7 +312,14 @@ export const ebookAPI = {
     formData.append('file', file);
     formData.append('output_format', options.outputFormat);
 
-    const response = await api.post<ConversionResponse>('/ebook/convert', formData);
+    const response = await api.post<ConversionResponse>('/ebook/convert', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 
@@ -277,7 +346,14 @@ export const fontAPI = {
       formData.append('optimize', options.optimize.toString());
     }
 
-    const response = await api.post<ConversionResponse>('/font/convert', formData);
+    const response = await api.post<ConversionResponse>('/font/convert', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 
@@ -353,7 +429,14 @@ export const batchAPI = {
       formData.append('toc', options.toc.toString());
     }
 
-    const response = await api.post<BatchConversionResponse>('/batch/convert', formData);
+    const response = await api.post<BatchConversionResponse>('/batch/convert', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (options.onUploadProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onUploadProgress(percentCompleted);
+        }
+      },
+    });
     return response.data;
   },
 

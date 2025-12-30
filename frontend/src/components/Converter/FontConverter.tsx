@@ -192,7 +192,21 @@ export const FontConverter: React.FC = () => {
               {converter.showFeedback && (
                 <div className={`text-center ${getStatusColor()}`}>
                   <p className="font-medium">{getStatusText()}</p>
-                  {converter.progress && (
+                  {converter.isUploading ? (
+                    <div className="mt-2">
+                      <div
+                        {...converter.getUploadProgressAriaAttributes()}
+                        className="w-full bg-gray-200 rounded-full h-2"
+                      >
+                        <div
+                          className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${converter.uploadProgress}%` }}
+                          aria-hidden="true"
+                        />
+                      </div>
+                      <p className="text-sm mt-1">{converter.uploadProgress}%</p>
+                    </div>
+                  ) : converter.progress ? (
                     <div className="mt-2">
                       <div
                         {...converter.getProgressAriaAttributes()}
@@ -206,7 +220,7 @@ export const FontConverter: React.FC = () => {
                       </div>
                       <p className="text-sm mt-1">{converter.progress.progress}%</p>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               )}
 

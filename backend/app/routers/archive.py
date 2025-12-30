@@ -9,6 +9,7 @@ from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
+from app.utils.websocket_security import session_validator
 
 
 router = APIRouter()
@@ -29,6 +30,7 @@ async def convert_archive(
     - **compression_level**: Compression level 0-9 (default: 6)
     """
     session_id = str(uuid.uuid4())
+    session_validator.register_session(session_id)
 
     try:
         # Validate file size

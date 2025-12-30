@@ -8,6 +8,7 @@ from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_download_filename,  validate_file_size
 from app.config import settings
 from app.models.conversion import BatchConversionResponse, BatchZipResponse
+from app.utils.websocket_security import session_validator
 
 
 router = APIRouter()
@@ -43,6 +44,7 @@ async def convert_batch(
     - Additional format-specific options are passed through to converters
     """
     session_id = str(uuid.uuid4())
+    session_validator.register_session(session_id)
     input_paths = []
     output_paths = []
 

@@ -82,14 +82,16 @@ export const ImageConverter: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
                   {t('common.outputFormat')}
                 </label>
                 <select
+                  id="output-format"
                   value={converter.outputFormat}
                   onChange={(e) => converter.setOutputFormat(e.target.value)}
                   className="input"
                   disabled={converter.status === 'converting'}
+                  aria-label="Select output format for image conversion"
                 >
                   {IMAGE_FORMATS.map((format) => (
                     <option key={format} value={format}>
@@ -100,10 +102,11 @@ export const ImageConverter: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="quality-slider" className="block text-sm font-medium text-gray-700 mb-2">
                   {t('common.quality')} ({quality}%)
                 </label>
                 <input
+                  id="quality-slider"
                   type="range"
                   min="1"
                   max="100"
@@ -111,50 +114,60 @@ export const ImageConverter: React.FC = () => {
                   onChange={(e) => setQuality(Number(e.target.value))}
                   className="w-full"
                   disabled={converter.status === 'converting'}
+                  aria-label={`Image quality: ${quality} percent`}
+                  aria-valuemin={1}
+                  aria-valuemax={100}
+                  aria-valuenow={quality}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
                 {t('common.customFilename')}
               </label>
               <input
+                id="custom-filename"
                 type="text"
                 value={converter.customFilename}
                 onChange={(e) => converter.setCustomFilename(e.target.value)}
                 placeholder={t('common.customFilenamePlaceholder')}
                 className="input w-full"
                 disabled={converter.status === 'converting'}
+                aria-describedby="filename-hint"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p id="filename-hint" className="text-xs text-gray-500 mt-1">
                 {t('converter.image.fileExtensionAuto')}
               </p>
             </div>
 
             {window.electron?.isElectron && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
                   {t('common.outputDirectory')}
                 </label>
                 <div className="flex gap-2">
                   <input
+                    id="output-directory"
                     type="text"
                     value={converter.outputDirectory || t('common.defaultDownloads')}
                     readOnly
                     className="input flex-1"
                     disabled={converter.status === 'converting'}
+                    aria-describedby="output-directory-hint"
+                    aria-label="Output directory path"
                   />
                   <Button
                     onClick={converter.handleSelectOutputDirectory}
                     variant="secondary"
                     disabled={converter.status === 'converting'}
+                    aria-label="Browse for output directory"
                   >
                     {t('common.browse')}
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  💡 {t('common.outputDirectoryHint')}
+                <p id="output-directory-hint" className="text-xs text-gray-500 mt-1">
+                  {t('common.outputDirectoryHint')}
                 </p>
               </div>
             )}
@@ -165,23 +178,33 @@ export const ImageConverter: React.FC = () => {
                   <span>{converter.progress?.message || t('common.processing')}</span>
                   <span>{converter.progress?.progress.toFixed(0) || 0}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  {...converter.getProgressAriaAttributes()}
+                  className="w-full bg-gray-200 rounded-full h-2"
+                >
                   <div
                     className="bg-primary-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${converter.progress?.progress || 0}%` }}
+                    aria-hidden="true"
                   />
                 </div>
               </div>
             )}
 
             {converter.error && converter.showFeedback && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div
+                {...converter.getStatusAriaAttributes()}
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+              >
                 {converter.error}
               </div>
             )}
 
             {converter.status === 'completed' && converter.showFeedback && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              <div
+                {...converter.getStatusAriaAttributes()}
+                className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
+              >
                 {t('messages.conversionSuccess')}
               </div>
             )}

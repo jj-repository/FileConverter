@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ConversionStatus } from '../types/conversion';
 import { useWebSocket } from './useWebSocket';
 import { API_BASE_URL, AUTO_DOWNLOAD_DELAY, FORCE_RERENDER_DELAY } from '../config/constants';
+import { getFriendlyErrorMessage } from '../utils/errorMessages';
 
 interface UseConverterOptions {
   defaultOutputFormat: string;
@@ -91,7 +92,8 @@ export const useConverter = (options: UseConverterOptions) => {
         setOutputDirectory(directory);
       }
     } catch (err) {
-      setError('Failed to select output directory');
+      const rawError = err instanceof Error ? err.message : 'Failed to select output directory';
+      setError(getFriendlyErrorMessage(rawError));
     }
   }, []);
 
@@ -165,11 +167,13 @@ export const useConverter = (options: UseConverterOptions) => {
           setShowFeedback(true);
         }, FORCE_RERENDER_DELAY);
       } else if (response.status === 'failed') {
-        setError(response.error || 'Conversion failed');
+        const rawError = response.error || 'Conversion failed';
+        setError(getFriendlyErrorMessage(rawError));
         setStatus('failed');
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Conversion failed');
+      const rawError = err.response?.data?.detail || err.message || 'Conversion failed';
+      setError(getFriendlyErrorMessage(rawError));
       setStatus('failed');
       setShowFeedback(true);
     }
@@ -221,6 +225,21 @@ export const useConverter = (options: UseConverterOptions) => {
     setShowFeedback(false);
   }, []);
 
+  // Accessibility helpers
+  const getProgressAriaAttributes = () => ({
+    role: 'progressbar' as const,
+    'aria-valuenow': progress?.progress || 0,
+    'aria-valuemin': 0,
+    'aria-valuemax': 100,
+    'aria-label': progress?.message || 'Conversion progress',
+  });
+
+  const getStatusAriaAttributes = () => ({
+    role: status === 'failed' ? ('alert' as const) : ('status' as const),
+    'aria-live': (status === 'failed' ? 'assertive' : 'polite') as 'assertive' | 'polite',
+    'aria-atomic': true,
+  });
+
   return {
     // State
     selectedFile,
@@ -248,5 +267,9 @@ export const useConverter = (options: UseConverterOptions) => {
     handleConvert,
     handleDownload,
     handleReset,
+
+    // Accessibility helpers
+    getProgressAriaAttributes,
+    getStatusAriaAttributes,
   };
 };

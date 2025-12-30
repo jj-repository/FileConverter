@@ -12,6 +12,7 @@ from app.config import settings
 from app.services.ebook_converter import EbookConverter
 from app.utils.validation import validate_file_size, validate_file_extension
 from app.models.conversion import ConversionResponse
+from app.utils.websocket_security import session_validator
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ async def convert_ebook(
         Conversion response with download URL
     """
     session_id = str(uuid.uuid4())
+    session_validator.register_session(session_id)
 
     try:
         # Validate file extension

@@ -9,6 +9,7 @@ from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_download_filename,  validate_file_size, validate_file_extension
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
+from app.utils.websocket_security import session_validator
 
 
 router = APIRouter()
@@ -33,6 +34,7 @@ async def convert_video(
     - **bitrate**: Video bitrate (e.g., 2M, 5M, default: 2M)
     """
     session_id = str(uuid.uuid4())
+    session_validator.register_session(session_id)
 
     try:
         # Validate file size

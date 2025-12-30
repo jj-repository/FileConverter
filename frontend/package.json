@@ -14,7 +14,12 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-builder"
+    "electron:build": "npm run build && electron-builder",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest watch"
   },
   "dependencies": {
     "axios": "^1.7.9",
@@ -25,17 +30,23 @@
     "react-i18next": "^16.5.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/ui": "^4.0.16",
     "autoprefixer": "^10.4.20",
     "concurrently": "^8.2.2",
     "electron": "^39.2.7",
     "electron-builder": "^24.9.1",
+    "jsdom": "^27.4.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
     "vite": "^6.0.7",
+    "vitest": "^4.0.16",
     "wait-on": "^7.2.0"
   },
   "build": {

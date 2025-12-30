@@ -47,7 +47,7 @@
     "typescript": "^5.7.2",
     "vite": "^6.0.7",
     "vitest": "^4.0.16",
-    "wait-on": "^7.2.0"
+    "wait-on": "^9.0.3"
   },
   "build": {
     "appId": "com.fileconverter.app",

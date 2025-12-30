@@ -12,13 +12,13 @@ const tabs: Tab[] = [
   { id: 'video', label: 'Videos', icon: '🎥' },
   { id: 'audio', label: 'Audio', icon: '🎵' },
   { id: 'document', label: 'Documents', icon: '📄' },
+  { id: 'batch', label: 'Batch', icon: '📦' },
   { id: 'data', label: 'Data', icon: '📊' },
   { id: 'archive', label: 'Archives', icon: '🗜️' },
   { id: 'spreadsheet', label: 'Spreadsheets', icon: '📈' },
   { id: 'subtitle', label: 'Subtitles', icon: '💬' },
   { id: 'ebook', label: 'eBooks', icon: '📚' },
   { id: 'font', label: 'Fonts', icon: '🔤' },
-  { id: 'batch', label: 'Batch', icon: '📦' },
 ];
 
 interface TabNavigationProps {
@@ -28,14 +28,14 @@ interface TabNavigationProps {
 
 export const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
   return (
-    <div className="border-b border-gray-200 mb-8">
-      <nav className="flex space-x-8" aria-label="Tabs">
+    <div className="border-b border-gray-200 mb-8 overflow-x-auto">
+      <nav className="flex space-x-8 min-w-min" aria-label="Tabs">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={`
-              py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 whitespace-nowrap
               ${
                 activeTab === tab.id
                   ? 'border-primary-600 text-primary-600'

@@ -30,18 +30,29 @@ class FFmpegMock:
 
             mock_proc = AsyncMock()
             mock_proc.returncode = 0
-            mock_proc.stdout = AsyncMock()
-            mock_proc.stderr = AsyncMock()
             mock_proc.wait = AsyncMock(return_value=0)
 
-            # Mock progress output
+            # Mock progress output with proper async iteration
             progress_lines = [
                 b"frame=100 fps=30 time=00:00:03.33 bitrate=2000.0kbits/s\n",
                 b"frame=200 fps=30 time=00:00:06.66 bitrate=2000.0kbits/s\n",
                 b"frame=300 fps=30 time=00:00:10.00 bitrate=2000.0kbits/s\n",
             ]
-            mock_proc.stdout.__aiter__ = AsyncMock(return_value=iter(progress_lines))
-            mock_proc.stderr.__aiter__ = AsyncMock(return_value=iter([]))
+
+            # Create async iterator for stdout
+            async def stdout_iterator():
+                for line in progress_lines:
+                    yield line
+
+            mock_proc.stdout = stdout_iterator()
+
+            # Create async iterator for stderr (empty)
+            async def stderr_iterator():
+                return
+                yield  # Make it a generator
+
+            mock_proc.stderr = AsyncMock()
+            mock_proc.stderr.read = AsyncMock(return_value=b'')
 
             return mock_proc
 
@@ -58,14 +69,18 @@ class FFmpegMock:
         async def async_proc_mock(*args, **kwargs):
             mock_proc = AsyncMock()
             mock_proc.returncode = 1
-            mock_proc.stdout = AsyncMock()
-            mock_proc.stderr = AsyncMock()
             mock_proc.wait = AsyncMock(return_value=1)
 
+            # Create async iterator for stdout (empty)
+            async def stdout_iterator():
+                return
+                yield  # Make it a generator
+
+            mock_proc.stdout = stdout_iterator()
+
             # Return error in stderr
+            mock_proc.stderr = AsyncMock()
             mock_proc.stderr.read = AsyncMock(return_value=error_message.encode())
-            mock_proc.stdout.__aiter__ = AsyncMock(return_value=iter([]))
-            mock_proc.stderr.__aiter__ = AsyncMock(return_value=iter([error_message.encode()]))
 
             return mock_proc
 
@@ -76,12 +91,17 @@ class FFmpegMock:
         """Mock FFmpeg conversion that times out"""
         async def async_proc_mock(*args, **kwargs):
             mock_proc = AsyncMock()
-            mock_proc.wait = AsyncMock(side_effect=asyncio.TimeoutError("Process timed out"))
             mock_proc.kill = AsyncMock()
-            mock_proc.stdout = AsyncMock()
+            mock_proc.wait = AsyncMock()
+
+            # Create async iterator that hangs/times out
+            async def stdout_iterator():
+                # Simulate timeout by raising TimeoutError when iterating
+                await asyncio.sleep(1000)  # This will timeout with asyncio.timeout
+                yield  # Make it a generator
+
+            mock_proc.stdout = stdout_iterator()
             mock_proc.stderr = AsyncMock()
-            mock_proc.stdout.__aiter__ = AsyncMock(return_value=iter([]))
-            mock_proc.stderr.__aiter__ = AsyncMock(return_value=iter([]))
 
             return mock_proc
 

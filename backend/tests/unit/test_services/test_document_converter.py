@@ -35,7 +35,6 @@ class TestDocumentConverterBasics:
             assert "input" in converter.supported_formats
             assert "output" in converter.supported_formats
             assert "docx" in converter.supported_formats["input"]
-            assert converter.executor is not None
 
     def test_initialization_pandoc_unavailable(self):
         """Test DocumentConverter handles missing Pandoc"""

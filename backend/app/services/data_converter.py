@@ -2,12 +2,17 @@ from pathlib import Path
 from typing import Dict, Any
 import pandas as pd
 import json
+
+# Use defusedxml for parsing XML (XXE protection)
 try:
-    # Use defusedxml if available for XXE protection
-    from defusedxml import ElementTree as ET
+    from defusedxml import ElementTree as DefusedET
+    DEFUSEDXML_AVAILABLE = True
 except ImportError:
-    # Fallback to standard library with safety measures
-    import xml.etree.ElementTree as ET
+    DEFUSEDXML_AVAILABLE = False
+
+# Use standard ElementTree for creating XML (defusedxml doesn't support Element creation)
+import xml.etree.ElementTree as ET
+
 import csv
 import asyncio
 import yaml
@@ -201,18 +206,20 @@ class DataConverter(BaseConverter):
 
     async def _xml_to_dataframe(self, xml_path: Path, encoding: str) -> pd.DataFrame:
         """Convert simple XML to DataFrame with XXE protection"""
-        # Create parser with XXE protection if using standard ET
-        try:
-            # Try using defusedxml first (safest)
-            tree = ET.parse(xml_path)
-        except AttributeError:
+        # Use defusedxml for parsing if available (XXE protection)
+        if DEFUSEDXML_AVAILABLE:
+            tree = DefusedET.parse(xml_path)
+        else:
             # Fallback: standard ET with manual XXE protection
-            import xml.etree.ElementTree as StdET
-            parser = StdET.XMLParser()
+            parser = ET.XMLParser()
             # Disable entity processing to prevent XXE attacks
-            parser.entity = {}  # type: ignore
-            parser.parser.SetParamEntityParsing(0)  # type: ignore
-            tree = StdET.parse(xml_path, parser=parser)
+            try:
+                parser.entity = {}  # type: ignore
+                parser.parser.SetParamEntityParsing(0)  # type: ignore
+            except AttributeError:
+                # Parser might not support these attributes
+                pass
+            tree = ET.parse(xml_path, parser=parser)
 
         root = tree.getroot()
 
@@ -271,7 +278,11 @@ class DataConverter(BaseConverter):
                             "size": file_path.stat().st_size,
                         }
             elif input_format == 'xml':
-                tree = ET.parse(file_path)
+                # Use defusedxml for parsing if available
+                if DEFUSEDXML_AVAILABLE:
+                    tree = DefusedET.parse(file_path)
+                else:
+                    tree = ET.parse(file_path)
                 root = tree.getroot()
                 return {
                     "format": "xml",

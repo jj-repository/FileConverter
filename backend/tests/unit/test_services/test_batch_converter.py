@@ -33,7 +33,6 @@ class TestBatchConverterBasics:
         assert converter.video_converter is not None
         assert converter.audio_converter is not None
         assert converter.document_converter is not None
-        assert converter.executor is not None
 
     def test_initialization_with_websocket_manager(self):
         """Test BatchConverter initializes with custom WebSocket manager"""

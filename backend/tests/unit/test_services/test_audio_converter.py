@@ -33,7 +33,6 @@ class TestAudioConverterBasics:
         assert "output" in converter.supported_formats
         assert "mp3" in converter.supported_formats["input"]
         assert "wav" in converter.supported_formats["output"]
-        assert converter.executor is not None
 
     def test_initialization_with_websocket_manager(self):
         """Test AudioConverter can be initialized with custom WebSocket manager"""

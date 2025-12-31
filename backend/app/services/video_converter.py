@@ -4,7 +4,6 @@ import subprocess
 import re
 import asyncio
 import logging
-from concurrent.futures import ThreadPoolExecutor
 
 from app.services.base_converter import BaseConverter
 from app.config import settings
@@ -21,7 +20,6 @@ class VideoConverter(BaseConverter):
             "input": list(settings.VIDEO_FORMATS),
             "output": list(settings.VIDEO_FORMATS),
         }
-        self.executor = ThreadPoolExecutor(max_workers=2)
 
     async def get_supported_formats(self) -> Dict[str, list]:
         """Get supported video formats"""

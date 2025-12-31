@@ -7,6 +7,10 @@ import shutil
 
 logger = logging.getLogger(__name__)
 
+# Global lock for cache file operations to prevent race conditions
+_cache_locks: Dict[str, asyncio.Lock] = {}
+_cache_locks_lock = asyncio.Lock()
+
 
 class WebSocketManager:
     """Manager for WebSocket connections and progress updates"""
@@ -93,13 +97,27 @@ class BaseConverter(ABC):
                 logger.info(f"Cache hit for {cache_key} (session: {session_id})")
                 await self.send_progress(session_id, 100, "completed", "Retrieved from cache")
 
-                # Copy cached file to output location
+                # Copy cached file to output location with lock to prevent race conditions
                 cached_file = Path(cached_result.output_file)
                 output_path = settings.UPLOAD_DIR / cached_file.name
 
                 # If cached file and output path are different, copy it
                 if cached_file != output_path:
-                    shutil.copy2(cached_file, output_path)
+                    # Get or create lock for this cache file
+                    async with _cache_locks_lock:
+                        if cache_key not in _cache_locks:
+                            _cache_locks[cache_key] = asyncio.Lock()
+                        file_lock = _cache_locks[cache_key]
+
+                    # Use file-specific lock to prevent concurrent copies
+                    async with file_lock:
+                        # Double-check file still exists before copying
+                        if cached_file.exists():
+                            await asyncio.to_thread(shutil.copy2, cached_file, output_path)
+                        else:
+                            # Cached file was deleted, need to reconvert
+                            logger.warning(f"Cached file {cached_file} no longer exists, reconverting")
+                            return await self.convert(input_path, output_format, options, session_id)
 
                 return output_path
 

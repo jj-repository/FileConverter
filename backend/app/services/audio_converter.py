@@ -4,7 +4,6 @@ import subprocess
 import re
 import asyncio
 import logging
-from concurrent.futures import ThreadPoolExecutor
 
 from app.services.base_converter import BaseConverter
 from app.config import settings
@@ -21,7 +20,6 @@ class AudioConverter(BaseConverter):
             "input": list(settings.AUDIO_FORMATS),
             "output": list(settings.AUDIO_FORMATS),
         }
-        self.executor = ThreadPoolExecutor(max_workers=2)
 
     async def get_supported_formats(self) -> Dict[str, list]:
         """Get supported audio formats"""
@@ -113,11 +111,25 @@ class AudioConverter(BaseConverter):
 
         await self.send_progress(session_id, 5, "converting", "Preparing conversion")
 
-        # Build FFmpeg command
+        # Build FFmpeg command with validated parameters
         codec = self.get_audio_codec(output_format, options.get('codec'))
+
+        # Validate bitrate
         bitrate = options.get('bitrate', '192k')
+        if bitrate not in settings.ALLOWED_BITRATES:
+            raise ValueError(f"Invalid bitrate: {bitrate}. Allowed values: {settings.ALLOWED_BITRATES}")
+
+        # Validate sample rate if provided
         sample_rate = options.get('sample_rate')
+        if sample_rate is not None:
+            if not isinstance(sample_rate, (int, str)) or int(sample_rate) not in settings.ALLOWED_SAMPLE_RATES:
+                raise ValueError(f"Invalid sample_rate: {sample_rate}. Allowed values: {settings.ALLOWED_SAMPLE_RATES}")
+
+        # Validate channels if provided
         channels = options.get('channels')
+        if channels is not None:
+            if not isinstance(channels, (int, str)) or int(channels) not in settings.ALLOWED_AUDIO_CHANNELS:
+                raise ValueError(f"Invalid channels: {channels}. Allowed values: {settings.ALLOWED_AUDIO_CHANNELS}")
 
         cmd = [
             settings.FFMPEG_PATH,
@@ -147,7 +159,7 @@ class AudioConverter(BaseConverter):
 
         await self.send_progress(session_id, 10, "converting", "Starting FFmpeg conversion")
 
-        # Run FFmpeg conversion with progress tracking
+        # Run FFmpeg conversion with progress tracking and timeout
         try:
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -157,22 +169,31 @@ class AudioConverter(BaseConverter):
 
             last_progress = 10
 
-            # Read output line by line
-            async for line in process.stdout:
-                line_str = line.decode('utf-8', errors='ignore')
+            # Timeout: 10 minutes for audio conversion
+            timeout_seconds = 600
 
-                # Parse progress
-                progress = self.parse_ffmpeg_progress(line_str, total_duration)
-                if progress is not None and progress > last_progress:
-                    # Map 0-100% to 10-95% to leave room for finalization
-                    mapped_progress = 10 + (progress * 0.85)
-                    last_progress = mapped_progress
-                    await self.send_progress(
-                        session_id,
-                        mapped_progress,
-                        "converting",
-                        f"Converting audio: {int(progress)}%"
-                    )
+            # Read output line by line with timeout
+            try:
+                async for line in asyncio.wait_for(process.stdout, timeout=timeout_seconds):
+                    line_str = line.decode('utf-8', errors='ignore')
+
+                    # Parse progress
+                    progress = self.parse_ffmpeg_progress(line_str, total_duration)
+                    if progress is not None and progress > last_progress:
+                        # Map 0-100% to 10-95% to leave room for finalization
+                        mapped_progress = 10 + (progress * 0.85)
+                        last_progress = mapped_progress
+                        await self.send_progress(
+                            session_id,
+                            mapped_progress,
+                            "converting",
+                            f"Converting audio: {int(progress)}%"
+                        )
+            except asyncio.TimeoutError:
+                # Kill process on timeout
+                process.kill()
+                await process.wait()
+                raise TimeoutError(f"Audio conversion timeout after {timeout_seconds} seconds")
 
             # Wait for process to complete
             await process.wait()

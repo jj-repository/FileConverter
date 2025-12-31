@@ -2,7 +2,12 @@ from pathlib import Path
 from typing import Dict, Any
 import pandas as pd
 import json
-import xml.etree.ElementTree as ET
+try:
+    # Use defusedxml if available for XXE protection
+    from defusedxml import ElementTree as ET
+except ImportError:
+    # Fallback to standard library with safety measures
+    import xml.etree.ElementTree as ET
 import csv
 import asyncio
 import yaml
@@ -195,8 +200,20 @@ class DataConverter(BaseConverter):
             raise
 
     async def _xml_to_dataframe(self, xml_path: Path, encoding: str) -> pd.DataFrame:
-        """Convert simple XML to DataFrame"""
-        tree = ET.parse(xml_path)
+        """Convert simple XML to DataFrame with XXE protection"""
+        # Create parser with XXE protection if using standard ET
+        try:
+            # Try using defusedxml first (safest)
+            tree = ET.parse(xml_path)
+        except AttributeError:
+            # Fallback: standard ET with manual XXE protection
+            import xml.etree.ElementTree as StdET
+            parser = StdET.XMLParser()
+            # Disable entity processing to prevent XXE attacks
+            parser.entity = {}  # type: ignore
+            parser.parser.SetParamEntityParsing(0)  # type: ignore
+            tree = StdET.parse(xml_path, parser=parser)
+
         root = tree.getroot()
 
         # Assume structure: <root><item><field>value</field></item></root>

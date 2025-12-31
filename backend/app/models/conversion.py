@@ -104,6 +104,10 @@ class BatchFileResult(BaseModel):
     filename: str
     success: bool
     output_path: Optional[str] = None
+    output_file: Optional[str] = None
+    download_url: Optional[str] = None
+    session_id: Optional[str] = None
+    index: Optional[int] = None
     error: Optional[str] = None
 
 

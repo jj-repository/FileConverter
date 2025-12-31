@@ -82,7 +82,7 @@ class BatchConverter:
                 "filename": input_path.name,
                 "success": True,
                 "output_file": output_path.name,
-                "output_path": output_path,
+                "output_path": str(output_path),
                 "download_url": f"/api/{file_type}/download/{output_path.name}",
                 "session_id": session_id,
                 "index": file_index,

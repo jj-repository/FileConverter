@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict, Any
 import pandas as pd
 from io import BytesIO
+import asyncio
 
 # Excel support
 try:
@@ -78,7 +79,7 @@ class SpreadsheetConverter(BaseConverter):
         await self.send_progress(session_id, 20, "converting", "Reading input spreadsheet")
 
         try:
-            # Read input file
+            # Read input file (wrap pandas I/O in thread pool)
             if input_format in ['xlsx', 'xls']:
                 if not OPENPYXL_AVAILABLE:
                     raise ValueError("Excel support not available. Install openpyxl.")
@@ -91,22 +92,22 @@ class SpreadsheetConverter(BaseConverter):
                 # Auto-detect delimiter if not provided
                 if not delimiter:
                     delimiter = ','
-                df = pd.read_csv(input_path, encoding=encoding, delimiter=delimiter)
+                df = await asyncio.to_thread(pd.read_csv, input_path, encoding=encoding, delimiter=delimiter)
             elif input_format == 'tsv':
-                df = pd.read_csv(input_path, encoding=encoding, delimiter='\t')
+                df = await asyncio.to_thread(pd.read_csv, input_path, encoding=encoding, delimiter='\t')
             else:
                 raise ValueError(f"Unsupported input format: {input_format}")
 
             await self.send_progress(session_id, 60, "converting", "Converting spreadsheet format")
 
-            # Write output file
+            # Write output file (wrap pandas I/O in thread pool)
             if output_format in ['xlsx', 'xls']:
                 if not OPENPYXL_AVAILABLE:
                     raise ValueError("Excel support not available. Install openpyxl.")
                 # openpyxl only writes XLSX, not XLS
                 if output_format == 'xls':
                     raise ValueError("XLS output not supported. Use XLSX instead. (XLS reading is supported)")
-                df.to_excel(output_path, index=False, engine='openpyxl')
+                await asyncio.to_thread(df.to_excel, output_path, index=False, engine='openpyxl')
             elif output_format == 'ods':
                 if not ODF_AVAILABLE:
                     raise ValueError("ODS support not available. Install odfpy.")
@@ -115,9 +116,9 @@ class SpreadsheetConverter(BaseConverter):
                 # Use delimiter from options or default to comma
                 if not delimiter:
                     delimiter = ','
-                df.to_csv(output_path, index=False, encoding=encoding, sep=delimiter)
+                await asyncio.to_thread(df.to_csv, output_path, index=False, encoding=encoding, sep=delimiter)
             elif output_format == 'tsv':
-                df.to_csv(output_path, index=False, encoding=encoding, sep='\t')
+                await asyncio.to_thread(df.to_csv, output_path, index=False, encoding=encoding, sep='\t')
             else:
                 raise ValueError(f"Unsupported output format: {output_format}")
 
@@ -132,14 +133,14 @@ class SpreadsheetConverter(BaseConverter):
     async def _read_excel(self, file_path: Path, sheet_name: str = None) -> pd.DataFrame:
         """Read Excel file (XLSX or XLS)"""
         if sheet_name:
-            return pd.read_excel(file_path, sheet_name=sheet_name, engine='openpyxl')
+            return await asyncio.to_thread(pd.read_excel, file_path, sheet_name=sheet_name, engine='openpyxl')
         else:
             # Read first sheet by default
-            return pd.read_excel(file_path, engine='openpyxl')
+            return await asyncio.to_thread(pd.read_excel, file_path, engine='openpyxl')
 
     async def _read_ods(self, file_path: Path, sheet_name: str = None) -> pd.DataFrame:
         """Read ODS file"""
-        doc = opendocument.load(str(file_path))
+        doc = await asyncio.to_thread(opendocument.load, str(file_path))
 
         # Get all sheets
         sheets = doc.spreadsheet.getElementsByType(Table)
@@ -218,7 +219,7 @@ class SpreadsheetConverter(BaseConverter):
             table.addElement(table_row)
 
         doc.spreadsheet.addElement(table)
-        doc.save(str(output_path))
+        await asyncio.to_thread(doc.save, str(output_path))
 
     async def get_spreadsheet_info(self, file_path: Path) -> Dict[str, Any]:
         """Extract metadata from spreadsheet file"""
@@ -232,8 +233,8 @@ class SpreadsheetConverter(BaseConverter):
 
             if input_format in ['xlsx', 'xls']:
                 if OPENPYXL_AVAILABLE:
-                    # Load workbook
-                    wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+                    # Load workbook (wrap in thread pool)
+                    wb = await asyncio.to_thread(openpyxl.load_workbook, file_path, read_only=True, data_only=True)
                     info["sheets"] = len(wb.sheetnames)
                     info["sheet_names"] = wb.sheetnames
 
@@ -245,7 +246,7 @@ class SpreadsheetConverter(BaseConverter):
 
             elif input_format == 'ods':
                 if ODF_AVAILABLE:
-                    doc = opendocument.load(str(file_path))
+                    doc = await asyncio.to_thread(opendocument.load, str(file_path))
                     sheets = doc.spreadsheet.getElementsByType(Table)
                     info["sheets"] = len(sheets)
                     info["sheet_names"] = [sheet.getAttribute('name') for sheet in sheets]
@@ -255,14 +256,16 @@ class SpreadsheetConverter(BaseConverter):
                         info["rows"] = len(rows)
 
             elif input_format == 'csv':
-                df = pd.read_csv(file_path, nrows=1)
-                info["rows"] = len(pd.read_csv(file_path))
+                df = await asyncio.to_thread(pd.read_csv, file_path, nrows=1)
+                full_df = await asyncio.to_thread(pd.read_csv, file_path)
+                info["rows"] = len(full_df)
                 info["columns"] = len(df.columns)
                 info["column_names"] = df.columns.tolist()
 
             elif input_format == 'tsv':
-                df = pd.read_csv(file_path, delimiter='\t', nrows=1)
-                info["rows"] = len(pd.read_csv(file_path, delimiter='\t'))
+                df = await asyncio.to_thread(pd.read_csv, file_path, delimiter='\t', nrows=1)
+                full_df = await asyncio.to_thread(pd.read_csv, file_path, delimiter='\t')
+                info["rows"] = len(full_df)
                 info["columns"] = len(df.columns)
                 info["column_names"] = df.columns.tolist()
 

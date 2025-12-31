@@ -86,12 +86,13 @@ class ImageConverter(BaseConverter):
             if output_format == 'svg':
                 # SVG to SVG just copies the file
                 import shutil
-                shutil.copy(input_path, output_path)
+                await asyncio.to_thread(shutil.copy, input_path, output_path)
                 await self.send_progress(session_id, 100, "completed", "SVG file copied")
                 return output_path
 
             # Convert SVG to PNG
-            cairosvg.svg2png(
+            await asyncio.to_thread(
+                cairosvg.svg2png,
                 url=str(input_path),
                 write_to=str(temp_png),
                 output_width=width,
@@ -99,8 +100,9 @@ class ImageConverter(BaseConverter):
             )
             input_path = temp_png
 
-        # Open image
-        with Image.open(input_path) as img:
+        # Open image (run in thread pool to avoid blocking)
+        img = await asyncio.to_thread(Image.open, input_path)
+        try:
             await self.send_progress(session_id, 40, "converting", "Processing image")
 
             # Handle transparency for formats that don't support it
@@ -164,8 +166,11 @@ class ImageConverter(BaseConverter):
             if pil_format == 'JPG':
                 pil_format = 'JPEG'
 
-            # Save image
-            img.save(output_path, format=pil_format, **save_options)
+            # Save image (run in thread pool to avoid blocking)
+            await asyncio.to_thread(img.save, output_path, format=pil_format, **save_options)
+
+        finally:
+            img.close()
 
         await self.send_progress(session_id, 100, "completed", "Image conversion completed")
 
@@ -174,7 +179,9 @@ class ImageConverter(BaseConverter):
     async def get_image_metadata(self, file_path: Path) -> Dict[str, Any]:
         """Extract image metadata"""
         try:
-            with Image.open(file_path) as img:
+            # Run blocking I/O in thread pool
+            img = await asyncio.to_thread(Image.open, file_path)
+            try:
                 return {
                     "width": img.width,
                     "height": img.height,
@@ -182,5 +189,7 @@ class ImageConverter(BaseConverter):
                     "mode": img.mode,
                     "size": file_path.stat().st_size,
                 }
+            finally:
+                img.close()
         except Exception as e:
             return {"error": str(e)}

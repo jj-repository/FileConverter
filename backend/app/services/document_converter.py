@@ -3,7 +3,6 @@ from typing import Dict, Any, Optional
 import subprocess
 import asyncio
 import logging
-from concurrent.futures import ThreadPoolExecutor
 
 from app.services.base_converter import BaseConverter
 from app.config import settings
@@ -20,7 +19,6 @@ class DocumentConverter(BaseConverter):
             "input": list(settings.DOCUMENT_FORMATS),
             "output": list(settings.DOCUMENT_FORMATS),
         }
-        self.executor = ThreadPoolExecutor(max_workers=2)
         self._check_pandoc()
 
     def _check_pandoc(self):
@@ -170,7 +168,8 @@ class DocumentConverter(BaseConverter):
                         "--strip-comments"
                     ]
 
-                    result = subprocess.run(
+                    result = await asyncio.to_thread(
+                        subprocess.run,
                         cmd,
                         capture_output=True,
                         text=True,
@@ -195,7 +194,7 @@ class DocumentConverter(BaseConverter):
             if input_format == "docx":
                 try:
                     from docx import Document
-                    doc = Document(str(file_path))
+                    doc = await asyncio.to_thread(Document, str(file_path))
                     metadata["paragraph_count"] = len(doc.paragraphs)
                     metadata["section_count"] = len(doc.sections)
                 except Exception as e:
@@ -205,7 +204,7 @@ class DocumentConverter(BaseConverter):
             if input_format == "pdf":
                 try:
                     from PyPDF2 import PdfReader
-                    pdf = PdfReader(str(file_path))
+                    pdf = await asyncio.to_thread(PdfReader, str(file_path))
                     metadata["page_count"] = len(pdf.pages)
 
                     # Get PDF info if available

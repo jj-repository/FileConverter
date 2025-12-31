@@ -172,31 +172,32 @@ class AudioConverter(BaseConverter):
             # Timeout: 10 minutes for audio conversion
             timeout_seconds = 600
 
-            # Read output line by line with timeout
             try:
-                async for line in asyncio.wait_for(process.stdout, timeout=timeout_seconds):
-                    line_str = line.decode('utf-8', errors='ignore')
+                # Read output line by line with timeout
+                async with asyncio.timeout(timeout_seconds):
+                    async for line in process.stdout:
+                        line_str = line.decode('utf-8', errors='ignore')
 
-                    # Parse progress
-                    progress = self.parse_ffmpeg_progress(line_str, total_duration)
-                    if progress is not None and progress > last_progress:
-                        # Map 0-100% to 10-95% to leave room for finalization
-                        mapped_progress = 10 + (progress * 0.85)
-                        last_progress = mapped_progress
-                        await self.send_progress(
-                            session_id,
-                            mapped_progress,
-                            "converting",
-                            f"Converting audio: {int(progress)}%"
-                        )
+                        # Parse progress
+                        progress = self.parse_ffmpeg_progress(line_str, total_duration)
+                        if progress is not None and progress > last_progress:
+                            # Map 0-100% to 10-95% to leave room for finalization
+                            mapped_progress = 10 + (progress * 0.85)
+                            last_progress = mapped_progress
+                            await self.send_progress(
+                                session_id,
+                                mapped_progress,
+                                "converting",
+                                f"Converting audio: {int(progress)}%"
+                            )
+
+                    # Wait for process to complete
+                    await process.wait()
             except asyncio.TimeoutError:
                 # Kill process on timeout
                 process.kill()
                 await process.wait()
-                raise TimeoutError(f"Audio conversion timeout after {timeout_seconds} seconds")
-
-            # Wait for process to complete
-            await process.wait()
+                raise Exception(f"Audio conversion timed out after {timeout_seconds} seconds")
 
             if process.returncode != 0:
                 stderr = await process.stderr.read()

@@ -28,13 +28,14 @@ Modern React frontend for the FileConverter application, built with TypeScript, 
 
 ### Test Coverage
 
-**139 tests total** - 100% passing
+**183 tests total** - 100% passing
 
 - ✅ **Error Messages** (21 tests) - Error message mapping for all error types
 - ✅ **useConverter Hook** (12 tests) - File conversion hook lifecycle
 - ✅ **ImageConverter Component** (19 tests) - Image converter UI and interactions
 - ✅ **VideoConverter Component** (42 tests) - Video converter with codec, resolution, bitrate controls
 - ✅ **AudioConverter Component** (45 tests) - Audio converter with bitrate, sample rate, channels controls
+- ✅ **DocumentConverter Component** (44 tests) - Document converter with preserve formatting, TOC controls
 
 ### Running Tests
 

@@ -20,7 +20,7 @@ video_converter = VideoConverter()
 async def convert_video(
     file: UploadFile = File(...),
     output_format: str = Form(...),
-    codec: Optional[str] = Form("libx264"),
+    codec: Optional[str] = Form(None),
     resolution: Optional[str] = Form("original"),
     bitrate: Optional[str] = Form("2M"),
 ):

@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Dict, Any, List
 import asyncio
 import zipfile
-from concurrent.futures import ThreadPoolExecutor
 
 from app.services.image_converter import ImageConverter
 from app.services.video_converter import VideoConverter
@@ -20,7 +19,6 @@ class BatchConverter:
         self.video_converter = VideoConverter(websocket_manager)
         self.audio_converter = AudioConverter(websocket_manager)
         self.document_converter = DocumentConverter(websocket_manager)
-        self.executor = ThreadPoolExecutor(max_workers=4)
 
     def get_converter_for_format(self, file_format: str):
         """Get the appropriate converter based on file format"""
@@ -206,11 +204,12 @@ class BatchConverter:
         def create_zip():
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for file_path in file_paths:
-                    if file_path.exists():
-                        zipf.write(file_path, file_path.name)
+                    # Convert to Path if string
+                    path_obj = Path(file_path) if isinstance(file_path, str) else file_path
+                    if path_obj.exists():
+                        zipf.write(path_obj, path_obj.name)
 
-        # Run in executor to avoid blocking
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(self.executor, create_zip)
+        # Run in thread pool to avoid blocking
+        await asyncio.to_thread(create_zip)
 
         return zip_path

@@ -171,6 +171,36 @@ def sample_audio_wav(temp_dir: Path) -> Path:
 
 
 @pytest.fixture
+def sample_video(temp_dir: Path) -> Path:
+    """Create a sample MP4 video for testing using FFmpeg"""
+    import subprocess
+    video_path = temp_dir / "test_video.mp4"
+
+    # Try to create a real video using FFmpeg
+    try:
+        subprocess.run([
+            'ffmpeg', '-f', 'lavfi', '-i', 'testsrc=duration=1:size=320x240:rate=1',
+            '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1',
+            '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-preset', 'ultrafast',
+            '-c:a', 'aac', '-t', '1',
+            str(video_path)
+        ], check=True, capture_output=True, timeout=10)
+        return video_path
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        # Fallback: create minimal valid MP4 with moov atom
+        # This is a very minimal but valid MP4 structure
+        mp4_data = bytes.fromhex(
+            # ftyp box
+            "0000001c6674797069736f6d00000200" +
+            "69736f6d69736f3269736f33" +
+            # moov box (required for FFmpeg)
+            "000000086d6f6f76"
+        )
+        video_path.write_bytes(mp4_data + (b"\x00" * 1000))
+        return video_path
+
+
+@pytest.fixture
 def sample_text_file(temp_dir: Path) -> Path:
     """Create a sample text file"""
     txt_path = temp_dir / "sample.txt"

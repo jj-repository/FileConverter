@@ -57,6 +57,38 @@ class VideoConverter(BaseConverter):
             return min(progress, 99.9)  # Cap at 99.9% until complete
         return None
 
+    def get_video_codec_for_format(self, output_format: str, user_codec: Optional[str] = None) -> str:
+        """Get appropriate video codec for the output video format"""
+        # If user specified a codec, return it (will be validated later)
+        if user_codec:
+            return user_codec
+
+        # Map output formats to compatible video codecs (defaults)
+        video_codec_map = {
+            "webm": "libvpx-vp9",  # WebM requires VP8, VP9, or AV1
+            "mkv": "libx264",
+            "mp4": "libx264",
+            "avi": "libx264",
+            "mov": "libx264",
+            "flv": "libx264",
+            "wmv": "wmv2",
+        }
+        return video_codec_map.get(output_format, "libx264")
+
+    def get_audio_codec_for_format(self, output_format: str) -> str:
+        """Get appropriate audio codec for the output video format"""
+        # Map output formats to compatible audio codecs
+        audio_codec_map = {
+            "webm": "libvorbis",  # WebM requires Vorbis or Opus
+            "mkv": "aac",
+            "mp4": "aac",
+            "avi": "mp3",
+            "mov": "aac",
+            "flv": "aac",
+            "wmv": "wmav2",
+        }
+        return audio_codec_map.get(output_format, "aac")
+
     async def convert(
         self,
         input_path: Path,
@@ -94,7 +126,8 @@ class VideoConverter(BaseConverter):
         await self.send_progress(session_id, 5, "converting", "Preparing conversion")
 
         # Build FFmpeg command - validate all user inputs
-        codec = options.get('codec', 'libx264')
+        # Get appropriate codec for the output format (or use user-specified codec)
+        codec = self.get_video_codec_for_format(output_format, options.get('codec'))
         if codec not in settings.ALLOWED_VIDEO_CODECS:
             raise ValueError(f"Invalid codec: {codec}. Allowed: {settings.ALLOWED_VIDEO_CODECS}")
 
@@ -114,9 +147,12 @@ class VideoConverter(BaseConverter):
             "-loglevel", "error",
         ]
 
-        # Add codec
+        # Add video codec
         cmd.extend(["-c:v", codec])
-        cmd.extend(["-c:a", "aac"])  # Audio codec
+
+        # Add appropriate audio codec for the output format
+        audio_codec = self.get_audio_codec_for_format(output_format)
+        cmd.extend(["-c:a", audio_codec])
 
         # Add bitrate
         cmd.extend(["-b:v", bitrate])

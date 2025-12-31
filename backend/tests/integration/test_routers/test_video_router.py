@@ -30,31 +30,55 @@ def client():
 
 @pytest.fixture
 def sample_video(temp_dir):
-    """Create a sample MP4 video for testing"""
+    """Create a sample MP4 video for testing using FFmpeg"""
+    import subprocess
     video_path = temp_dir / "test_video.mp4"
-    # Create a minimal valid MP4 file with proper header
-    # This is a minimal MP4 structure that won't decode but has valid headers
-    mp4_header = bytes.fromhex(
-        "00000020667479706d70343200000000" +
-        "6d703432" +  # MP4 signature
-        "69736f6d" +  # isom brand
-        "0000000000000000000000000000" +
-        "0000"
-    )
-    # Add some filler data to make it a valid-looking file
-    video_data = mp4_header + (b"\x00" * 5000)
-    video_path.write_bytes(video_data)
-    return video_path
+
+    # Try to create a real video using FFmpeg
+    try:
+        subprocess.run([
+            'ffmpeg', '-f', 'lavfi', '-i', 'testsrc=duration=1:size=320x240:rate=1',
+            '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1',
+            '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-preset', 'ultrafast',
+            '-c:a', 'aac', '-t', '1',
+            str(video_path)
+        ], check=True, capture_output=True, timeout=10)
+        return video_path
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        # Fallback: create minimal valid MP4 with moov atom
+        # This is a very minimal but valid MP4 structure
+        mp4_data = bytes.fromhex(
+            # ftyp box
+            "0000001c6674797069736f6d00000200" +
+            "69736f6d69736f3269736f33" +
+            # moov box (required for FFmpeg)
+            "000000086d6f6f76"
+        )
+        video_path.write_bytes(mp4_data + (b"\x00" * 1000))
+        return video_path
 
 
 @pytest.fixture
 def sample_webm(temp_dir):
-    """Create a sample WebM video for testing"""
+    """Create a sample WebM video for testing using FFmpeg"""
+    import subprocess
     video_path = temp_dir / "test_video.webm"
-    # WebM header (EBML)
-    webm_header = bytes([0x1A, 0x45, 0xDF, 0xA3]) + (b"\x00" * 5000)
-    video_path.write_bytes(webm_header)
-    return video_path
+
+    # Try to create a real webm using FFmpeg
+    try:
+        subprocess.run([
+            'ffmpeg', '-f', 'lavfi', '-i', 'testsrc=duration=1:size=320x240:rate=1',
+            '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1',
+            '-c:v', 'libvpx-vp9', '-c:a', 'libvorbis', '-t', '1',
+            str(video_path)
+        ], check=True, capture_output=True, timeout=10)
+        return video_path
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        # Fallback: create minimal webm structure
+        # EBML header for WebM
+        webm_header = bytes([0x1A, 0x45, 0xDF, 0xA3]) + (b"\x00" * 1000)
+        video_path.write_bytes(webm_header)
+        return video_path
 
 
 class TestVideoConvert:

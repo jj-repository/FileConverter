@@ -122,13 +122,13 @@ class AudioConverter(BaseConverter):
         # Validate sample rate if provided
         sample_rate = options.get('sample_rate')
         if sample_rate is not None:
-            if not isinstance(sample_rate, (int, str)) or int(sample_rate) not in settings.ALLOWED_SAMPLE_RATES:
+            if not isinstance(sample_rate, (int, str)) or str(sample_rate) not in settings.ALLOWED_SAMPLE_RATES:
                 raise ValueError(f"Invalid sample_rate: {sample_rate}. Allowed values: {settings.ALLOWED_SAMPLE_RATES}")
 
         # Validate channels if provided
         channels = options.get('channels')
         if channels is not None:
-            if not isinstance(channels, (int, str)) or int(channels) not in settings.ALLOWED_AUDIO_CHANNELS:
+            if not isinstance(channels, (int, str)) or str(channels) not in settings.ALLOWED_AUDIO_CHANNELS:
                 raise ValueError(f"Invalid channels: {channels}. Allowed values: {settings.ALLOWED_AUDIO_CHANNELS}")
 
         cmd = [

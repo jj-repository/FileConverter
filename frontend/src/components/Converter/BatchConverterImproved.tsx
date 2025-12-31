@@ -60,7 +60,9 @@ export const BatchConverter: React.FC = () => {
         handleFilesSelect(files);
       }
     } catch (err) {
-      console.error('Error selecting folder:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error selecting folder:', err);
+      }
       setError('Failed to load folder files');
     }
   };
@@ -77,7 +79,9 @@ export const BatchConverter: React.FC = () => {
         setOutputDirectory(directory);
       }
     } catch (err) {
-      console.error('Error selecting output directory:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error selecting output directory:', err);
+      }
       setError('Failed to select output directory');
     }
   };

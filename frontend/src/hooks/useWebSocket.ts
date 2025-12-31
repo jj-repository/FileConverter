@@ -16,7 +16,9 @@ export const useWebSocket = (sessionId: string | null) => {
 
     ws.onopen = () => {
       setIsConnected(true);
-      console.log('WebSocket connected');
+      if (import.meta.env.DEV) {
+        console.log('WebSocket connected');
+      }
     };
 
     ws.onmessage = (event) => {
@@ -24,17 +26,23 @@ export const useWebSocket = (sessionId: string | null) => {
         const data: ProgressUpdate = JSON.parse(event.data);
         setProgress(data);
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+        if (import.meta.env.DEV) {
+          console.error('Error parsing WebSocket message:', error);
+        }
       }
     };
 
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      if (import.meta.env.DEV) {
+        console.error('WebSocket error:', error);
+      }
     };
 
     ws.onclose = () => {
       setIsConnected(false);
-      console.log('WebSocket disconnected');
+      if (import.meta.env.DEV) {
+        console.log('WebSocket disconnected');
+      }
     };
 
     wsRef.current = ws;

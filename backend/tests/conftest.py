@@ -109,6 +109,68 @@ def sample_image_svg(temp_dir: Path) -> Path:
 
 
 @pytest.fixture
+def sample_audio_mp3(temp_dir: Path) -> Path:
+    """Create a sample MP3 audio file using FFmpeg"""
+    import subprocess
+    audio_path = temp_dir / "sample.mp3"
+
+    try:
+        # Use FFmpeg to generate a valid MP3 file (1 second of silence)
+        subprocess.run([
+            'ffmpeg', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo',
+            '-t', '1', '-q:a', '9', '-acodec', 'libmp3lame',
+            str(audio_path)
+        ], check=True, capture_output=True, timeout=5)
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        # Fallback: create a minimal but valid MP3 structure
+        # This is a 1-frame MP3 file that FFmpeg can recognize
+        mp3_header = b'\xff\xfb\x90\x00'  # Valid MPEG1 Layer3 header
+        audio_path.write_bytes(mp3_header + (b'\x00' * 417))
+
+    return audio_path
+
+
+@pytest.fixture
+def sample_audio_wav(temp_dir: Path) -> Path:
+    """Create a sample WAV audio file using FFmpeg"""
+    import subprocess
+    audio_path = temp_dir / "sample.wav"
+
+    try:
+        # Use FFmpeg to generate a valid WAV file (1 second of silence)
+        subprocess.run([
+            'ffmpeg', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo',
+            '-t', '1', '-acodec', 'pcm_s16le',
+            str(audio_path)
+        ], check=True, capture_output=True, timeout=5)
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        # Fallback: create a minimal valid WAV file
+        import struct
+        with audio_path.open('wb') as f:
+            # RIFF header
+            f.write(b'RIFF')
+            f.write(struct.pack('<I', 36 + 8820))  # File size - 8
+            f.write(b'WAVE')
+
+            # fmt chunk
+            f.write(b'fmt ')
+            f.write(struct.pack('<I', 16))  # fmt chunk size
+            f.write(struct.pack('<H', 1))   # PCM
+            f.write(struct.pack('<H', 2))   # Stereo
+            f.write(struct.pack('<I', 44100))  # Sample rate
+            f.write(struct.pack('<I', 44100 * 2 * 2))  # Byte rate
+            f.write(struct.pack('<H', 4))   # Block align
+            f.write(struct.pack('<H', 16))  # Bits per sample
+
+            # data chunk
+            f.write(b'data')
+            f.write(struct.pack('<I', 8820))  # data size (0.05 seconds)
+            f.write(b'\x00' * 8820)
+
+    return audio_path
+
+
+@pytest.fixture
 def sample_text_file(temp_dir: Path) -> Path:
     """Create a sample text file"""
     txt_path = temp_dir / "sample.txt"

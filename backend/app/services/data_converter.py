@@ -68,13 +68,23 @@ class DataConverter(BaseConverter):
         try:
             # Read input file based on format
             if input_format == 'csv':
-                df = pd.read_csv(input_path, encoding=encoding, delimiter=delimiter)
+                try:
+                    df = pd.read_csv(input_path, encoding=encoding, delimiter=delimiter)
+                except pd.errors.ParserError:
+                    # Handle malformed CSV by using error_bad_lines=False or on_bad_lines
+                    df = pd.read_csv(input_path, encoding=encoding, delimiter=delimiter,
+                                     on_bad_lines='skip')
             elif input_format == 'json':
                 with open(input_path, 'r', encoding=encoding) as f:
                     data = json.load(f)
                     # Try to convert to DataFrame
                     if isinstance(data, list):
-                        df = pd.DataFrame(data)
+                        # Handle empty list - create DataFrame with at least one column
+                        # so it can be written to/read from CSV properly
+                        if len(data) == 0:
+                            df = pd.DataFrame(columns=['value'])
+                        else:
+                            df = pd.DataFrame(data)
                     elif isinstance(data, dict):
                         # Check if it's a dict of lists (column-oriented)
                         if all(isinstance(v, list) for v in data.values()):

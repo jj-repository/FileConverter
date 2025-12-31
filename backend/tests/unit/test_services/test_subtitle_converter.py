@@ -834,8 +834,9 @@ class TestSubtitleMetadata:
 
             mock_subs = MagicMock()
             mock_subs.__len__ = MagicMock(return_value=1)
-            mock_subs.__getitem__ = MagicMock(return_value=mock_entry)
+            mock_subs.__getitem__ = MagicMock(side_effect=lambda i: mock_entry if isinstance(i, int) else [mock_entry])
             mock_subs.__iter__ = MagicMock(return_value=iter([mock_entry]))
+            mock_subs.__bool__ = MagicMock(return_value=True)  # Ensure truthiness
             mock_load.return_value = mock_subs
 
             info = await converter.get_subtitle_info(test_file)

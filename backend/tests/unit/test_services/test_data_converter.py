@@ -14,6 +14,8 @@ import json
 import csv
 import xml.etree.ElementTree as ET
 import pandas as pd
+import configparser
+import toml
 
 from app.services.data_converter import DataConverter
 from app.config import settings
@@ -1157,6 +1159,635 @@ class TestEdgeCases:
 # ============================================================================
 # CONFTEST FIXTURES (if not already present)
 # ============================================================================
+
+# ============================================================================
+# TOML CONVERSION TESTS
+# ============================================================================
+
+class TestTOMLConversion:
+    """Test TOML data conversion"""
+
+    @pytest.mark.asyncio
+    async def test_toml_to_json_conversion(self, temp_dir):
+        """Test TOML to JSON conversion"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.toml"
+        toml_content = """
+title = "TOML Example"
+name = "Alice"
+age = 30
+city = "New York"
+"""
+        input_file.write_text(toml_content)
+
+        output_file = settings.UPLOAD_DIR / "test_converted.json"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="json",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+            assert output_file.exists()
+
+            # Verify JSON content
+            with open(output_file, 'r') as f:
+                data = json.load(f)
+                assert len(data) == 1
+                assert data[0]["title"] == "TOML Example"
+
+    @pytest.mark.asyncio
+    async def test_toml_to_csv_conversion(self, temp_dir):
+        """Test TOML to CSV conversion"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.toml"
+        toml_content = """
+name = "Alice"
+age = 30
+"""
+        input_file.write_text(toml_content)
+
+        output_file = settings.UPLOAD_DIR / "test_converted.csv"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="csv",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+            df = pd.read_csv(output_file)
+            assert len(df) == 1
+
+    @pytest.mark.asyncio
+    async def test_json_to_toml_conversion(self, temp_dir):
+        """Test JSON to TOML conversion"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.json"
+        json_data = [{"name": "Alice", "age": 30, "city": "New York"}]
+        input_file.write_text(json.dumps(json_data))
+
+        output_file = settings.UPLOAD_DIR / "test_converted.toml"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="toml",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+            assert output_file.exists()
+
+            # Verify TOML can be parsed
+            data = toml.load(output_file)
+            assert data["name"] == "Alice"
+
+    @pytest.mark.asyncio
+    async def test_empty_dataframe_to_toml_raises_error(self, temp_dir):
+        """Test converting empty DataFrame to TOML raises error"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.json"
+        input_file.write_text(json.dumps([]))
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+            with pytest.raises(ValueError, match="Cannot convert empty DataFrame to TOML"):
+                await converter.convert(
+                    input_path=input_file,
+                    output_format="toml",
+                    options={},
+                    session_id="test-session"
+                )
+
+
+# ============================================================================
+# INI CONVERSION TESTS
+# ============================================================================
+
+class TestINIConversion:
+    """Test INI data conversion"""
+
+    @pytest.mark.asyncio
+    async def test_ini_to_json_conversion(self, temp_dir):
+        """Test INI to JSON conversion"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.ini"
+        ini_content = """[database]
+host = localhost
+port = 5432
+name = mydb
+
+[cache]
+host = redis-server
+port = 6379
+"""
+        input_file.write_text(ini_content)
+
+        output_file = settings.UPLOAD_DIR / "test_converted.json"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="json",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+            assert output_file.exists()
+
+            # Verify JSON content
+            with open(output_file, 'r') as f:
+                data = json.load(f)
+                assert len(data) == 2
+                assert data[0]["section"] == "database"
+
+    @pytest.mark.asyncio
+    async def test_ini_to_csv_conversion(self, temp_dir):
+        """Test INI to CSV conversion"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.ini"
+        ini_content = """[server1]
+host = localhost
+port = 8080
+
+[server2]
+host = remote
+port = 9090
+"""
+        input_file.write_text(ini_content)
+
+        output_file = settings.UPLOAD_DIR / "test_converted.csv"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="csv",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+            df = pd.read_csv(output_file)
+            assert len(df) == 2
+
+    @pytest.mark.asyncio
+    async def test_json_to_ini_conversion(self, temp_dir):
+        """Test JSON to INI conversion"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.json"
+        json_data = [
+            {"section": "database", "host": "localhost", "port": "5432"},
+            {"section": "cache", "host": "redis", "port": "6379"}
+        ]
+        input_file.write_text(json.dumps(json_data))
+
+        output_file = settings.UPLOAD_DIR / "test_converted.ini"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="ini",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+            assert output_file.exists()
+
+            # Verify INI can be parsed
+            config = configparser.ConfigParser()
+            config.read(output_file)
+            assert "database" in config.sections()
+            assert config["database"]["host"] == "localhost"
+
+
+# ============================================================================
+# JSONL CONVERSION TESTS
+# ============================================================================
+
+class TestJSONLConversion:
+    """Test JSONL (JSON Lines) data conversion"""
+
+    @pytest.mark.asyncio
+    async def test_jsonl_to_json_conversion(self, temp_dir):
+        """Test JSONL to JSON conversion"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.jsonl"
+        jsonl_content = """{"name": "Alice", "age": 30}
+{"name": "Bob", "age": 25}
+{"name": "Charlie", "age": 35}
+"""
+        input_file.write_text(jsonl_content)
+
+        output_file = settings.UPLOAD_DIR / "test_converted.json"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="json",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+            assert output_file.exists()
+
+            # Verify JSON content
+            with open(output_file, 'r') as f:
+                data = json.load(f)
+                assert len(data) == 3
+                assert data[0]["name"] == "Alice"
+
+    @pytest.mark.asyncio
+    async def test_jsonl_to_csv_conversion(self, temp_dir):
+        """Test JSONL to CSV conversion"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.jsonl"
+        jsonl_content = """{"name": "Alice", "age": 30}
+{"name": "Bob", "age": 25}
+"""
+        input_file.write_text(jsonl_content)
+
+        output_file = settings.UPLOAD_DIR / "test_converted.csv"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="csv",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+            df = pd.read_csv(output_file)
+            assert len(df) == 2
+
+    @pytest.mark.asyncio
+    async def test_json_to_jsonl_conversion(self, temp_dir):
+        """Test JSON to JSONL conversion"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.json"
+        json_data = [
+            {"name": "Alice", "age": 30},
+            {"name": "Bob", "age": 25}
+        ]
+        input_file.write_text(json.dumps(json_data))
+
+        output_file = settings.UPLOAD_DIR / "test_converted.jsonl"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="jsonl",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+            assert output_file.exists()
+
+            # Verify JSONL format (one JSON object per line)
+            lines = output_file.read_text().strip().split('\n')
+            assert len(lines) == 2
+            first_obj = json.loads(lines[0])
+            assert first_obj["name"] == "Alice"
+
+    @pytest.mark.asyncio
+    async def test_jsonl_with_empty_lines(self, temp_dir):
+        """Test JSONL with empty lines (should skip them)"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.jsonl"
+        jsonl_content = """{"name": "Alice", "age": 30}
+
+{"name": "Bob", "age": 25}
+
+"""
+        input_file.write_text(jsonl_content)
+
+        output_file = settings.UPLOAD_DIR / "test_converted.json"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="json",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+
+            # Verify only non-empty lines were parsed
+            with open(output_file, 'r') as f:
+                data = json.load(f)
+                assert len(data) == 2
+
+
+# ============================================================================
+# METADATA EXTRACTION TESTS
+# ============================================================================
+
+class TestGetDataInfo:
+    """Test get_data_info metadata extraction"""
+
+    @pytest.mark.asyncio
+    async def test_get_csv_info(self, temp_dir):
+        """Test extracting metadata from CSV file"""
+        converter = DataConverter()
+
+        csv_file = temp_dir / "test.csv"
+        csv_content = "name,age,city\nAlice,30,New York\nBob,25,London"
+        csv_file.write_text(csv_content)
+
+        info = await converter.get_data_info(csv_file)
+
+        assert info["format"] == "csv"
+        assert info["rows"] == 2
+        assert info["columns"] == 3
+        assert "name" in info["column_names"]
+        assert info["size"] > 0
+
+    @pytest.mark.asyncio
+    async def test_get_json_array_info(self, temp_dir):
+        """Test extracting metadata from JSON array file"""
+        converter = DataConverter()
+
+        json_file = temp_dir / "test.json"
+        json_data = [{"name": "Alice"}, {"name": "Bob"}, {"name": "Charlie"}]
+        json_file.write_text(json.dumps(json_data))
+
+        info = await converter.get_data_info(json_file)
+
+        assert info["format"] == "json"
+        assert info["type"] == "array"
+        assert info["items"] == 3
+        assert info["size"] > 0
+
+    @pytest.mark.asyncio
+    async def test_get_json_object_info(self, temp_dir):
+        """Test extracting metadata from JSON object file"""
+        converter = DataConverter()
+
+        json_file = temp_dir / "test.json"
+        json_data = {"name": "Alice", "age": 30, "city": "New York"}
+        json_file.write_text(json.dumps(json_data))
+
+        info = await converter.get_data_info(json_file)
+
+        assert info["format"] == "json"
+        assert info["type"] == "object"
+        assert "name" in info["keys"]
+        assert info["size"] > 0
+
+    @pytest.mark.asyncio
+    async def test_get_xml_info_with_defusedxml(self, temp_dir):
+        """Test extracting metadata from XML file (with defusedxml)"""
+        converter = DataConverter()
+
+        xml_file = temp_dir / "test.xml"
+        xml_content = """<?xml version="1.0"?>
+<data>
+    <item><name>Alice</name></item>
+    <item><name>Bob</name></item>
+</data>"""
+        xml_file.write_text(xml_content)
+
+        info = await converter.get_data_info(xml_file)
+
+        assert info["format"] == "xml"
+        assert info["root_tag"] == "data"
+        assert info["children"] == 2
+        assert info["size"] > 0
+
+    @pytest.mark.asyncio
+    async def test_get_xml_info_without_defusedxml(self, temp_dir):
+        """Test extracting metadata from XML file (without defusedxml)"""
+        converter = DataConverter()
+
+        xml_file = temp_dir / "test.xml"
+        xml_content = """<?xml version="1.0"?>
+<data>
+    <item><name>Alice</name></item>
+</data>"""
+        xml_file.write_text(xml_content)
+
+        # Mock DEFUSEDXML_AVAILABLE as False
+        with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
+            info = await converter.get_data_info(xml_file)
+
+            assert info["format"] == "xml"
+            assert info["root_tag"] == "data"
+            assert info["children"] == 1
+
+    @pytest.mark.asyncio
+    async def test_get_info_unsupported_format(self, temp_dir):
+        """Test get_data_info with unsupported format"""
+        converter = DataConverter()
+
+        txt_file = temp_dir / "test.txt"
+        txt_file.write_text("some text")
+
+        info = await converter.get_data_info(txt_file)
+
+        assert "error" in info
+        assert info["error"] == "Unsupported format"
+
+    @pytest.mark.asyncio
+    async def test_get_info_malformed_file(self, temp_dir):
+        """Test get_data_info with malformed file"""
+        converter = DataConverter()
+
+        json_file = temp_dir / "test.json"
+        json_file.write_text("{ invalid json }")
+
+        info = await converter.get_data_info(json_file)
+
+        assert "error" in info
+
+
+# ============================================================================
+# DEFUSEDXML FALLBACK TESTS
+# ============================================================================
+
+class TestDefusedXMLFallback:
+    """Test XML parsing fallback when defusedxml is not available"""
+
+    @pytest.mark.asyncio
+    async def test_xml_conversion_without_defusedxml(self, temp_dir):
+        """Test XML conversion when defusedxml is not available"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.xml"
+        xml_content = """<?xml version="1.0"?>
+<data>
+    <item>
+        <name>Alice</name>
+        <age>30</age>
+    </item>
+</data>"""
+        input_file.write_text(xml_content)
+
+        output_file = settings.UPLOAD_DIR / "test_converted.json"
+
+        with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
+            with patch.object(converter, 'send_progress', new=AsyncMock()):
+                output_file.parent.mkdir(parents=True, exist_ok=True)
+
+                result = await converter.convert(
+                    input_path=input_file,
+                    output_format="json",
+                    options={},
+                    session_id="test-session"
+                )
+
+                assert result == output_file
+                assert output_file.exists()
+
+                # Verify JSON content was still parsed correctly
+                with open(output_file, 'r') as f:
+                    data = json.load(f)
+                    assert len(data) == 1
+                    assert data[0]["name"] == "Alice"
+
+    def test_defusedxml_import_error_handling(self):
+        """Test that ImportError for defusedxml is handled correctly"""
+        # This test verifies the import error handling at module load time
+        # We can't directly test the import error, but we can verify that
+        # DEFUSEDXML_AVAILABLE is set correctly based on import success/failure
+        import app.services.data_converter as dc
+
+        # The flag should be a boolean
+        assert isinstance(dc.DEFUSEDXML_AVAILABLE, bool)
+
+        # If defusedxml is available, it should be True, otherwise False
+        try:
+            import defusedxml
+            assert dc.DEFUSEDXML_AVAILABLE is True
+        except ImportError:
+            assert dc.DEFUSEDXML_AVAILABLE is False
+
+
+# ============================================================================
+# ADDITIONAL EDGE CASES
+# ============================================================================
+
+class TestAdditionalEdgeCases:
+    """Test additional edge cases for better coverage"""
+
+    @pytest.mark.asyncio
+    async def test_yaml_dict_structure_input(self, temp_dir):
+        """Test YAML with dict structure (not list) input"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.yaml"
+        yaml_content = """
+name: Alice
+age: 30
+city: New York
+"""
+        input_file.write_text(yaml_content)
+
+        output_file = settings.UPLOAD_DIR / "test_converted.json"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+
+            result = await converter.convert(
+                input_path=input_file,
+                output_format="json",
+                options={},
+                session_id="test-session"
+            )
+
+            assert result == output_file
+
+            # Verify data was converted correctly
+            with open(output_file, 'r') as f:
+                data = json.load(f)
+                assert len(data) == 1
+                assert data[0]["name"] == "Alice"
+
+    @pytest.mark.asyncio
+    async def test_yaml_unsupported_structure_raises_error(self, temp_dir):
+        """Test YAML with unsupported structure (string)"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.yaml"
+        yaml_content = "just a string"
+        input_file.write_text(yaml_content)
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+            with pytest.raises(ValueError, match="Unsupported YAML structure"):
+                await converter.convert(
+                    input_path=input_file,
+                    output_format="json",
+                    options={},
+                    session_id="test-session"
+                )
+
+    @pytest.mark.asyncio
+    async def test_toml_unsupported_structure_raises_error(self, temp_dir):
+        """Test TOML with unsupported structure"""
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.toml"
+        toml_content = "name = 'Alice'"
+        input_file.write_text(toml_content)
+
+        # Mock toml.load to return non-dict (though unlikely in practice)
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+            with patch('toml.load', return_value="not a dict"):
+                with pytest.raises(ValueError, match="Unsupported TOML structure"):
+                    await converter.convert(
+                        input_path=input_file,
+                        output_format="json",
+                        options={},
+                        session_id="test-session"
+                    )
+
 
 @pytest.fixture
 def temp_dir(tmp_path):

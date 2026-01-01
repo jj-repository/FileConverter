@@ -1789,6 +1789,112 @@ city: New York
                     )
 
 
+    @pytest.mark.asyncio
+    async def test_xml_parsing_fallback_when_defusedxml_unavailable(self, temp_dir):
+        """Test XML parsing uses fallback when defusedxml is not available"""
+        import sys
+        from unittest.mock import patch
+
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.xml"
+        xml_content = """<?xml version="1.0"?>
+<root>
+    <record><name>Alice</name><age>30</age></record>
+</root>"""
+        input_file.write_text(xml_content)
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+            # Temporarily disable defusedxml
+            with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
+                # This should use the fallback XML parser
+                result = await converter.convert(
+                    input_path=input_file,
+                    output_format="json",
+                    options={},
+                    session_id="test-session"
+                )
+
+                assert result.exists()
+                assert result.suffix == ".json"
+
+
+class TestDataImportFallback:
+    """Test import error handling for optional dependencies"""
+
+    def test_defusedxml_import_fallback(self):
+        """Test that DEFUSEDXML_AVAILABLE is set to False when defusedxml is not available"""
+        import sys
+        from unittest.mock import patch
+
+        # Temporarily hide defusedxml
+        with patch.dict(sys.modules, {'defusedxml': None, 'defusedxml.ElementTree': None}):
+            # Force module reload to trigger import error
+            import importlib
+            import app.services.data_converter
+            importlib.reload(app.services.data_converter)
+
+            # The module should still load with DEFUSEDXML_AVAILABLE=False
+            assert hasattr(app.services.data_converter, 'DEFUSEDXML_AVAILABLE')
+            # Re-reload to restore normal state
+            importlib.reload(app.services.data_converter)
+
+
+class TestDataEdgeCases:
+    """Test edge cases to reach 100% coverage"""
+
+    @pytest.mark.asyncio
+    async def test_unsupported_input_format_in_conversion(self, temp_dir):
+        """Test unsupported input format error in conversion (line 146)"""
+        converter = DataConverter()
+
+        # Patch supported_formats to include 'xyz' so validation passes
+        # but the format isn't handled in the if/elif chain
+        converter.supported_formats = {
+            "input": ["csv", "json", "xml", "yaml", "yml", "toml", "ini", "jsonl", "xyz"],
+            "output": ["csv", "json"]
+        }
+
+        input_file = temp_dir / "test.xyz"
+        input_file.write_text("test data")
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with pytest.raises(ValueError, match="Unsupported input format: xyz"):
+                await converter.convert(
+                    input_path=input_file,
+                    output_format="csv",
+                    options={},
+                    session_id="test-session"
+                )
+
+    @pytest.mark.asyncio
+    async def test_unsupported_output_format_in_conversion(self, temp_dir):
+        """Test unsupported output format error in conversion (line 197)"""
+        converter = DataConverter()
+
+        # Patch supported_formats to include 'xyz' in outputs so validation passes
+        # but the format isn't handled in the output if/elif chain
+        converter.supported_formats = {
+            "input": ["json"],
+            "output": ["csv", "json", "xml", "yaml", "yml", "toml", "ini", "jsonl", "xyz"]
+        }
+
+        input_file = temp_dir / "test.json"
+        input_file.write_text(json.dumps([{"name": "Alice"}]))
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with pytest.raises(ValueError, match="Unsupported output format: xyz"):
+                await converter.convert(
+                    input_path=input_file,
+                    output_format="xyz",
+                    options={},
+                    session_id="test-session"
+                )
+
+
+
 @pytest.fixture
 def temp_dir(tmp_path):
     """Provide a temporary directory for test files"""

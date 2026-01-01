@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import zipfile
 import io
+import ebooklib
 
 from app.services.ebook_converter import EbookConverter
 from app.config import settings
@@ -1077,3 +1078,150 @@ class TestOptionsAndParameters:
                 )
 
                 assert result == output_file
+
+
+class TestEbookEdgeCases:
+    """Test edge cases and error handling in ebook conversion"""
+
+    @pytest.mark.asyncio
+    async def test_epub_to_txt_removes_script_tags(self, temp_dir):
+        """Test that script tags are removed when converting EPUB to TXT (line 130)"""
+        converter = EbookConverter()
+
+        output_file = settings.UPLOAD_DIR / "test_converted.txt"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Create mock EPUB with HTML content including script tags
+        mock_book = MagicMock()
+        mock_item = MagicMock()
+        mock_item.get_type.return_value = 9  # ITEM_DOCUMENT
+        html_content = b"""
+        <html>
+            <script>alert('test');</script>
+            <style>.test { color: red; }</style>
+            <body>Content here</body>
+        </html>
+        """
+        mock_item.get_content.return_value = html_content
+        mock_book.get_items.return_value = [mock_item]
+        mock_book.get_metadata.return_value = []  # No title/author
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            await converter._epub_to_txt(mock_book, output_file, "test-session")
+
+            assert output_file.exists()
+            # Verify script and style tags were removed
+            content = output_file.read_text()
+            assert 'alert' not in content
+            assert '.test' not in content
+
+    @pytest.mark.asyncio
+    async def test_epub_to_html_handles_missing_body_tag(self, temp_dir):
+        """Test EPUB to HTML handles content without body tag (line 197)"""
+        converter = EbookConverter()
+
+        output_file = settings.UPLOAD_DIR / "test_converted.html"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Create mock EPUB with HTML content without body tag
+        mock_book = MagicMock()
+        mock_item = MagicMock()
+        mock_item.get_type.return_value = 9  # ITEM_DOCUMENT
+        html_content = b"<html><p>Direct content without body</p></html>"
+        mock_item.get_content.return_value = html_content
+        mock_book.get_items.return_value = [mock_item]
+        mock_book.get_metadata.return_value = []  # No title/author
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            await converter._epub_to_html(mock_book, output_file, "test-session")
+
+            assert output_file.exists()
+            # Verify the HTML content was included despite missing body tag
+            content = output_file.read_text()
+            assert 'Direct content without body' in content
+
+    @pytest.mark.asyncio
+    async def test_epub_to_pdf_handles_paragraph_errors(self, temp_dir):
+        """Test EPUB to PDF handles errors when adding paragraphs (lines 238, 256-259)"""
+        converter = EbookConverter()
+
+        output_file = settings.UPLOAD_DIR / "test_converted.pdf"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Create mock EPUB with content that will cause paragraph errors
+        # Use double newlines to create multiple paragraphs after text cleaning
+        mock_book = MagicMock()
+        mock_item = MagicMock()
+        mock_item.get_type.return_value = 9  # ITEM_DOCUMENT
+        html_content = b"""<html>
+<script>should be removed</script>
+<body>
+<p>First paragraph that works fine.</p>
+
+<p>Second paragraph that will fail.</p>
+</body>
+</html>"""
+        mock_item.get_content.return_value = html_content
+        mock_book.get_items.return_value = [mock_item]
+        mock_book.get_metadata.return_value = []  # No title/author
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch('app.services.ebook_converter.SimpleDocTemplate') as mock_doc_class:
+                with patch('app.services.ebook_converter.Paragraph') as mock_paragraph_class:
+                    with patch('app.services.ebook_converter.Spacer', return_value=MagicMock()):
+                        with patch('app.services.ebook_converter.getSampleStyleSheet') as mock_styles:
+                            # Return a proper styles object
+                            mock_styles.return_value = {
+                                'Title': MagicMock(),
+                                'Heading2': MagicMock(),
+                                'BodyText': MagicMock()
+                            }
+
+                            # Mock logger to verify warning is called
+                            with patch('app.services.ebook_converter.logger') as mock_logger:
+                                # Make Paragraph raise exception to test exception handler (lines 256-259)
+                                # We need at least one call to succeed, then one to fail
+                                def paragraph_side_effect(*args, **kwargs):
+                                    if not hasattr(paragraph_side_effect, 'call_count'):
+                                        paragraph_side_effect.call_count = 0
+                                    paragraph_side_effect.call_count += 1
+
+                                    if paragraph_side_effect.call_count == 1:
+                                        return MagicMock()  # First paragraph succeeds
+                                    else:
+                                        raise Exception("Font error")  # Subsequent paragraphs fail
+
+                                mock_paragraph_class.side_effect = paragraph_side_effect
+
+                                mock_doc_instance = MagicMock()
+                                mock_doc_class.return_value = mock_doc_instance
+
+                                await converter._epub_to_pdf(mock_book, output_file, "test-session")
+
+                                # Should have called build on the document despite the error
+                                mock_doc_instance.build.assert_called_once()
+                                # Should have logged the warning for the failed paragraph
+                                assert mock_logger.warning.called
+
+    @pytest.mark.asyncio
+    async def test_epub_convert_unsupported_output_format(self, temp_dir):
+        """Test converting from EPUB to unsupported format raises error (line 104)"""
+        converter = EbookConverter()
+
+        input_file = temp_dir / "test.epub"
+        input_file.write_bytes(b"fake epub")
+
+        output_file = settings.UPLOAD_DIR / "test_converted.xyz"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch('ebooklib.epub.read_epub') as mock_read:
+                mock_book = MagicMock()
+                mock_read.return_value = mock_book
+
+                with pytest.raises(ValueError, match="Unsupported output format"):
+                    await converter._convert_from_epub(
+                        input_file,
+                        output_file,
+                        "xyz",  # Unsupported format
+                        "test-session"
+                    )

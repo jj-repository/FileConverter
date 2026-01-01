@@ -9,7 +9,7 @@ and metadata extraction for PDF/DOCX
 import pytest
 import asyncio
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch, MagicMock, PropertyMock
 import subprocess
 
 from app.services.document_converter import DocumentConverter
@@ -504,3 +504,45 @@ class TestDocumentMetadata:
             metadata = await converter.get_document_metadata(test_file)
 
             assert "error" in metadata
+
+    @pytest.mark.asyncio
+    async def test_get_metadata_stats_error_handled(self, temp_dir):
+        """Test that errors getting document stats are handled gracefully"""
+        with patch('subprocess.run') as mock_check:
+            mock_check.return_value = Mock(returncode=0)
+            converter = DocumentConverter()
+
+            test_file = temp_dir / "test.txt"
+            test_file.write_text("Test content")
+
+            # Mock file.read_text() to raise an exception
+            with patch.object(Path, 'read_text', side_effect=Exception("Read error")):
+                metadata = await converter.get_document_metadata(test_file)
+
+                # Should still return metadata, just without stats
+                assert "format" in metadata
+                # Stats should not be present due to error
+                assert "word_count" not in metadata or metadata.get("word_count") is None
+
+    @pytest.mark.asyncio
+    async def test_get_metadata_pdf_metadata_error_handled(self, temp_dir):
+        """Test that errors reading PDF metadata are handled gracefully"""
+        with patch('subprocess.run') as mock_check:
+            mock_check.return_value = Mock(returncode=0)
+            converter = DocumentConverter()
+
+            test_file = temp_dir / "test.pdf"
+            test_file.write_bytes(b"%PDF-1.4\nfake pdf")
+
+            # Mock PdfReader to raise an exception when accessing metadata
+            with patch('PyPDF2.PdfReader') as mock_reader:
+                mock_pdf = MagicMock()
+                mock_pdf.metadata = MagicMock()
+                # Make metadata access raise exception
+                type(mock_pdf.metadata).title = PropertyMock(side_effect=Exception("Metadata error"))
+                mock_reader.return_value = mock_pdf
+
+                metadata = await converter.get_document_metadata(test_file)
+
+                # Should still return metadata, just without PDF-specific fields
+                assert "format" in metadata

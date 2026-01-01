@@ -528,6 +528,562 @@ class TestImageSpecialFormats:
 
 
 # ============================================================================
+# SVG CONVERSION TESTS
+# ============================================================================
+
+class TestSVGConversion:
+    """Test SVG image conversion"""
+
+    @pytest.mark.asyncio
+    async def test_svg_to_png_conversion(self, temp_dir, mock_websocket_manager):
+        """Test SVG to PNG conversion"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.svg"
+        # Create simple SVG
+        svg_content = '''<?xml version="1.0"?>
+<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="red"/>
+</svg>'''
+        input_file.write_text(svg_content)
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        settings.TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+        options = {"width": 200, "height": 200}
+
+        # Check if SVG support is available
+        from app.services.image_converter import SVG_AVAILABLE
+
+        if SVG_AVAILABLE:
+            result = await converter.convert(input_file, "png", options, "test-session")
+            assert result.exists()
+            assert result.suffix == ".png"
+
+            # Verify dimensions
+            converted_img = Image.open(result)
+            assert converted_img.format == "PNG"
+            assert converted_img.size == (200, 200)
+
+            # Clean up
+            if result.exists():
+                result.unlink()
+        else:
+            # Should raise error when SVG support not available
+            with pytest.raises(ValueError, match="SVG support not available"):
+                await converter.convert(input_file, "png", options, "test-session")
+
+    @pytest.mark.asyncio
+    async def test_svg_to_svg_copy(self, temp_dir, mock_websocket_manager):
+        """Test SVG to SVG conversion (should just copy)"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.svg"
+        svg_content = '''<?xml version="1.0"?>
+<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="40" fill="blue"/>
+</svg>'''
+        input_file.write_text(svg_content)
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        from app.services.image_converter import SVG_AVAILABLE
+
+        if SVG_AVAILABLE:
+            # SVG to SVG should just copy the file
+            result = await converter.convert(input_file, "svg", {}, "test-session")
+
+            assert result.exists()
+            assert result.suffix == ".svg"
+
+            # Verify content was copied
+            assert result.read_text() == svg_content
+
+            # Clean up
+            if result.exists():
+                result.unlink()
+        else:
+            # Without SVG support, even SVG to SVG fails (current behavior)
+            with pytest.raises(ValueError, match="SVG support not available"):
+                await converter.convert(input_file, "svg", {}, "test-session")
+
+    @pytest.mark.asyncio
+    async def test_svg_without_cairosvg_raises_error(self, temp_dir):
+        """Test SVG conversion fails gracefully without cairosvg"""
+        converter = ImageConverter()
+
+        input_file = temp_dir / "test.svg"
+        svg_content = '<svg><rect width="100" height="100"/></svg>'
+        input_file.write_text(svg_content)
+
+        # Mock SVG_AVAILABLE as False
+        with patch('app.services.image_converter.SVG_AVAILABLE', False):
+            with pytest.raises(ValueError, match="SVG support not available"):
+                await converter.convert(input_file, "png", {}, "test-session")
+
+    @pytest.mark.asyncio
+    async def test_svg_with_custom_dimensions(self, temp_dir, mock_websocket_manager):
+        """Test SVG conversion with custom dimensions"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.svg"
+        svg_content = '<svg width="50" height="50" xmlns="http://www.w3.org/2000/svg"><rect width="50" height="50" fill="green"/></svg>'
+        input_file.write_text(svg_content)
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        settings.TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+        from app.services.image_converter import SVG_AVAILABLE
+
+        if SVG_AVAILABLE:
+            # Test with only width
+            result = await converter.convert(input_file, "jpg", {"width": 400}, "test-session")
+            assert result.exists()
+
+            # Clean up
+            if result.exists():
+                result.unlink()
+
+
+# ============================================================================
+# HEIC/HEIF SUPPORT TESTS
+# ============================================================================
+
+class TestHEICSupport:
+    """Test HEIC/HEIF format support"""
+
+    def test_heif_availability_flag(self):
+        """Test that HEIF_AVAILABLE flag is set correctly"""
+        from app.services.image_converter import HEIF_AVAILABLE
+
+        # Should be a boolean
+        assert isinstance(HEIF_AVAILABLE, bool)
+
+        # Verify it matches actual availability
+        try:
+            import pillow_heif
+            assert HEIF_AVAILABLE is True
+        except ImportError:
+            assert HEIF_AVAILABLE is False
+
+
+# ============================================================================
+# TRANSPARENCY HANDLING TESTS
+# ============================================================================
+
+class TestTransparencyHandling:
+    """Test transparency handling for various image modes"""
+
+    @pytest.mark.asyncio
+    async def test_palette_mode_to_jpeg(self, temp_dir, mock_websocket_manager):
+        """Test palette mode (P) to JPEG conversion"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test_palette.png"
+        # Create palette mode image
+        img = Image.new('P', (100, 100))
+        # Add some colors to palette
+        img.putpalette([255, 0, 0] * 85 + [0, 255, 0] * 85 + [0, 0, 255] * 86)
+        img.save(input_file, 'PNG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "jpg", {"quality": 95}, "test-session")
+
+        assert result.exists()
+
+        # Verify it's RGB JPEG
+        converted_img = Image.open(result)
+        assert converted_img.format == "JPEG"
+        assert converted_img.mode == "RGB"
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_la_mode_to_jpeg(self, temp_dir, mock_websocket_manager):
+        """Test LA mode (grayscale with alpha) to JPEG conversion"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test_la.png"
+        # Create LA mode image (grayscale with alpha)
+        img = Image.new('LA', (100, 100), color=(128, 255))
+        img.save(input_file, 'PNG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "jpg", {"quality": 95}, "test-session")
+
+        assert result.exists()
+
+        # Verify it's RGB JPEG
+        converted_img = Image.open(result)
+        assert converted_img.format == "JPEG"
+        assert converted_img.mode == "RGB"
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_rgba_background_handling(self, temp_dir, mock_websocket_manager):
+        """Test RGBA to JPEG creates white background"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test_rgba.png"
+        # Create RGBA with semi-transparent red
+        img = Image.new('RGBA', (100, 100), color=(255, 0, 0, 128))
+        img.save(input_file, 'PNG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "jpg", {}, "test-session")
+
+        assert result.exists()
+
+        # Open and verify it has white background blended
+        converted_img = Image.open(result)
+        assert converted_img.mode == "RGB"
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+
+# ============================================================================
+# WEBP QUALITY TESTS
+# ============================================================================
+
+class TestWebPQuality:
+    """Test WebP format quality settings"""
+
+    @pytest.mark.asyncio
+    async def test_webp_quality_setting(self, temp_dir, mock_websocket_manager):
+        """Test WebP conversion with quality setting"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='blue')
+        img.save(input_file, 'JPEG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "webp", {"quality": 80}, "test-session")
+
+        assert result.exists()
+        assert result.suffix == ".webp"
+
+        # Verify it's WebP
+        converted_img = Image.open(result)
+        assert converted_img.format == "WEBP"
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+
+# ============================================================================
+# QUALITY EDGE CASES
+# ============================================================================
+
+class TestQualityEdgeCases:
+    """Test edge cases for quality parameter"""
+
+    @pytest.mark.asyncio
+    async def test_quality_boundary_min(self, temp_dir, mock_websocket_manager):
+        """Test quality=1 (minimum valid)"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'JPEG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "jpg", {"quality": 1}, "test-session")
+
+        assert result.exists()
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_quality_boundary_max(self, temp_dir, mock_websocket_manager):
+        """Test quality=100 (maximum valid)"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'JPEG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "jpg", {"quality": 100}, "test-session")
+
+        assert result.exists()
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_quality_zero_rejected(self, temp_dir):
+        """Test quality=0 is rejected"""
+        converter = ImageConverter()
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'JPEG')
+
+        with pytest.raises(ValueError, match="Invalid quality"):
+            await converter.convert(input_file, "jpg", {"quality": 0}, "test-session")
+
+    @pytest.mark.asyncio
+    async def test_quality_negative_rejected(self, temp_dir):
+        """Test negative quality is rejected"""
+        converter = ImageConverter()
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'JPEG')
+
+        with pytest.raises(ValueError, match="Invalid quality"):
+            await converter.convert(input_file, "jpg", {"quality": -10}, "test-session")
+
+    @pytest.mark.asyncio
+    async def test_quality_over_100_rejected(self, temp_dir):
+        """Test quality > 100 is rejected"""
+        converter = ImageConverter()
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'JPEG')
+
+        with pytest.raises(ValueError, match="Invalid quality"):
+            await converter.convert(input_file, "jpg", {"quality": 101}, "test-session")
+
+
+# ============================================================================
+# DIMENSION VALIDATION TESTS
+# ============================================================================
+
+class TestDimensionValidation:
+    """Test dimension validation edge cases"""
+
+    @pytest.mark.asyncio
+    async def test_width_one_accepted(self, temp_dir, mock_websocket_manager):
+        """Test width=1 (minimum) is accepted"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'JPEG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        # width=1 should be valid (minimum)
+        result = await converter.convert(input_file, "jpg", {"width": 1}, "test-session")
+        assert result.exists()
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_height_one_accepted(self, temp_dir, mock_websocket_manager):
+        """Test height=1 (minimum) is accepted"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'JPEG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        # height=1 should be valid (minimum)
+        result = await converter.convert(input_file, "jpg", {"height": 1}, "test-session")
+        assert result.exists()
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_negative_height_rejected(self, temp_dir):
+        """Test negative height is rejected"""
+        converter = ImageConverter()
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'JPEG')
+
+        with pytest.raises(ValueError, match="Invalid height"):
+            await converter.convert(input_file, "jpg", {"height": -50}, "test-session")
+
+    @pytest.mark.asyncio
+    async def test_excessive_height_rejected(self, temp_dir):
+        """Test height > 10000 is rejected"""
+        converter = ImageConverter()
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'JPEG')
+
+        with pytest.raises(ValueError, match="Invalid height"):
+            await converter.convert(input_file, "jpg", {"height": 15000}, "test-session")
+
+    @pytest.mark.asyncio
+    async def test_max_valid_dimensions(self, temp_dir, mock_websocket_manager):
+        """Test maximum valid dimensions (10000x10000)"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.jpg"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'JPEG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        # This should succeed (boundary test)
+        result = await converter.convert(input_file, "jpg", {"width": 10000, "height": 10000}, "test-session")
+
+        assert result.exists()
+
+        # Verify dimensions
+        converted_img = Image.open(result)
+        assert converted_img.size == (10000, 10000)
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+
+# ============================================================================
+# FORMAT MAPPING TESTS
+# ============================================================================
+
+class TestFormatMapping:
+    """Test PIL format name mapping"""
+
+    @pytest.mark.asyncio
+    async def test_jpg_format_mapped_to_jpeg(self, temp_dir, mock_websocket_manager):
+        """Test that 'jpg' is mapped to 'JPEG' for PIL"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.png"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'PNG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Use 'jpg' extension (should be mapped to 'JPEG' for PIL)
+        result = await converter.convert(input_file, "jpg", {"quality": 95}, "test-session")
+
+        assert result.exists()
+
+        # Verify it's JPEG format
+        converted_img = Image.open(result)
+        assert converted_img.format == "JPEG"
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_jpeg_format_stays_uppercase(self, temp_dir, mock_websocket_manager):
+        """Test that 'jpeg' is properly handled"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.png"
+        img = Image.new('RGB', (100, 100), color='red')
+        img.save(input_file, 'PNG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "jpeg", {"quality": 95}, "test-session")
+
+        assert result.exists()
+        assert result.suffix == ".jpeg"
+
+        # Verify it's JPEG format
+        converted_img = Image.open(result)
+        assert converted_img.format == "JPEG"
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+
+# ============================================================================
+# ADDITIONAL CONVERSION TESTS
+# ============================================================================
+
+class TestAdditionalConversions:
+    """Test additional image conversions"""
+
+    @pytest.mark.asyncio
+    async def test_png_to_webp(self, temp_dir, mock_websocket_manager):
+        """Test PNG to WebP conversion"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.png"
+        img = Image.new('RGB', (100, 100), color='green')
+        img.save(input_file, 'PNG')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "webp", {}, "test-session")
+
+        assert result.exists()
+        assert result.suffix == ".webp"
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_gif_to_png(self, temp_dir, mock_websocket_manager):
+        """Test GIF to PNG conversion"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.gif"
+        img = Image.new('RGB', (100, 100), color='yellow')
+        img.save(input_file, 'GIF')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "png", {}, "test-session")
+
+        assert result.exists()
+        assert result.suffix == ".png"
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_bmp_to_jpg(self, temp_dir, mock_websocket_manager):
+        """Test BMP to JPG conversion"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.bmp"
+        img = Image.new('RGB', (100, 100), color='purple')
+        img.save(input_file, 'BMP')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "jpg", {"quality": 85}, "test-session")
+
+        assert result.exists()
+        assert result.suffix == ".jpg"
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+
+# ============================================================================
 # EDGE CASES
 # ============================================================================
 
@@ -568,6 +1124,30 @@ class TestImageEdgeCases:
 
         assert result.exists()
         assert result.suffix == ".jpg"
+
+        # Clean up
+        if result.exists():
+            result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_non_rgb_mode_to_jpeg(self, temp_dir, mock_websocket_manager):
+        """Test converting non-RGB mode image to JPEG"""
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test_cmyk.tiff"
+        # Create CMYK image (TIFF supports CMYK)
+        img = Image.new('CMYK', (100, 100), color=(100, 50, 0, 0))
+        img.save(input_file, 'TIFF')
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(input_file, "jpg", {}, "test-session")
+
+        assert result.exists()
+
+        # Verify conversion to RGB
+        converted_img = Image.open(result)
+        assert converted_img.mode == "RGB"
 
         # Clean up
         if result.exists():

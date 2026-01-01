@@ -452,3 +452,97 @@ class TestAudioConversionFormats:
         data = response.json()
         assert data["status"] == "completed"
         assert data["output_file"].endswith(".mp3")
+
+
+class TestAudioCleanup:
+    """Test cleanup behavior in error scenarios"""
+
+    def test_convert_cleanup_output_file_on_error(self, client, sample_audio, monkeypatch):
+        """Test that output_path is cleaned up when conversion fails after file creation"""
+        from app.services.audio_converter import AudioConverter
+        from pathlib import Path
+        from app.utils.file_handler import cleanup_file
+        from app.config import settings
+        from app.models.conversion import ConversionResponse
+
+        # Track cleanup calls
+        cleanup_calls = []
+        original_cleanup = cleanup_file
+
+        def mock_cleanup(file_path):
+            cleanup_calls.append(str(file_path))
+            return original_cleanup(file_path)
+
+        monkeypatch.setattr("app.routers.audio.cleanup_file", mock_cleanup)
+
+        # Mock converter to succeed and return output path
+        output_file = settings.UPLOAD_DIR / "test_output_audio.wav"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_bytes(b"fake data")
+
+        async def mock_convert_with_cache(self, input_path, output_format, options, session_id):
+            # Return valid output path
+            return output_file
+
+        monkeypatch.setattr(AudioConverter, "convert_with_cache", mock_convert_with_cache)
+
+        # Mock ConversionResponse to raise exception after output_path is set
+        original_conversion_response = ConversionResponse
+        def mock_conversion_response(*args, **kwargs):
+            raise Exception("Simulated error after conversion")
+
+        monkeypatch.setattr("app.routers.audio.ConversionResponse", mock_conversion_response)
+
+        with open(sample_audio, 'rb') as f:
+            response = client.post(
+                "/api/audio/convert",
+                files={"file": ("test.mp3", f, "audio/mpeg")},
+                data={"output_format": "wav"}
+            )
+
+        # Should return 500 error
+        assert response.status_code == 500
+        response_data = response.json()
+        error_msg = response_data.get("detail") or response_data.get("error")
+        assert "Conversion failed" in error_msg
+
+        # Verify cleanup was called on both input_path AND output_path
+        assert len(cleanup_calls) >= 2
+        # Clean up the test file
+        output_file.unlink(missing_ok=True)
+
+    def test_info_cleanup_temp_file_on_error(self, client, sample_audio, monkeypatch):
+        """Test that temp_path is cleaned up when info extraction fails"""
+        from app.services.audio_converter import AudioConverter
+        from app.utils.file_handler import cleanup_file
+
+        # Track cleanup calls
+        cleanup_calls = []
+        original_cleanup = cleanup_file
+
+        def mock_cleanup(file_path):
+            cleanup_calls.append(str(file_path))
+            return original_cleanup(file_path)
+
+        monkeypatch.setattr("app.routers.audio.cleanup_file", mock_cleanup)
+
+        # Mock get_audio_metadata to raise exception
+        async def mock_get_audio_metadata(self, input_path):
+            raise Exception("Simulated info extraction error")
+
+        monkeypatch.setattr(AudioConverter, "get_audio_metadata", mock_get_audio_metadata)
+
+        with open(sample_audio, 'rb') as f:
+            response = client.post(
+                "/api/audio/info",
+                files={"file": ("test.mp3", f, "audio/mpeg")}
+            )
+
+        # Should return 500 error
+        assert response.status_code == 500
+        response_data = response.json()
+        error_msg = response_data.get("detail") or response_data.get("error")
+        assert "Failed to get audio info" in error_msg
+
+        # Verify cleanup was called on temp_path
+        assert len(cleanup_calls) >= 1

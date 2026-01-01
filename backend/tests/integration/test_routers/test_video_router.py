@@ -525,3 +525,82 @@ class TestVideoConversionFormats:
         assert data["status"] == "completed"
         assert "session_id" in data
         assert "download_url" in data
+
+
+class TestVideoCleanup:
+    """Test cleanup behavior in error scenarios"""
+
+    def test_convert_cleanup_output_file_on_error(self, client, sample_video, monkeypatch):
+        """Test that output_path is cleaned up when conversion fails after file creation"""
+        from app.services.video_converter import VideoConverter
+        from app.utils.file_handler import cleanup_file
+        from app.config import settings
+        from app.models.conversion import ConversionResponse
+
+        cleanup_calls = []
+        original_cleanup = cleanup_file
+
+        def mock_cleanup(file_path):
+            cleanup_calls.append(str(file_path))
+            return original_cleanup(file_path)
+
+        monkeypatch.setattr("app.routers.video.cleanup_file", mock_cleanup)
+
+        output_file = settings.UPLOAD_DIR / "test_output_video.webm"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_bytes(b"fake data")
+
+        async def mock_convert_with_cache(self, input_path, output_format, options, session_id):
+            return output_file
+
+        monkeypatch.setattr(VideoConverter, "convert_with_cache", mock_convert_with_cache)
+
+        def mock_conversion_response(*args, **kwargs):
+            raise Exception("Simulated error after conversion")
+
+        monkeypatch.setattr("app.routers.video.ConversionResponse", mock_conversion_response)
+
+        with open(sample_video, 'rb') as f:
+            response = client.post(
+                "/api/video/convert",
+                files={"file": ("test.mp4", f, "video/mp4")},
+                data={"output_format": "webm"}
+            )
+
+        assert response.status_code == 500
+        response_data = response.json()
+        error_msg = response_data.get("detail") or response_data.get("error")
+        assert "Conversion failed" in error_msg
+        assert len(cleanup_calls) >= 2
+        output_file.unlink(missing_ok=True)
+
+    def test_info_cleanup_temp_file_on_error(self, client, sample_video, monkeypatch):
+        """Test that temp_path is cleaned up when info extraction fails"""
+        from app.services.video_converter import VideoConverter
+        from app.utils.file_handler import cleanup_file
+
+        cleanup_calls = []
+        original_cleanup = cleanup_file
+
+        def mock_cleanup(file_path):
+            cleanup_calls.append(str(file_path))
+            return original_cleanup(file_path)
+
+        monkeypatch.setattr("app.routers.video.cleanup_file", mock_cleanup)
+
+        async def mock_get_video_metadata(self, input_path):
+            raise Exception("Simulated info extraction error")
+
+        monkeypatch.setattr(VideoConverter, "get_video_metadata", mock_get_video_metadata)
+
+        with open(sample_video, 'rb') as f:
+            response = client.post(
+                "/api/video/info",
+                files={"file": ("test.mp4", f, "video/mp4")}
+            )
+
+        assert response.status_code == 500
+        response_data = response.json()
+        error_msg = response_data.get("detail") or response_data.get("error")
+        assert "Failed to get video info" in error_msg
+        assert len(cleanup_calls) >= 1

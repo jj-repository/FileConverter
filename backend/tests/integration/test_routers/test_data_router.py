@@ -602,3 +602,82 @@ class TestDataConversionFormats:
 
         assert response2.status_code == 200
         assert response2.json()["output_file"].endswith(".xml")
+
+
+class TestDataCleanup:
+    """Test cleanup behavior in error scenarios"""
+
+    def test_convert_cleanup_output_file_on_error(self, client, sample_json, monkeypatch):
+        """Test that output_path is cleaned up when conversion fails after file creation"""
+        from app.services.data_converter import DataConverter
+        from app.utils.file_handler import cleanup_file
+        from app.config import settings
+        from app.models.conversion import ConversionResponse
+
+        cleanup_calls = []
+        original_cleanup = cleanup_file
+
+        def mock_cleanup(file_path):
+            cleanup_calls.append(str(file_path))
+            return original_cleanup(file_path)
+
+        monkeypatch.setattr("app.routers.data.cleanup_file", mock_cleanup)
+
+        output_file = settings.UPLOAD_DIR / "test_output_data.csv"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_bytes(b"fake data")
+
+        async def mock_convert_with_cache(self, input_path, output_format, options, session_id):
+            return output_file
+
+        monkeypatch.setattr(DataConverter, "convert_with_cache", mock_convert_with_cache)
+
+        def mock_conversion_response(*args, **kwargs):
+            raise Exception("Simulated error after conversion")
+
+        monkeypatch.setattr("app.routers.data.ConversionResponse", mock_conversion_response)
+
+        with open(sample_json, 'rb') as f:
+            response = client.post(
+                "/api/data/convert",
+                files={"file": ("test.json", f, "application/json")},
+                data={"output_format": "csv"}
+            )
+
+        assert response.status_code == 500
+        response_data = response.json()
+        error_msg = response_data.get("detail") or response_data.get("error")
+        assert "Conversion failed" in error_msg
+        assert len(cleanup_calls) >= 2
+        output_file.unlink(missing_ok=True)
+
+    def test_info_cleanup_temp_file_on_error(self, client, sample_json, monkeypatch):
+        """Test that temp_path is cleaned up when info extraction fails"""
+        from app.services.data_converter import DataConverter
+        from app.utils.file_handler import cleanup_file
+
+        cleanup_calls = []
+        original_cleanup = cleanup_file
+
+        def mock_cleanup(file_path):
+            cleanup_calls.append(str(file_path))
+            return original_cleanup(file_path)
+
+        monkeypatch.setattr("app.routers.data.cleanup_file", mock_cleanup)
+
+        async def mock_get_data_info(self, input_path):
+            raise Exception("Simulated info extraction error")
+
+        monkeypatch.setattr(DataConverter, "get_data_info", mock_get_data_info)
+
+        with open(sample_json, 'rb') as f:
+            response = client.post(
+                "/api/data/info",
+                files={"file": ("test.json", f, "application/json")}
+            )
+
+        assert response.status_code == 500
+        response_data = response.json()
+        error_msg = response_data.get("detail") or response_data.get("error")
+        assert "Failed to get data info" in error_msg
+        assert len(cleanup_calls) >= 1

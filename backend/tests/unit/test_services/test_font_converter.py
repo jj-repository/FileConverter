@@ -110,6 +110,9 @@ class TestFontConversion:
                 # Verify save was called
                 mock_font.save.assert_called_once()
 
+                # Verify font was closed (resource cleanup)
+                mock_font.close.assert_called_once()
+
     @pytest.mark.asyncio
     async def test_convert_woff_to_ttf_success(self, temp_dir):
         """Test successful WOFF to TTF conversion"""
@@ -171,6 +174,7 @@ class TestFontConversion:
 
                 assert result == output_file
                 mock_ttfont_class.assert_called_once_with(str(input_file))
+                mock_font.close.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_convert_woff_to_woff2_success(self, temp_dir):
@@ -202,6 +206,7 @@ class TestFontConversion:
                 assert result == output_file
                 # WOFF2 should have flavor set
                 assert mock_font.flavor == "woff2"
+                mock_font.close.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_convert_progress_updates_sent(self, temp_dir):
@@ -237,6 +242,7 @@ class TestFontConversion:
                 progress_values = [call[0][1] for call in calls]  # Extract progress argument
                 assert progress_values[0] == 10  # Start
                 assert progress_values[-1] == 100  # Complete
+                mock_font.close.assert_called_once()
 
 
 # ============================================================================
@@ -287,6 +293,7 @@ class TestFontSubsetting:
 
                     # Verify subset was applied
                     mock_subsetter.subset.assert_called_once_with(mock_font)
+                    mock_font.close.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_subset_keeps_specified_characters(self, temp_dir):
@@ -322,6 +329,8 @@ class TestFontSubsetting:
                     call_kwargs = mock_subsetter.populate.call_args[1]
                     assert call_kwargs["text"] == test_text
 
+                    mock_font.close.assert_called_once()
+
     @pytest.mark.asyncio
     async def test_convert_without_subsetting(self, temp_dir):
         """Test conversion without subsetting when option not provided"""
@@ -350,6 +359,8 @@ class TestFontSubsetting:
 
                     # Subsetter should not be called
                     mock_subsetter_class.assert_not_called()
+
+                    mock_font.close.assert_called_once()
 
 
 # ============================================================================

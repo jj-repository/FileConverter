@@ -636,14 +636,16 @@ class TestEdgeCases:
                 mock_process.returncode = 0
                 mock_process.wait = AsyncMock(return_value=0)
 
-                # Create proper async iterators
+                # Create proper empty async iterators
                 async def stdout_iterator():
-                    return
-                    yield  # Make it a generator
+                    # Properly empty async generator - no items to yield
+                    if False:
+                        yield  # Makes this a generator but never executes
 
                 async def stderr_iterator():
-                    return
-                    yield  # Make it a generator
+                    # Properly empty async generator - no items to yield
+                    if False:
+                        yield  # Makes this a generator but never executes
 
                 mock_process.stdout = stdout_iterator()
                 mock_process.stderr = AsyncMock()

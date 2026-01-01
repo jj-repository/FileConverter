@@ -55,8 +55,10 @@ async def convert_font(
             )
 
         # Validate file size
+        validate_file_size(file, "font")
+
+        # Read file content
         content = await file.read()
-        validate_file_size(len(content), settings.FONT_MAX_SIZE, "font")
 
         # Save uploaded file
         input_path = settings.TEMP_DIR / f"{session_id}_input.{input_format}"
@@ -118,8 +120,10 @@ async def optimize_font(
         input_format = validate_file_extension(file.filename, settings.FONT_FORMATS)
 
         # Validate file size
+        validate_file_size(file, "font")
+
+        # Read file content
         content = await file.read()
-        validate_file_size(len(content), settings.FONT_MAX_SIZE, "font")
 
         # Save uploaded file
         input_path = settings.TEMP_DIR / f"{session_id}_input.{input_format}"
@@ -214,8 +218,10 @@ async def get_font_info(file: UploadFile = File(...)):
         input_format = validate_file_extension(file.filename, settings.FONT_FORMATS)
 
         # Validate file size
+        validate_file_size(file, "font")
+
+        # Read file content
         content = await file.read()
-        validate_file_size(len(content), settings.FONT_MAX_SIZE, "font")
 
         # Save temp file
         temp_path = settings.TEMP_DIR / f"temp_{uuid.uuid4()}.{input_format}"

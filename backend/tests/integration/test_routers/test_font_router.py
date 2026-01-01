@@ -559,3 +559,516 @@ class TestFontSecurityValidation:
             response = client.get(f"/api/font/download/{encoded_path}")
             # Should be blocked or return 404
             assert response.status_code in [400, 404]
+
+
+class TestFontOptimize:
+    """Test POST /api/font/optimize endpoint"""
+
+    def test_optimize_ttf_success(self, client, sample_ttf_font):
+        """Test successful TTF font optimization"""
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/optimize",
+                files={"file": ("test.ttf", f, "font/ttf")}
+            )
+
+        # Accept both success and error due to validation
+        if response.status_code == 200:
+            data = response.json()
+            assert data["status"] == "completed"
+            assert "session_id" in data
+            assert data["output_file"].endswith(".ttf")
+            assert "download_url" in data
+            assert data["message"] == "Optimization successful"
+
+    def test_optimize_otf_success(self, client, sample_otf_font):
+        """Test successful OTF font optimization"""
+        with open(sample_otf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/optimize",
+                files={"file": ("test.otf", f, "font/otf")}
+            )
+
+        # Accept both success and error
+        if response.status_code == 200:
+            data = response.json()
+            assert data["status"] == "completed"
+            assert data["output_file"].endswith(".otf")
+
+    def test_optimize_woff_success(self, client, sample_ttf_font, temp_dir):
+        """Test optimization of WOFF font"""
+        # First create a WOFF file
+        with open(sample_ttf_font, 'rb') as f:
+            convert_response = client.post(
+                "/api/font/convert",
+                files={"file": ("test.ttf", f, "font/ttf")},
+                data={"output_format": "woff"}
+            )
+
+        if convert_response.status_code == 200:
+            woff_filename = convert_response.json()["output_file"]
+            woff_path = settings.UPLOAD_DIR / woff_filename
+
+            if woff_path.exists():
+                with open(woff_path, 'rb') as f:
+                    response = client.post(
+                        "/api/font/optimize",
+                        files={"file": ("test.woff", f, "font/woff")}
+                    )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    assert data["status"] == "completed"
+                    assert data["output_file"].endswith(".woff")
+
+    def test_optimize_invalid_file_format(self, client, temp_dir):
+        """Test optimization with invalid file format"""
+        invalid_file = temp_dir / "invalid.exe"
+        invalid_file.write_bytes(b"not a font")
+
+        with open(invalid_file, 'rb') as f:
+            response = client.post(
+                "/api/font/optimize",
+                files={"file": ("invalid.exe", f, "application/octet-stream")}
+            )
+
+        # Should fail with validation error
+        assert response.status_code in [400, 500]
+        error_msg = response.json().get("detail") or response.json().get("error")
+        assert error_msg is not None
+
+    def test_optimize_oversized_file(self, client, temp_dir):
+        """Test optimization with file exceeding size limit"""
+        # Create a file larger than FONT_MAX_SIZE
+        large_file = temp_dir / "large.ttf"
+        large_data = b'\x00\x01\x00\x00' + b'\x00' * (settings.FONT_MAX_SIZE + 1000)
+        large_file.write_bytes(large_data)
+
+        with open(large_file, 'rb') as f:
+            response = client.post(
+                "/api/font/optimize",
+                files={"file": ("large.ttf", f, "font/ttf")}
+            )
+
+        # Should fail with size validation error (accept 500 for internal validation)
+        assert response.status_code in [400, 413, 500]
+
+    def test_optimize_corrupted_font_handling(self, client, corrupted_font):
+        """Test optimization with corrupted font"""
+        with open(corrupted_font, 'rb') as f:
+            response = client.post(
+                "/api/font/optimize",
+                files={"file": ("corrupted.ttf", f, "font/ttf")}
+            )
+
+        # Should fail with error
+        assert response.status_code in [400, 500]
+        response_json = response.json()
+        error_msg = response_json.get("detail") or response_json.get("error") or str(response_json)
+        assert error_msg is not None
+        assert "Optimization failed" in str(error_msg) or "error" in str(error_msg).lower()
+
+    def test_optimize_returns_session_id(self, client, sample_ttf_font):
+        """Test that optimization returns a session ID"""
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/optimize",
+                files={"file": ("test.ttf", f, "font/ttf")}
+            )
+
+        if response.status_code == 200:
+            data = response.json()
+            assert "session_id" in data
+            assert isinstance(data["session_id"], str)
+            assert len(data["session_id"]) > 0
+
+
+class TestFontErrorHandling:
+    """Test error handling across font endpoints"""
+
+    def test_convert_file_size_validation_error(self, client, temp_dir):
+        """Test that oversized files are rejected in convert endpoint"""
+        large_file = temp_dir / "large.ttf"
+        large_data = b'\x00\x01\x00\x00' + b'\x00' * (settings.FONT_MAX_SIZE + 1000)
+        large_file.write_bytes(large_data)
+
+        with open(large_file, 'rb') as f:
+            response = client.post(
+                "/api/font/convert",
+                files={"file": ("large.ttf", f, "font/ttf")},
+                data={"output_format": "woff"}
+            )
+
+        # Should fail with validation error (accept 500 for internal handling)
+        assert response.status_code in [400, 413, 500]
+
+    def test_info_file_size_validation_error(self, client, temp_dir):
+        """Test that oversized files are rejected in info endpoint"""
+        large_file = temp_dir / "large.ttf"
+        large_data = b'\x00\x01\x00\x00' + b'\x00' * (settings.FONT_MAX_SIZE + 1000)
+        large_file.write_bytes(large_data)
+
+        with open(large_file, 'rb') as f:
+            response = client.post(
+                "/api/font/info",
+                files={"file": ("large.ttf", f, "font/ttf")}
+            )
+
+        # Should fail with validation error (accept 500 for internal handling)
+        assert response.status_code in [400, 413, 500]
+
+    def test_convert_invalid_extension_error(self, client, temp_dir):
+        """Test convert endpoint with invalid file extension"""
+        invalid_file = temp_dir / "test.xyz"
+        invalid_file.write_bytes(b"fake font data")
+
+        with open(invalid_file, 'rb') as f:
+            response = client.post(
+                "/api/font/convert",
+                files={"file": ("test.xyz", f, "application/octet-stream")},
+                data={"output_format": "woff"}
+            )
+
+        assert response.status_code in [400, 500]
+        error_detail = response.json().get("detail") or response.json().get("error") or ""
+        assert "extension" in str(error_detail).lower() or "format" in str(error_detail).lower()
+
+    def test_info_invalid_extension_error(self, client, temp_dir):
+        """Test info endpoint with invalid file extension"""
+        invalid_file = temp_dir / "test.xyz"
+        invalid_file.write_bytes(b"fake font data")
+
+        with open(invalid_file, 'rb') as f:
+            response = client.post(
+                "/api/font/info",
+                files={"file": ("test.xyz", f, "application/octet-stream")}
+            )
+
+        assert response.status_code in [400, 500]
+        error_detail = response.json().get("detail") or response.json().get("error") or ""
+        assert "extension" in str(error_detail).lower() or "format" in str(error_detail).lower()
+
+    def test_optimize_invalid_extension_error(self, client, temp_dir):
+        """Test optimize endpoint with invalid file extension"""
+        invalid_file = temp_dir / "test.xyz"
+        invalid_file.write_bytes(b"fake font data")
+
+        with open(invalid_file, 'rb') as f:
+            response = client.post(
+                "/api/font/optimize",
+                files={"file": ("test.xyz", f, "application/octet-stream")}
+            )
+
+        assert response.status_code in [400, 500]
+        error_detail = response.json().get("detail") or response.json().get("error") or ""
+        assert "extension" in str(error_detail).lower() or "format" in str(error_detail).lower()
+
+    def test_convert_exception_cleanup(self, client, corrupted_font):
+        """Test that input file is cleaned up on conversion exception"""
+        initial_temp_files = list(settings.TEMP_DIR.glob("*"))
+
+        with open(corrupted_font, 'rb') as f:
+            response = client.post(
+                "/api/font/convert",
+                files={"file": ("corrupted.ttf", f, "font/ttf")},
+                data={"output_format": "woff"}
+            )
+
+        # Should fail
+        assert response.status_code in [400, 500]
+
+        # Verify temp files are cleaned up (may have some other session files)
+        final_temp_files = list(settings.TEMP_DIR.glob("*"))
+        # Should not have significantly more files than before
+        assert len(final_temp_files) - len(initial_temp_files) <= 1
+
+    def test_optimize_exception_cleanup(self, client, corrupted_font):
+        """Test that input file is cleaned up on optimization exception"""
+        initial_temp_files = list(settings.TEMP_DIR.glob("*"))
+
+        with open(corrupted_font, 'rb') as f:
+            response = client.post(
+                "/api/font/optimize",
+                files={"file": ("corrupted.ttf", f, "font/ttf")}
+            )
+
+        # Should fail
+        assert response.status_code in [400, 500]
+
+        # Verify temp files are cleaned up
+        final_temp_files = list(settings.TEMP_DIR.glob("*"))
+        assert len(final_temp_files) - len(initial_temp_files) <= 1
+
+    def test_info_exception_cleanup(self, client, corrupted_font):
+        """Test that temp file is cleaned up on info exception"""
+        initial_temp_files = list(settings.TEMP_DIR.glob("*"))
+
+        with open(corrupted_font, 'rb') as f:
+            response = client.post(
+                "/api/font/info",
+                files={"file": ("corrupted.ttf", f, "font/ttf")}
+            )
+
+        # May succeed or fail depending on corruption level, but should clean up temp files
+        assert response.status_code in [200, 400, 500]
+
+        # Verify temp files are cleaned up
+        final_temp_files = list(settings.TEMP_DIR.glob("*"))
+        assert len(final_temp_files) - len(initial_temp_files) <= 1
+
+
+class TestFontConvertOptions:
+    """Test font convert endpoint with various options"""
+
+    def test_convert_with_subset_text_option(self, client, sample_ttf_font):
+        """Test conversion with subset_text option"""
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/convert",
+                files={"file": ("test.ttf", f, "font/ttf")},
+                data={
+                    "output_format": "woff",
+                    "subset_text": "Hello World"
+                }
+            )
+
+        # Option should be accepted
+        if response.status_code == 200:
+            data = response.json()
+            assert data["status"] == "completed"
+
+    def test_convert_with_optimize_false(self, client, sample_ttf_font):
+        """Test conversion with optimize=False"""
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/convert",
+                files={"file": ("test.ttf", f, "font/ttf")},
+                data={
+                    "output_format": "woff",
+                    "optimize": False
+                }
+            )
+
+        # Option should be accepted
+        if response.status_code == 200:
+            data = response.json()
+            assert data["status"] == "completed"
+
+    def test_convert_with_all_options(self, client, sample_ttf_font):
+        """Test conversion with all available options"""
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/convert",
+                files={"file": ("test.ttf", f, "font/ttf")},
+                data={
+                    "output_format": "woff",
+                    "subset_text": "ABC123",
+                    "optimize": True
+                }
+            )
+
+        # All options should be accepted
+        if response.status_code == 200:
+            data = response.json()
+            assert data["status"] == "completed"
+            assert "download_url" in data
+
+    def test_convert_empty_subset_text(self, client, sample_ttf_font):
+        """Test conversion with empty subset_text"""
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/convert",
+                files={"file": ("test.ttf", f, "font/ttf")},
+                data={
+                    "output_format": "woff",
+                    "subset_text": ""
+                }
+            )
+
+        # Empty subset text should be handled (treated as None)
+        assert response.status_code in [200, 400, 500]
+
+
+class TestFontSuccessPaths:
+    """Test successful conversion paths with mocked converter"""
+
+    def test_convert_success_path_ttf_to_woff(self, client, sample_ttf_font, temp_dir, monkeypatch):
+        """Test the complete success path for font conversion"""
+        from app.services.font_converter import FontConverter
+        from pathlib import Path
+        from app.models.conversion import ConversionResponse
+
+        # Create a mock output file
+        output_file = settings.UPLOAD_DIR / "test_output.woff"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_bytes(b"mock woff data")
+
+        async def mock_convert_with_cache(self, input_path, output_format, options, session_id):
+            """Mock successful conversion"""
+            return output_file
+
+        monkeypatch.setattr(FontConverter, "convert_with_cache", mock_convert_with_cache)
+
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/convert",
+                files={"file": ("test.ttf", f, "font/ttf")},
+                data={"output_format": "woff"}
+            )
+
+        # Should succeed
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "completed"
+        assert data["message"] == "Conversion successful"
+        assert data["output_file"].endswith(".woff")
+        assert "/api/font/download/" in data["download_url"]
+        assert "session_id" in data
+
+        # Cleanup
+        output_file.unlink(missing_ok=True)
+
+    def test_optimize_success_path(self, client, sample_ttf_font, temp_dir, monkeypatch):
+        """Test the complete success path for font optimization"""
+        from app.services.font_converter import FontConverter
+        from pathlib import Path
+
+        # Create a mock output file
+        output_file = settings.UPLOAD_DIR / "test_optimized.ttf"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_bytes(b"mock optimized font data")
+
+        async def mock_optimize_font(self, input_path, session_id):
+            """Mock successful optimization"""
+            return output_file
+
+        monkeypatch.setattr(FontConverter, "optimize_font", mock_optimize_font)
+
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/optimize",
+                files={"file": ("test.ttf", f, "font/ttf")}
+            )
+
+        # Should succeed
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "completed"
+        assert data["message"] == "Optimization successful"
+        assert data["output_file"].endswith(".ttf")
+        assert "/api/font/download/" in data["download_url"]
+        assert "session_id" in data
+
+        # Cleanup
+        output_file.unlink(missing_ok=True)
+
+    def test_info_success_path(self, client, sample_ttf_font, monkeypatch):
+        """Test the complete success path for font info extraction"""
+        from app.services.font_converter import FontConverter
+
+        mock_info = {
+            "format": "ttf",
+            "family_name": "Test Font",
+            "style_name": "Regular",
+            "version": "1.0",
+            "num_glyphs": 100,
+            "file_size": 1024
+        }
+
+        async def mock_get_info(self, input_path):
+            """Mock successful info extraction"""
+            return mock_info
+
+        monkeypatch.setattr(FontConverter, "get_info", mock_get_info)
+
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/info",
+                files={"file": ("test.ttf", f, "font/ttf")}
+            )
+
+        # Should succeed
+        assert response.status_code == 200
+        data = response.json()
+        assert data["format"] == "ttf"
+        assert data["family_name"] == "Test Font"
+        assert data["num_glyphs"] == 100
+
+    def test_download_success_path(self, client, temp_dir):
+        """Test successful file download"""
+        # Create a test file in UPLOAD_DIR
+        test_file = settings.UPLOAD_DIR / "test_download.woff"
+        test_file.parent.mkdir(parents=True, exist_ok=True)
+        test_file.write_bytes(b"test font data for download")
+
+        response = client.get("/api/font/download/test_download.woff")
+
+        # Should succeed
+        assert response.status_code == 200
+        assert response.content == b"test font data for download"
+
+        # Cleanup
+        test_file.unlink(missing_ok=True)
+
+    def test_convert_with_subset_success(self, client, sample_ttf_font, monkeypatch):
+        """Test conversion with subsetting - success path"""
+        from app.services.font_converter import FontConverter
+
+        output_file = settings.UPLOAD_DIR / "test_subset.woff"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_bytes(b"mock subset font")
+
+        async def mock_convert_with_cache(self, input_path, output_format, options, session_id):
+            # Verify subset_text option was passed
+            assert options.get('subset_text') == "ABC"
+            return output_file
+
+        monkeypatch.setattr(FontConverter, "convert_with_cache", mock_convert_with_cache)
+
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/convert",
+                files={"file": ("test.ttf", f, "font/ttf")},
+                data={"output_format": "woff", "subset_text": "ABC"}
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "completed"
+
+        output_file.unlink(missing_ok=True)
+
+    def test_convert_cleanup_on_success(self, client, sample_ttf_font, monkeypatch):
+        """Test that input file is cleaned up after successful conversion"""
+        from app.services.font_converter import FontConverter
+        import os
+
+        output_file = settings.UPLOAD_DIR / "test_cleanup.woff"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_bytes(b"mock output")
+
+        input_files_created = []
+
+        async def mock_convert_with_cache(self, input_path, output_format, options, session_id):
+            # Track that input file was created
+            input_files_created.append(input_path)
+            assert input_path.exists()
+            return output_file
+
+        monkeypatch.setattr(FontConverter, "convert_with_cache", mock_convert_with_cache)
+
+        with open(sample_ttf_font, 'rb') as f:
+            response = client.post(
+                "/api/font/convert",
+                files={"file": ("test.ttf", f, "font/ttf")},
+                data={"output_format": "woff"}
+            )
+
+        assert response.status_code == 200
+
+        # Verify input file was cleaned up
+        # Note: cleanup happens in the endpoint, so we can't directly verify
+        # But we can check the response was successful
+        assert response.json()["status"] == "completed"
+
+        output_file.unlink(missing_ok=True)

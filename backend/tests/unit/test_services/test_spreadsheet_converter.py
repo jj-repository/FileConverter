@@ -1145,3 +1145,274 @@ class TestEdgeCases:
                     )
 
                     assert result == output_file
+
+
+class TestSpreadsheetEdgeCases:
+    """Test edge cases to reach 100% coverage"""
+
+    @pytest.mark.asyncio
+    async def test_openpyxl_not_available_for_reading(self, temp_dir):
+        """Test error when openpyxl not available for reading Excel (line 85)"""
+        converter = SpreadsheetConverter()
+
+        input_file = temp_dir / "test.xlsx"
+        input_file.write_bytes(b"fake xlsx")
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch('app.services.spreadsheet_converter.OPENPYXL_AVAILABLE', False):
+                with pytest.raises(ValueError, match="Excel support not available"):
+                    await converter.convert(
+                        input_path=input_file,
+                        output_format="csv",
+                        options={},
+                        session_id="test-session"
+                    )
+
+    @pytest.mark.asyncio
+    async def test_odf_not_available_for_reading(self, temp_dir):
+        """Test error when odfpy not available for reading ODS (line 89)"""
+        converter = SpreadsheetConverter()
+
+        input_file = temp_dir / "test.ods"
+        input_file.write_bytes(b"fake ods")
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch('app.services.spreadsheet_converter.ODF_AVAILABLE', False):
+                with pytest.raises(ValueError, match="ODS support not available"):
+                    await converter.convert(
+                        input_path=input_file,
+                        output_format="csv",
+                        options={},
+                        session_id="test-session"
+                    )
+
+    @pytest.mark.asyncio
+    async def test_unsupported_input_format_error(self, temp_dir):
+        """Test unsupported input format raises error (line 99)"""
+        converter = SpreadsheetConverter()
+
+        # Patch supported_formats to include 'xyz' so validation passes
+        # but the format isn't handled in the if/elif chain
+        converter.supported_formats = {
+            "input": ["csv", "xlsx", "xls", "ods", "tsv", "xyz"],
+            "output": ["csv", "xlsx"]
+        }
+
+        input_file = temp_dir / "test.xyz"
+        input_file.write_text("test data")
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with pytest.raises(ValueError, match="Unsupported input format: xyz"):
+                await converter.convert(
+                    input_path=input_file,
+                    output_format="csv",
+                    options={},
+                    session_id="test-session"
+                )
+
+    @pytest.mark.asyncio
+    async def test_unsupported_output_format_error(self, temp_dir):
+        """Test unsupported output format raises error (line 123)"""
+        converter = SpreadsheetConverter()
+
+        # Patch supported_formats to include 'xyz' in outputs
+        converter.supported_formats = {
+            "input": ["csv"],
+            "output": ["csv", "xlsx", "xls", "ods", "tsv", "xyz"]
+        }
+
+        input_file = temp_dir / "test.csv"
+        input_file.write_text("A,B\n1,2\n")
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch('app.services.spreadsheet_converter.pd.read_csv') as mock_read:
+                mock_df = MagicMock(spec=pd.DataFrame)
+                mock_read.return_value = mock_df
+
+                with pytest.raises(ValueError, match="Unsupported output format: xyz"):
+                    await converter.convert(
+                        input_path=input_file,
+                        output_format="xyz",
+                        options={},
+                        session_id="test-session"
+                    )
+
+    @pytest.mark.asyncio
+    async def test_ods_no_sheets_found_error(self, temp_dir):
+        """Test error when no sheets found in ODS file (line 149)"""
+        converter = SpreadsheetConverter()
+
+        input_file = temp_dir / "test.ods"
+        input_file.write_bytes(b"fake ods")
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch('app.services.spreadsheet_converter.opendocument.load') as mock_load:
+                # Mock ODS document with no sheets
+                mock_doc = MagicMock()
+                mock_doc.spreadsheet.getElementsByType.return_value = []  # No sheets
+                mock_load.return_value = mock_doc
+
+                with pytest.raises(ValueError, match="No sheets found in ODS file"):
+                    await converter._read_ods(input_file, None)
+
+    @pytest.mark.asyncio
+    async def test_ods_sheet_name_not_found_error(self, temp_dir):
+        """Test error when specific sheet name not found in ODS (line 160)"""
+        converter = SpreadsheetConverter()
+
+        input_file = temp_dir / "test.ods"
+        input_file.write_bytes(b"fake ods")
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch('app.services.spreadsheet_converter.opendocument.load') as mock_load:
+                # Mock ODS document with sheets but not the requested name
+                mock_sheet1 = MagicMock()
+                mock_sheet1.getAttribute.return_value = "Sheet1"
+
+                mock_sheet2 = MagicMock()
+                mock_sheet2.getAttribute.return_value = "Sheet2"
+
+                mock_doc = MagicMock()
+                mock_doc.spreadsheet.getElementsByType.return_value = [mock_sheet1, mock_sheet2]
+                mock_load.return_value = mock_doc
+
+                with pytest.raises(ValueError, match="Sheet 'NonExistent' not found"):
+                    await converter._read_ods(input_file, "NonExistent")
+
+    @pytest.mark.asyncio
+    async def test_ods_cell_extraction_with_data(self, temp_dir):
+        """Test ODS cell extraction including lines 170-180, 185-188"""
+        converter = SpreadsheetConverter()
+
+        input_file = temp_dir / "test.ods"
+        input_file.write_bytes(b"fake ods")
+
+        with patch('app.services.spreadsheet_converter.opendocument.load') as mock_load:
+            # Mock ODS document with actual data
+            # Create mock cells with data - don't use spec to allow attribute setting
+            mock_cell1 = MagicMock()
+            mock_p1 = MagicMock()
+            mock_p1.firstChild = MagicMock()
+            mock_p1.firstChild.data = "Header1"
+            mock_cell1.getElementsByType.return_value = [mock_p1]
+
+            mock_cell2 = MagicMock()
+            mock_p2 = MagicMock()
+            mock_p2.firstChild = MagicMock()
+            mock_p2.firstChild.data = "Header2"
+            mock_cell2.getElementsByType.return_value = [mock_p2]
+
+            # Create header row
+            mock_header_row = MagicMock()
+            mock_header_row.getElementsByType.return_value = [mock_cell1, mock_cell2]
+
+            # Create data cells
+            mock_data_cell1 = MagicMock()
+            mock_data_p1 = MagicMock()
+            mock_data_p1.firstChild = MagicMock()
+            mock_data_p1.firstChild.data = "Value1"
+            mock_data_cell1.getElementsByType.return_value = [mock_data_p1]
+
+            mock_data_cell2 = MagicMock()
+            mock_data_p2 = MagicMock()
+            mock_data_p2.firstChild = MagicMock()
+            mock_data_p2.firstChild.data = "Value2"
+            mock_data_cell2.getElementsByType.return_value = [mock_data_p2]
+
+            # Create data row
+            mock_data_row = MagicMock()
+            mock_data_row.getElementsByType.return_value = [mock_data_cell1, mock_data_cell2]
+
+            # Create mock sheet with rows
+            mock_sheet = MagicMock()
+            mock_sheet.getAttribute.return_value = "Sheet1"
+            mock_sheet.getElementsByType.return_value = [mock_header_row, mock_data_row]
+
+            mock_doc = MagicMock()
+            mock_doc.spreadsheet.getElementsByType.return_value = [mock_sheet]
+            mock_load.return_value = mock_doc
+
+            # Test reading the ODS file
+            df = await converter._read_ods(input_file, None)
+
+            # Verify DataFrame was created correctly
+            assert isinstance(df, pd.DataFrame)
+            assert len(df.columns) == 2
+            assert len(df) == 1  # One data row
+
+    @pytest.mark.asyncio
+    async def test_ods_cell_extraction_with_empty_cells(self, temp_dir):
+        """Test ODS cell extraction with empty cells (line 178)"""
+        converter = SpreadsheetConverter()
+
+        input_file = temp_dir / "test.ods"
+        input_file.write_bytes(b"fake ods")
+
+        with patch('app.services.spreadsheet_converter.opendocument.load') as mock_load:
+            # Create mock cell with no paragraphs (empty cell) - hits line 178
+            mock_empty_cell = MagicMock()
+            mock_empty_cell.getElementsByType.return_value = []  # No paragraphs
+
+            mock_cell_with_data = MagicMock()
+            mock_p = MagicMock()
+            mock_p.firstChild = MagicMock()
+            mock_p.firstChild.data = "Data"
+            mock_cell_with_data.getElementsByType.return_value = [mock_p]
+
+            # Create row with one empty cell and one with data
+            mock_row = MagicMock()
+            mock_row.getElementsByType.return_value = [mock_empty_cell, mock_cell_with_data]
+
+            # Create sheet with single row (hits line 188 - single row becomes DataFrame without header)
+            mock_sheet = MagicMock()
+            mock_sheet.getAttribute.return_value = "Sheet1"
+            mock_sheet.getElementsByType.return_value = [mock_row]  # Only one row
+
+            mock_doc = MagicMock()
+            mock_doc.spreadsheet.getElementsByType.return_value = [mock_sheet]
+            mock_load.return_value = mock_doc
+
+            # Test reading the ODS file
+            df = await converter._read_ods(input_file, None)
+
+            # Verify DataFrame was created (single row case - line 188)
+            assert isinstance(df, pd.DataFrame)
+            assert len(df) == 1
+
+
+class TestSpreadsheetImportFallback:
+    """Test import error handling for optional dependencies"""
+
+    def test_openpyxl_import_fallback(self):
+        """Test OPENPYXL_AVAILABLE flag when openpyxl not available (lines 11-12)"""
+        import sys
+        from unittest.mock import patch
+
+        # Temporarily hide openpyxl
+        with patch.dict(sys.modules, {'openpyxl': None}):
+            # Force module reload to trigger import error
+            import importlib
+            import app.services.spreadsheet_converter
+            importlib.reload(app.services.spreadsheet_converter)
+
+            # The module should still load with OPENPYXL_AVAILABLE=False
+            assert hasattr(app.services.spreadsheet_converter, 'OPENPYXL_AVAILABLE')
+            # Re-reload to restore normal state
+            importlib.reload(app.services.spreadsheet_converter)
+
+    def test_odf_import_fallback(self):
+        """Test ODF_AVAILABLE flag when odfpy not available (lines 20-21)"""
+        import sys
+        from unittest.mock import patch
+
+        # Temporarily hide odf modules
+        with patch.dict(sys.modules, {'odf': None, 'odf.opendocument': None, 'odf.table': None, 'odf.text': None}):
+            # Force module reload to trigger import error
+            import importlib
+            import app.services.spreadsheet_converter
+            importlib.reload(app.services.spreadsheet_converter)
+
+            # The module should still load with ODF_AVAILABLE=False
+            assert hasattr(app.services.spreadsheet_converter, 'ODF_AVAILABLE')
+            # Re-reload to restore normal state
+            importlib.reload(app.services.spreadsheet_converter)

@@ -407,3 +407,48 @@ class TestBaseConverterCacheIntegration:
 
                 # Should call convert directly (cache disabled for converter)
                 mock_convert.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_convert_with_cache_file_deleted_after_cache_hit(self, temp_dir):
+        """Test cached file gets deleted between cache check and copy (lines 119-120)"""
+        converter = MockConverter()
+
+        input_file = temp_dir / "test.txt"
+        input_file.write_text("test content")
+
+        cached_file = temp_dir / "cached_output.pdf"
+        cached_file.write_text("cached content")
+
+        output_file = settings.UPLOAD_DIR / "test_converted.pdf"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        with patch('app.config.settings.CACHE_ENABLED', True):
+            # Patch get_cache_service where it's imported (inside the method)
+            with patch('app.services.cache_service.get_cache_service') as mock_cache_func:
+                # Mock cache service
+                mock_cache_service = MagicMock()
+                mock_cache_func.return_value = mock_cache_service
+
+                # Generate cache key
+                cache_key = "test-cache-key"
+                mock_cache_service.generate_cache_key.return_value = cache_key
+
+                # Return cached result with path to file
+                mock_cached_result = MagicMock()
+                mock_cached_result.output_file = str(cached_file)
+                mock_cache_service.get_cached_result.return_value = mock_cached_result
+
+                # Mock the file existence check to return False (simulating file deletion)
+                with patch.object(Path, 'exists', return_value=False):
+                    with patch.object(converter, 'convert', return_value=output_file) as mock_convert:
+                        with patch.object(converter, 'send_progress', new=AsyncMock()):
+                            result = await converter.convert_with_cache(
+                                input_path=input_file,
+                                output_format="pdf",
+                                options={},
+                                session_id="test-session"
+                            )
+
+                            # Should call convert because cached file was deleted
+                            mock_convert.assert_called_once()
+                            assert result == output_file

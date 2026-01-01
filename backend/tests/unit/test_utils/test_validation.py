@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from pathlib import Path
 from unittest.mock import Mock, patch
 import io
+import sys
 
 from app.utils.validation import (
     validate_file_size,
@@ -173,6 +174,34 @@ class TestValidateDownloadFilename:
         result = validate_download_filename("TestFile.MP4", temp_dir)
         assert result.name == "TestFile.MP4"
 
+    @pytest.mark.security
+    def test_resolve_path_error_handling(self, temp_dir):
+        """Test that OSError/RuntimeError during path resolution is handled"""
+        test_file = temp_dir / "testfile.txt"
+        test_file.write_text("content")
+
+        # Mock resolve() to raise OSError
+        with patch('pathlib.Path.resolve', side_effect=OSError("Permission denied")):
+            with pytest.raises(HTTPException) as exc_info:
+                validate_download_filename("testfile.txt", temp_dir)
+
+            assert exc_info.value.status_code == 400
+            assert "Invalid file path" in exc_info.value.detail
+
+    @pytest.mark.security
+    def test_resolve_runtime_error_handling(self, temp_dir):
+        """Test that RuntimeError during path resolution is handled"""
+        test_file = temp_dir / "testfile.txt"
+        test_file.write_text("content")
+
+        # Mock resolve() to raise RuntimeError
+        with patch('pathlib.Path.resolve', side_effect=RuntimeError("Symlink loop")):
+            with pytest.raises(HTTPException) as exc_info:
+                validate_download_filename("testfile.txt", temp_dir)
+
+            assert exc_info.value.status_code == 400
+            assert "Invalid file path" in exc_info.value.detail
+
 
 # ============================================================================
 # FILE SIZE VALIDATION TESTS (SECURITY)
@@ -316,6 +345,35 @@ class TestValidateFileSize:
         assert exc_info.value.status_code == 413
         assert "Font file too large" in exc_info.value.detail
 
+    @pytest.mark.security
+    def test_spreadsheet_exceeds_limit(self):
+        """Test that spreadsheet over 100MB raises 413"""
+        mock_file = Mock()
+        mock_file.file = Mock()
+        mock_file.file.tell.return_value = 110 * 1024 * 1024  # 110MB
+        mock_file.file.seek = Mock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            validate_file_size(mock_file, "spreadsheet")
+
+        assert exc_info.value.status_code == 413
+        assert "Spreadsheet file too large" in exc_info.value.detail
+
+    @pytest.mark.security
+    def test_unknown_type_exceeds_general_limit(self):
+        """Test that unknown file type exceeds MAX_UPLOAD_SIZE limit"""
+        mock_file = Mock()
+        mock_file.file = Mock()
+        # Set size larger than MAX_UPLOAD_SIZE (which is 1GB)
+        mock_file.file.tell.return_value = 1200 * 1024 * 1024  # 1.2GB
+        mock_file.file.seek = Mock()
+
+        with pytest.raises(HTTPException) as exc_info:
+            validate_file_size(mock_file, "unknown_type")
+
+        assert exc_info.value.status_code == 413
+        assert "File too large" in exc_info.value.detail
+
     def test_file_at_exact_limit(self):
         """Test that file at exact limit is allowed"""
         mock_file = Mock()
@@ -447,6 +505,18 @@ class TestValidateFileExtension:
 class TestValidateMimeType:
     """Test validate_mime_type() - MIME type validation"""
 
+    def test_magic_availability_check(self):
+        """Test that MAGIC_AVAILABLE is properly set based on magic import"""
+        # Import the module to check if MAGIC_AVAILABLE is set correctly
+        from app.utils import validation
+
+        # MAGIC_AVAILABLE should be True if magic is installed, False otherwise
+        try:
+            import magic
+            assert validation.MAGIC_AVAILABLE == True
+        except ImportError:
+            assert validation.MAGIC_AVAILABLE == False
+
     @pytest.mark.security
     def test_valid_mime_accepted(self, sample_image_jpg):
         """Test that valid MIME type is accepted"""
@@ -505,6 +575,37 @@ class TestValidateMimeType:
 
             # Should match with "image" prefix
             validate_mime_type(sample_image_jpg, {"image"})
+
+    @pytest.mark.security
+    def test_mime_validation_exception_handled_gracefully(self, sample_image_jpg):
+        """Test that exceptions in python-magic are handled gracefully"""
+        # Create a mock magic module
+        mock_magic_module = Mock()
+        mock_magic_class = Mock()
+        mock_magic_class.side_effect = Exception("magic library error")
+        mock_magic_module.Magic = mock_magic_class
+
+        with patch('app.utils.validation.MAGIC_AVAILABLE', True), \
+             patch.dict('sys.modules', {'magic': mock_magic_module}):
+
+            # Should not raise - validation should be skipped on error
+            validate_mime_type(sample_image_jpg, {"video/mp4"})
+
+    @pytest.mark.security
+    def test_mime_validation_from_file_exception(self, sample_image_jpg):
+        """Test that exceptions from magic.from_file() are handled gracefully"""
+        # Create a mock magic module
+        mock_magic_module = Mock()
+        mock_mime_instance = Mock()
+        # Make from_file raise an exception
+        mock_mime_instance.from_file.side_effect = Exception("Cannot read file")
+        mock_magic_module.Magic.return_value = mock_mime_instance
+
+        with patch('app.utils.validation.MAGIC_AVAILABLE', True), \
+             patch.dict('sys.modules', {'magic': mock_magic_module}):
+
+            # Should not raise - validation should be skipped on error
+            validate_mime_type(sample_image_jpg, {"video/mp4"})
 
 
 # ============================================================================

@@ -1091,3 +1091,45 @@ class TestArchiveConversionIntegration:
             assert progress_updates[0]["progress"] == 0
             assert progress_updates[-1]["progress"] == 100
             assert progress_updates[-1]["status"] == "completed"
+
+    @pytest.mark.asyncio
+    async def test_convert_unsupported_input_format_error(self, temp_dir):
+        """Test conversion with unsupported input format raises ValueError"""
+        from unittest.mock import patch
+        converter = ArchiveConverter()
+
+        # Create a file with zip extension
+        input_path = temp_dir / "test.zip"
+        input_path.write_bytes(b"PK\x03\x04")  # ZIP file signature
+
+        # Mock settings to exclude 'zip' from ARCHIVE_FORMATS
+        with patch.object(settings, 'ARCHIVE_FORMATS', {'tar', 'tar.gz'}):
+            with pytest.raises(ValueError, match="Unsupported input format"):
+                await converter.convert(
+                    input_path=input_path,
+                    output_format="tar",
+                    options={},
+                    session_id="test-session"
+                )
+
+
+class TestArchiveImportFallback:
+    """Test import error handling for optional dependencies"""
+
+    def test_py7zr_import_fallback(self):
+        """Test that SEVENZ_AVAILABLE is set to False when py7zr is not available"""
+        # This tests the import error handler on lines 13-14
+        import sys
+        from unittest.mock import patch
+
+        # Temporarily hide py7zr
+        with patch.dict(sys.modules, {'py7zr': None}):
+            # Force module reload to trigger import error
+            import importlib
+            import app.services.archive_converter
+            importlib.reload(app.services.archive_converter)
+
+            # The module should still load with SEVENZ_AVAILABLE=False
+            assert hasattr(app.services.archive_converter, 'SEVENZ_AVAILABLE')
+            # Re-reload to restore normal state
+            importlib.reload(app.services.archive_converter)

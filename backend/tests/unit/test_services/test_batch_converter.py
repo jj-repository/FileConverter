@@ -418,6 +418,36 @@ class TestBatchConversionParallel:
             assert "Error 3" in results[2]["error"]
 
     @pytest.mark.asyncio
+    async def test_convert_batch_parallel_direct_exception_from_task(self, temp_dir):
+        """Test parallel batch handles exceptions raised directly from convert_single_file"""
+        converter = BatchConverter()
+
+        input_files = [
+            temp_dir / "test1.mp3",
+            temp_dir / "test2.mp3",
+        ]
+        for f in input_files:
+            f.write_text("fake audio")
+
+        # Mock convert_single_file itself to raise an exception (bypassing its internal exception handling)
+        with patch.object(converter, 'convert_single_file', side_effect=[
+            {"filename": "test1.mp3", "success": True, "output_file": "output.wav", "output_path": "/path/output.wav", "download_url": "/download/output.wav", "session_id": "test", "index": 0},
+            Exception("Direct exception from task")
+        ]):
+            results = await converter.convert_batch(
+                input_paths=input_files,
+                output_format="wav",
+                options={},
+                session_id="batch-session",
+                parallel=True
+            )
+
+            assert len(results) == 2
+            assert results[0]["success"] is True
+            assert results[1]["success"] is False
+            assert "Direct exception from task" in results[1]["error"]
+
+    @pytest.mark.asyncio
     async def test_convert_batch_parallel_sends_initial_progress(self, temp_dir):
         """Test parallel batch sends initial progress update"""
         mock_ws_manager = AsyncMock()

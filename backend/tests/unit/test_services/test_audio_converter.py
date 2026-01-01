@@ -246,6 +246,164 @@ class TestCodecSelection:
 
 
 # ============================================================================
+# VALIDATION TESTS
+# ============================================================================
+
+class TestParameterValidation:
+    """Test parameter validation for audio conversion"""
+
+    @pytest.mark.asyncio
+    async def test_invalid_bitrate_rejected(self, temp_dir):
+        """Test that invalid bitrate is rejected"""
+        converter = AudioConverter()
+
+        input_file = temp_dir / "test.mp3"
+        input_file.write_text("fake audio")
+
+        with pytest.raises(ValueError, match="Invalid bitrate"):
+            await converter.convert(
+                input_path=input_file,
+                output_format="mp3",
+                options={"bitrate": "999999k"},  # Invalid bitrate
+                session_id="test-session"
+            )
+
+    @pytest.mark.asyncio
+    async def test_invalid_sample_rate_rejected(self, temp_dir):
+        """Test that invalid sample_rate is rejected"""
+        converter = AudioConverter()
+
+        input_file = temp_dir / "test.mp3"
+        input_file.write_text("fake audio")
+
+        with pytest.raises(ValueError, match="Invalid sample_rate"):
+            await converter.convert(
+                input_path=input_file,
+                output_format="mp3",
+                options={"sample_rate": 99999},  # Invalid sample rate
+                session_id="test-session"
+            )
+
+    @pytest.mark.asyncio
+    async def test_invalid_channels_rejected(self, temp_dir):
+        """Test that invalid channels value is rejected"""
+        converter = AudioConverter()
+
+        input_file = temp_dir / "test.mp3"
+        input_file.write_text("fake audio")
+
+        with pytest.raises(ValueError, match="Invalid channels"):
+            await converter.convert(
+                input_path=input_file,
+                output_format="mp3",
+                options={"channels": 99},  # Invalid channel count
+                session_id="test-session"
+            )
+
+    @pytest.mark.asyncio
+    async def test_valid_bitrate_accepted(self, temp_dir):
+        """Test that valid bitrate is accepted"""
+        converter = AudioConverter()
+
+        input_file = temp_dir / "test.mp3"
+        input_file.write_text("fake audio")
+
+        output_file = settings.UPLOAD_DIR / "test_converted.mp3"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch.object(converter, 'get_audio_duration', return_value=100.0):
+                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+                    mock_process = AsyncMock()
+                    mock_process.returncode = 0
+                    mock_process.stdout = AsyncMock()
+                    mock_process.stdout.__aiter__.return_value = iter([])
+                    mock_process.stderr = AsyncMock()
+                    mock_process.wait = AsyncMock()
+                    mock_subprocess.return_value = mock_process
+
+                    output_file.parent.mkdir(parents=True, exist_ok=True)
+                    output_file.write_text("converted")
+
+                    # Should not raise
+                    result = await converter.convert(
+                        input_path=input_file,
+                        output_format="mp3",
+                        options={"bitrate": "128k"},  # Valid bitrate
+                        session_id="test-session"
+                    )
+
+                    assert result == output_file
+
+    @pytest.mark.asyncio
+    async def test_valid_sample_rate_accepted(self, temp_dir):
+        """Test that valid sample_rate is accepted"""
+        converter = AudioConverter()
+
+        input_file = temp_dir / "test.mp3"
+        input_file.write_text("fake audio")
+
+        output_file = settings.UPLOAD_DIR / "test_converted.mp3"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch.object(converter, 'get_audio_duration', return_value=100.0):
+                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+                    mock_process = AsyncMock()
+                    mock_process.returncode = 0
+                    mock_process.stdout = AsyncMock()
+                    mock_process.stdout.__aiter__.return_value = iter([])
+                    mock_process.stderr = AsyncMock()
+                    mock_process.wait = AsyncMock()
+                    mock_subprocess.return_value = mock_process
+
+                    output_file.parent.mkdir(parents=True, exist_ok=True)
+                    output_file.write_text("converted")
+
+                    # Should not raise
+                    result = await converter.convert(
+                        input_path=input_file,
+                        output_format="mp3",
+                        options={"sample_rate": 44100},  # Valid sample rate
+                        session_id="test-session"
+                    )
+
+                    assert result == output_file
+
+    @pytest.mark.asyncio
+    async def test_valid_channels_accepted(self, temp_dir):
+        """Test that valid channels value is accepted"""
+        converter = AudioConverter()
+
+        input_file = temp_dir / "test.mp3"
+        input_file.write_text("fake audio")
+
+        output_file = settings.UPLOAD_DIR / "test_converted.mp3"
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch.object(converter, 'get_audio_duration', return_value=100.0):
+                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+                    mock_process = AsyncMock()
+                    mock_process.returncode = 0
+                    mock_process.stdout = AsyncMock()
+                    mock_process.stdout.__aiter__.return_value = iter([])
+                    mock_process.stderr = AsyncMock()
+                    mock_process.wait = AsyncMock()
+                    mock_subprocess.return_value = mock_process
+
+                    output_file.parent.mkdir(parents=True, exist_ok=True)
+                    output_file.write_text("converted")
+
+                    # Should not raise
+                    result = await converter.convert(
+                        input_path=input_file,
+                        output_format="mp3",
+                        options={"channels": 2},  # Valid stereo
+                        session_id="test-session"
+                    )
+
+                    assert result == output_file
+
+
+# ============================================================================
 # CONVERSION TESTS
 # ============================================================================
 
@@ -523,6 +681,55 @@ class TestAudioConversion:
                             options={},
                             session_id="test-session"
                         )
+
+    @pytest.mark.asyncio
+    async def test_conversion_timeout_handled(self, temp_dir):
+        """Test that conversion timeout is properly handled"""
+        converter = AudioConverter()
+
+        input_file = temp_dir / "test.mp3"
+        input_file.write_text("fake audio")
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            with patch.object(converter, 'get_audio_duration', return_value=100.0):
+                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+                    # Mock process that times out
+                    mock_process = AsyncMock()
+                    mock_process.returncode = 0
+
+                    # Create async iterator that never yields (simulates hanging)
+                    async def infinite_iterator():
+                        # This simulates a process that hangs
+                        await asyncio.sleep(1000)  # Sleep longer than timeout
+                        yield b""
+
+                    mock_process.stdout = infinite_iterator()
+                    mock_process.stderr = AsyncMock()
+                    mock_process.kill = Mock()
+                    mock_process.wait = AsyncMock()
+                    mock_subprocess.return_value = mock_process
+
+                    # Patch asyncio.timeout to raise TimeoutError immediately
+                    with patch('asyncio.timeout') as mock_timeout:
+                        # Create a context manager that raises TimeoutError
+                        class TimeoutContext:
+                            async def __aenter__(self):
+                                raise asyncio.TimeoutError()
+                            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                                pass
+
+                        mock_timeout.return_value = TimeoutContext()
+
+                        with pytest.raises(Exception, match="timed out"):
+                            await converter.convert(
+                                input_path=input_file,
+                                output_format="mp3",
+                                options={},
+                                session_id="test-session"
+                            )
+
+                        # Verify process was killed
+                        mock_process.kill.assert_called_once()
 
 
 # ============================================================================

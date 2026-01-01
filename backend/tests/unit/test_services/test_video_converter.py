@@ -466,6 +466,23 @@ class TestVideoMetadata:
             assert "error" in metadata
             assert metadata["error"] == "Failed to probe video"
 
+    @pytest.mark.asyncio
+    async def test_get_video_metadata_exception_during_processing(self, temp_dir):
+        """Test metadata extraction when exception occurs during processing"""
+        converter = VideoConverter()
+
+        video_file = temp_dir / "test.mp4"
+        video_file.write_text("mock video")
+
+        # Mock subprocess.run to raise an exception
+        with patch('subprocess.run') as mock_run:
+            mock_run.side_effect = Exception("Subprocess error")
+
+            metadata = await converter.get_video_metadata(video_file)
+
+            assert "error" in metadata
+            assert "Subprocess error" in metadata["error"]
+
     def test_parse_fps_from_fraction(self):
         """Test FPS parsing from fraction string"""
         converter = VideoConverter()

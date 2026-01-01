@@ -832,6 +832,186 @@ class TestFontMetadata:
             # Check basic metadata exists
             assert "filename" in info
 
+    @pytest.mark.asyncio
+    async def test_get_info_handles_unicode_decode_error_style_name(self, temp_dir):
+        """Test metadata extraction handles unicode decode errors for style name (nameID 2)"""
+        converter = FontConverter()
+
+        test_file = temp_dir / "test.ttf"
+        test_file.write_bytes(b"ttf")
+
+        with patch('app.services.font_converter.TTFont') as mock_ttfont_class:
+            # Mock name record for style name that raises UnicodeDecodeError
+            mock_name_record = Mock()
+            mock_name_record.nameID = 2  # Style name
+            mock_name_record.toUnicode = Mock(side_effect=UnicodeDecodeError('utf-8', b'', 0, 1, 'invalid'))
+
+            mock_name_table = Mock()
+            mock_name_table.names = [mock_name_record]
+
+            mock_font = MagicMock()
+            mock_font.get = Mock(return_value=mock_name_table)
+            mock_font.__contains__ = Mock(return_value=False)
+            mock_font.close = Mock()
+            mock_ttfont_class.return_value = mock_font
+
+            # Should not raise exception
+            info = await converter.get_info(test_file)
+
+            # Should still return basic info
+            assert "filename" in info
+            assert "size" in info
+
+    @pytest.mark.asyncio
+    async def test_get_info_handles_attribute_error_style_name(self, temp_dir):
+        """Test metadata extraction handles AttributeError for style name (nameID 2)"""
+        converter = FontConverter()
+
+        test_file = temp_dir / "test.ttf"
+        test_file.write_bytes(b"ttf")
+
+        with patch('app.services.font_converter.TTFont') as mock_ttfont_class:
+            # Mock name record for style name that raises AttributeError
+            mock_name_record = Mock()
+            mock_name_record.nameID = 2  # Style name
+            mock_name_record.toUnicode = Mock(side_effect=AttributeError("Missing attr"))
+
+            mock_name_table = Mock()
+            mock_name_table.names = [mock_name_record]
+
+            mock_font = MagicMock()
+            mock_font.get = Mock(return_value=mock_name_table)
+            mock_font.__contains__ = Mock(return_value=False)
+            mock_font.close = Mock()
+            mock_ttfont_class.return_value = mock_font
+
+            # Should not raise exception
+            info = await converter.get_info(test_file)
+
+            # Should still return basic info
+            assert "filename" in info
+            assert "size" in info
+
+    @pytest.mark.asyncio
+    async def test_get_info_handles_unicode_decode_error_full_name(self, temp_dir):
+        """Test metadata extraction handles unicode decode errors for full name (nameID 4)"""
+        converter = FontConverter()
+
+        test_file = temp_dir / "test.ttf"
+        test_file.write_bytes(b"ttf")
+
+        with patch('app.services.font_converter.TTFont') as mock_ttfont_class:
+            # Mock name record for full name that raises UnicodeDecodeError
+            mock_name_record = Mock()
+            mock_name_record.nameID = 4  # Full name
+            mock_name_record.toUnicode = Mock(side_effect=UnicodeDecodeError('utf-8', b'', 0, 1, 'invalid'))
+
+            mock_name_table = Mock()
+            mock_name_table.names = [mock_name_record]
+
+            mock_font = MagicMock()
+            mock_font.get = Mock(return_value=mock_name_table)
+            mock_font.__contains__ = Mock(return_value=False)
+            mock_font.close = Mock()
+            mock_ttfont_class.return_value = mock_font
+
+            # Should not raise exception
+            info = await converter.get_info(test_file)
+
+            # Should still return basic info
+            assert "filename" in info
+            assert "size" in info
+
+    @pytest.mark.asyncio
+    async def test_get_info_handles_attribute_error_full_name(self, temp_dir):
+        """Test metadata extraction handles AttributeError for full name (nameID 4)"""
+        converter = FontConverter()
+
+        test_file = temp_dir / "test.ttf"
+        test_file.write_bytes(b"ttf")
+
+        with patch('app.services.font_converter.TTFont') as mock_ttfont_class:
+            # Mock name record for full name that raises AttributeError
+            mock_name_record = Mock()
+            mock_name_record.nameID = 4  # Full name
+            mock_name_record.toUnicode = Mock(side_effect=AttributeError("Missing attr"))
+
+            mock_name_table = Mock()
+            mock_name_table.names = [mock_name_record]
+
+            mock_font = MagicMock()
+            mock_font.get = Mock(return_value=mock_name_table)
+            mock_font.__contains__ = Mock(return_value=False)
+            mock_font.close = Mock()
+            mock_ttfont_class.return_value = mock_font
+
+            # Should not raise exception
+            info = await converter.get_info(test_file)
+
+            # Should still return basic info
+            assert "filename" in info
+            assert "size" in info
+
+    @pytest.mark.asyncio
+    async def test_get_info_handles_unicode_decode_error_version(self, temp_dir):
+        """Test metadata extraction handles unicode decode errors for version (nameID 5)"""
+        converter = FontConverter()
+
+        test_file = temp_dir / "test.ttf"
+        test_file.write_bytes(b"ttf")
+
+        with patch('app.services.font_converter.TTFont') as mock_ttfont_class:
+            # Mock name record for version that raises UnicodeDecodeError
+            mock_name_record = Mock()
+            mock_name_record.nameID = 5  # Version
+            mock_name_record.toUnicode = Mock(side_effect=UnicodeDecodeError('utf-8', b'', 0, 1, 'invalid'))
+
+            mock_name_table = Mock()
+            mock_name_table.names = [mock_name_record]
+
+            mock_font = MagicMock()
+            mock_font.get = Mock(return_value=mock_name_table)
+            mock_font.__contains__ = Mock(return_value=False)
+            mock_font.close = Mock()
+            mock_ttfont_class.return_value = mock_font
+
+            # Should not raise exception
+            info = await converter.get_info(test_file)
+
+            # Should still return basic info
+            assert "filename" in info
+            assert "size" in info
+
+    @pytest.mark.asyncio
+    async def test_get_info_handles_attribute_error_version(self, temp_dir):
+        """Test metadata extraction handles AttributeError for version (nameID 5)"""
+        converter = FontConverter()
+
+        test_file = temp_dir / "test.ttf"
+        test_file.write_bytes(b"ttf")
+
+        with patch('app.services.font_converter.TTFont') as mock_ttfont_class:
+            # Mock name record for version that raises AttributeError
+            mock_name_record = Mock()
+            mock_name_record.nameID = 5  # Version
+            mock_name_record.toUnicode = Mock(side_effect=AttributeError("Missing attr"))
+
+            mock_name_table = Mock()
+            mock_name_table.names = [mock_name_record]
+
+            mock_font = MagicMock()
+            mock_font.get = Mock(return_value=mock_name_table)
+            mock_font.__contains__ = Mock(return_value=False)
+            mock_font.close = Mock()
+            mock_ttfont_class.return_value = mock_font
+
+            # Should not raise exception
+            info = await converter.get_info(test_file)
+
+            # Should still return basic info
+            assert "filename" in info
+            assert "size" in info
+
 
 # ============================================================================
 # ERROR HANDLING TESTS

@@ -284,6 +284,119 @@ class TestAppShutdown:
 
         assert task.cancelled()
 
+    @pytest.mark.asyncio
+    async def test_cleanup_task_deletes_old_files(self, temp_dir):
+        """Test that cleanup_old_files() actually deletes old files (covers lines 112, 119)"""
+        import time
+        import os
+
+        # Create old files in temp and upload directories
+        old_temp_file = settings.TEMP_DIR / "old_temp_cleanup.txt"
+        old_temp_file.write_text("old temp")
+
+        old_upload_file = settings.UPLOAD_DIR / "old_upload_cleanup.txt"
+        old_upload_file.write_text("old upload")
+
+        # Set modification time to old
+        old_time = time.time() - (settings.TEMP_FILE_LIFETIME + 3600)
+        os.utime(old_temp_file, (old_time, old_time))
+        os.utime(old_upload_file, (old_time, old_time))
+
+        # Create recent files that should NOT be deleted
+        recent_temp_file = settings.TEMP_DIR / "recent_temp_cleanup.txt"
+        recent_temp_file.write_text("recent temp")
+
+        recent_upload_file = settings.UPLOAD_DIR / "recent_upload_cleanup.txt"
+        recent_upload_file.write_text("recent upload")
+
+        # Run cleanup_old_files for one iteration
+        task = asyncio.create_task(cleanup_old_files())
+
+        # Let it run one cleanup iteration
+        await asyncio.sleep(0.5)
+
+        # Cancel before it sleeps for 3600 seconds
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+        # Verify old files were deleted (lines 112 and 119)
+        assert not old_temp_file.exists(), "Old temp file should be deleted (line 112)"
+        assert not old_upload_file.exists(), "Old upload file should be deleted (line 119)"
+
+        # Verify recent files were NOT deleted
+        assert recent_temp_file.exists(), "Recent temp file should NOT be deleted"
+        assert recent_upload_file.exists(), "Recent upload file should NOT be deleted"
+
+        # Cleanup
+        if recent_temp_file.exists():
+            recent_temp_file.unlink()
+        if recent_upload_file.exists():
+            recent_upload_file.unlink()
+
+    @pytest.mark.asyncio
+    async def test_cleanup_task_logs_cache_cleanup_stats(self, temp_dir, caplog):
+        """Test that cleanup_old_files() logs cache cleanup stats when items removed (line 128)"""
+        import logging
+
+        # Set caplog to capture INFO level logs
+        caplog.set_level(logging.INFO)
+
+        cache_dir = temp_dir / "cleanup_log_cache"
+        original_cache_enabled = settings.CACHE_ENABLED
+
+        try:
+            # Enable cache and initialize with short expiration
+            settings.CACHE_ENABLED = True
+            cache_service = initialize_cache_service(
+                cache_dir=cache_dir,
+                expiration_hours=0,  # Immediate expiration
+                max_size_mb=100
+            )
+
+            # Create an expired cache entry
+            from PIL import Image
+            test_image = temp_dir / "test_log.jpg"
+            img = Image.new('RGB', (40, 40), color='green')
+            img.save(test_image, 'JPEG')
+
+            cache_key = cache_service.generate_cache_key(
+                test_image, "png", {"quality": 90}
+            )
+
+            output_file = temp_dir / "output_log.png"
+            img.save(output_file, 'PNG')
+
+            cache_service.store_result(
+                cache_key=cache_key,
+                original_filename="test_log.jpg",
+                output_file_path=output_file,
+                output_format="png",
+                conversion_options={"quality": 90}
+            )
+
+            # Wait for expiration
+            await asyncio.sleep(0.1)
+
+            # Run cleanup task
+            task = asyncio.create_task(cleanup_old_files())
+            await asyncio.sleep(0.5)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+            # Verify logging occurred (line 128)
+            # Check if cache cleanup was logged
+            assert any("cache cleanup" in record.message.lower() for record in caplog.records), \
+                "Cache cleanup should be logged (line 128)"
+
+        finally:
+            settings.CACHE_ENABLED = original_cache_enabled
+
     def test_app_handles_multiple_requests(self, client):
         """Test that app can handle multiple concurrent requests"""
         responses = []

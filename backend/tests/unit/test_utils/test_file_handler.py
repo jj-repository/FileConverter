@@ -530,3 +530,70 @@ class TestCleanupFile:
         if test_file.exists():
             os.chmod(test_file, 0o644)
             test_file.unlink(missing_ok=True)
+
+
+# ============================================================================
+# ADDITIONAL COVERAGE TESTS
+# ============================================================================
+
+class TestFileHandlerExceptionCoverage:
+    """Tests to cover exception handlers in file_handler.py"""
+
+    @pytest.mark.asyncio
+    async def test_get_video_info_general_exception(self, temp_dir):
+        """Test get_video_info general exception handler (lines 96-97)"""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "test.mp4"
+        test_file.write_bytes(b"fake video")
+
+        # Mock subprocess.run to raise a generic exception (not subprocess.CalledProcessError)
+        with patch('subprocess.run', side_effect=RuntimeError("Unexpected error")):
+            result = await get_video_info(test_file)
+
+            assert "error" in result
+            assert "Unexpected error" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_get_audio_info_general_exception(self, temp_dir):
+        """Test get_audio_info general exception handler (lines 136-137)"""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "test.mp3"
+        test_file.write_bytes(b"fake audio")
+
+        # Mock subprocess.run to raise a generic exception
+        with patch('subprocess.run', side_effect=RuntimeError("Audio processing error")):
+            result = await get_audio_info(test_file)
+
+            assert "error" in result
+            assert "Audio processing error" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_get_document_info_docx_import_error(self, temp_dir):
+        """Test get_document_info DOCX exception handler (lines 167-169)"""
+        from unittest.mock import patch
+
+        test_file = temp_dir / "test.docx"
+        test_file.write_bytes(b"PK\x03\x04fake docx")  # Fake DOCX signature
+
+        # Mock the docx import to raise an exception
+        with patch('builtins.__import__', side_effect=ImportError("docx not installed")):
+            result = await get_document_info(test_file)
+
+            # Should still return basic info even if DOCX parsing fails
+            assert "size" in result
+            assert "format" in result
+            assert result["format"] == "docx"
+
+    def test_cleanup_file_unlink_exception(self, temp_dir):
+        """Test cleanup_file exception when unlink fails (lines 195-196)"""
+        from unittest.mock import patch, MagicMock
+
+        test_file = temp_dir / "test.txt"
+        test_file.write_text("test content")
+
+        # Mock Path.unlink to raise an exception
+        with patch.object(Path, 'unlink', side_effect=PermissionError("Cannot delete file")):
+            # Should not raise exception - errors are logged but not propagated
+            cleanup_file(test_file)  # Should complete without error

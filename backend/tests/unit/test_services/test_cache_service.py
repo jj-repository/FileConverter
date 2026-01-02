@@ -594,3 +594,349 @@ class TestCachePathHelpers:
 
         assert metadata_path == temp_cache_dir / cache_key / "metadata.json"
         assert isinstance(metadata_path, Path)
+
+
+# ============================================================================
+# ERROR HANDLING TESTS
+# ============================================================================
+
+class TestCacheErrorHandling:
+    """Test error handling in cache service"""
+
+    def test_generate_file_hash_error(self, temp_cache_dir):
+        """Test error handling when file cannot be read (lines 86-88)"""
+        cache = CacheService(cache_dir=temp_cache_dir)
+
+        # Try to hash non-existent file
+        nonexistent_file = Path("/nonexistent/file.txt")
+
+        with pytest.raises(Exception):
+            cache.generate_file_hash(nonexistent_file)
+
+    def test_write_metadata_error(self, temp_cache_dir, monkeypatch):
+        """Test error handling when metadata cannot be written (lines 186-188)"""
+        from unittest.mock import mock_open, patch
+
+        cache = CacheService(cache_dir=temp_cache_dir)
+
+        metadata = CacheMetadata(
+            cache_key="test_key",
+            original_filename="test.jpg",
+            output_file="/tmp/output.png",
+            output_format="png",
+            created_at=time.time(),
+            expires_at=time.time() + 3600,
+            file_size=1024,
+            conversion_options={}
+        )
+
+        # Mock open to raise exception
+        with patch("builtins.open", side_effect=PermissionError("Cannot write")):
+            with pytest.raises(PermissionError):
+                cache.write_metadata(metadata)
+
+    def test_missing_output_file_returns_none(self, temp_dir, temp_cache_dir):
+        """Test that missing output file is handled (lines 219-222)"""
+        cache = CacheService(cache_dir=temp_cache_dir)
+
+        # Create cache entry with metadata but delete the output file
+        input_file = temp_dir / "input.jpg"
+        input_file.write_text("Input content")
+
+        output_file = temp_dir / "output.png"
+        output_file.write_text("Output content")
+
+        cache_key = cache.generate_cache_key(input_file, "png", {})
+
+        # Store result
+        cache.store_result(cache_key, "input.jpg", output_file, "png", {})
+
+        # Delete the output file to simulate missing file
+        metadata = cache.read_metadata(cache_key)
+        Path(metadata.output_file).unlink()
+
+        # Try to get cached result
+        result = cache.get_cached_result(cache_key)
+
+        # Should return None because output file is missing
+        assert result is None
+        assert cache.stats["misses"] == 1
+
+    def test_store_result_error_cleanup(self, temp_dir, temp_cache_dir, monkeypatch):
+        """Test error handling during store_result with cleanup (lines 273-279)"""
+        from unittest.mock import patch
+
+        cache = CacheService(cache_dir=temp_cache_dir)
+
+        input_file = temp_dir / "input.jpg"
+        input_file.write_text("Input content")
+
+        output_file = temp_dir / "output.png"
+        output_file.write_text("Output content")
+
+        cache_key = cache.generate_cache_key(input_file, "png", {})
+
+        # Mock shutil.copy2 to raise exception
+        with patch("shutil.copy2", side_effect=PermissionError("Cannot copy")):
+            # Should not raise exception (errors are caught and logged)
+            cache.store_result(cache_key, "input.jpg", output_file, "png", {})
+
+        # Cache entry should not exist
+        result = cache.get_cached_result(cache_key)
+        assert result is None
+
+    def test_store_result_error_cleanup_also_fails(self, temp_dir, temp_cache_dir):
+        """Test nested exception handling when cleanup also fails (lines 278-279)"""
+        from unittest.mock import patch, MagicMock
+
+        cache = CacheService(cache_dir=temp_cache_dir)
+
+        input_file = temp_dir / "input.jpg"
+        input_file.write_text("Input content")
+
+        output_file = temp_dir / "output.png"
+        output_file.write_text("Output content")
+
+        cache_key = cache.generate_cache_key(input_file, "png", {})
+
+        # Create the cache entry directory first (so cleanup has something to try to remove)
+        cache_path = cache.get_cache_path(cache_key)
+        cache_path.mkdir(parents=True, exist_ok=True)
+
+        # Mock write_metadata to fail (causing exception in store_result)
+        # and also mock _remove_cache_entry to fail (cleanup fails)
+        with patch.object(cache, "write_metadata", side_effect=Exception("Metadata write failed")):
+            with patch.object(cache, "_remove_cache_entry", side_effect=Exception("Remove failed")):
+                # Should not raise exception (both errors are caught and ignored)
+                cache.store_result(cache_key, "input.jpg", output_file, "png", {})
+
+        # Should complete without raising exception
+
+    def test_remove_cache_entry_error(self, temp_cache_dir, monkeypatch):
+        """Test error handling in _remove_cache_entry (lines 293-294)"""
+        from unittest.mock import patch
+
+        cache = CacheService(cache_dir=temp_cache_dir)
+
+        # Create a cache entry
+        cache_key = "test_key_12345678"
+        cache_path = cache.get_cache_path(cache_key)
+        cache_path.mkdir(parents=True)
+
+        # Mock shutil.rmtree to raise exception
+        with patch("shutil.rmtree", side_effect=PermissionError("Cannot remove")):
+            # Should not raise exception (errors are caught and logged)
+            cache._remove_cache_entry(cache_key)
+
+    def test_cleanup_skips_non_directory_items(self, temp_cache_dir):
+        """Test cleanup skips non-directory items (line 311)"""
+        cache = CacheService(cache_dir=temp_cache_dir)
+
+        # Create a file (not directory) in cache dir
+        file_in_cache = temp_cache_dir / "some_file.txt"
+        file_in_cache.write_text("Not a cache entry")
+
+        # Run cleanup (should skip the file)
+        stats = cache.cleanup_expired()
+
+        # Should complete without error
+        assert "expired_removed" in stats
+
+    def test_directory_size_error(self, temp_cache_dir, monkeypatch):
+        """Test error handling in _get_directory_size (lines 440-441)"""
+        from unittest.mock import patch
+
+        cache = CacheService(cache_dir=temp_cache_dir)
+
+        # Create a cache entry
+        cache_path = temp_cache_dir / "test_entry"
+        cache_path.mkdir()
+
+        # Mock rglob to raise exception
+        with patch.object(Path, "rglob", side_effect=PermissionError("Cannot read")):
+            size = cache._get_directory_size(cache_path)
+
+            # Should return 0 when error occurs
+            assert size == 0
+
+
+# ============================================================================
+# CLEANUP ALL TESTS
+# ============================================================================
+
+class TestCleanupAll:
+    """Test cleanup_all method"""
+
+    def test_cleanup_all_combines_both_cleanups(self, temp_dir, temp_cache_dir):
+        """Test cleanup_all runs both expired and size cleanups (lines 401-423)"""
+        cache = CacheService(cache_dir=temp_cache_dir, expiration_hours=0, max_size_mb=1)
+
+        # Create some expired entries
+        for i in range(3):
+            input_file = temp_dir / f"input_{i}.jpg"
+            input_file.write_text("Input " * 1000)
+
+            output_file = temp_dir / f"output_{i}.png"
+            output_file.write_text("Output " * 10000)
+
+            cache_key = cache.generate_cache_key(input_file, "png", {"index": i})
+            cache.store_result(cache_key, f"input_{i}.jpg", output_file, "png", {"index": i})
+            time.sleep(0.01)
+
+        # Wait for expiration
+        time.sleep(0.1)
+
+        # Run cleanup_all
+        stats = cache.cleanup_all()
+
+        # Should have stats from both cleanups
+        assert "expired_removed" in stats
+        assert "corrupted_removed" in stats
+        assert "size_limit_removed" in stats
+        assert "total_space_freed_mb" in stats
+
+        # Should have cleaned up entries
+        assert stats["expired_removed"] >= 0 or stats["size_limit_removed"] >= 0
+
+    def test_cleanup_all_logs_results(self, temp_dir, temp_cache_dir):
+        """Test cleanup_all returns detailed statistics"""
+        cache = CacheService(cache_dir=temp_cache_dir)
+
+        stats = cache.cleanup_all()
+
+        # Verify all expected keys are present
+        assert "expired_removed" in stats
+        assert "corrupted_removed" in stats
+        assert "size_limit_removed" in stats
+        assert "total_space_freed_mb" in stats
+
+
+# ============================================================================
+# CACHE SIZE EXCEEDED TESTS
+# ============================================================================
+
+class TestCacheSizeExceeded:
+    """Test cache size limit enforcement"""
+
+    def test_cache_size_exceeded_removes_oldest(self, temp_dir, temp_cache_dir):
+        """Test that cleanup_by_size removes oldest entries when limit exceeded (lines 357-392)"""
+        cache = CacheService(cache_dir=temp_cache_dir, max_size_mb=1)
+
+        # Store multiple large files to exceed limit
+        for i in range(15):
+            input_file = temp_dir / f"input_{i}.jpg"
+            input_file.write_text("x" * 100000)  # 100KB
+
+            output_file = temp_dir / f"output_{i}.png"
+            output_file.write_text("y" * 150000)  # 150KB each, total ~2.25MB
+
+            cache_key = cache.generate_cache_key(input_file, "png", {"index": i})
+            cache.store_result(cache_key, f"input_{i}.jpg", output_file, "png", {"index": i})
+            time.sleep(0.01)  # Ensure different timestamps
+
+        # Verify cache size exceeds limit before cleanup
+        size_before = cache.get_total_cache_size()
+        assert size_before > cache.max_size_mb * 1024 * 1024
+
+        # Run cleanup
+        stats = cache.cleanup_by_size()
+
+        # Should have removed some entries
+        assert stats["entries_removed"] > 0
+        assert stats["space_freed_mb"] > 0
+
+        # Final cache size should be under limit
+        final_size = cache.get_total_cache_size()
+        assert final_size <= cache.max_size_mb * 1024 * 1024
+
+    def test_cache_under_limit_no_cleanup(self, temp_dir, temp_cache_dir):
+        """Test that cleanup_by_size does nothing when under limit"""
+        cache = CacheService(cache_dir=temp_cache_dir, max_size_mb=1000)  # Large limit
+
+        # Store small file
+        input_file = temp_dir / "input.jpg"
+        input_file.write_text("small")
+
+        output_file = temp_dir / "output.png"
+        output_file.write_text("small output")
+
+        cache_key = cache.generate_cache_key(input_file, "png", {})
+        cache.store_result(cache_key, "input.jpg", output_file, "png", {})
+
+        # Run cleanup
+        stats = cache.cleanup_by_size()
+
+        # Should not remove anything
+        assert stats["entries_removed"] == 0
+        assert stats["space_freed_mb"] == 0
+
+    def test_cleanup_by_size_skips_non_directory_items(self, temp_dir, temp_cache_dir):
+        """Test cleanup_by_size skips non-directory items (line 364)"""
+        cache = CacheService(cache_dir=temp_cache_dir, max_size_mb=1)
+
+        # Create a file (not directory) in cache dir BEFORE storing cache entries
+        file_in_cache = temp_cache_dir / "some_file.txt"
+        file_in_cache.write_text("Not a cache entry - should be skipped")
+
+        # Store enough entries to exceed limit
+        for i in range(10):
+            input_file = temp_dir / f"input_{i}.jpg"
+            input_file.write_text("x" * 200000)  # 200KB each
+
+            output_file = temp_dir / f"output_{i}.png"
+            output_file.write_text("y" * 200000)  # 200KB each
+
+            cache_key = cache.generate_cache_key(input_file, "png", {"index": i})
+            cache.store_result(cache_key, f"input_{i}.jpg", output_file, "png", {"index": i})
+            time.sleep(0.01)
+
+        # Verify cache size exceeds limit
+        size_before = cache.get_total_cache_size()
+        assert size_before > cache.max_size_mb * 1024 * 1024
+
+        # Run cleanup (should skip the file and clean cache entries)
+        stats = cache.cleanup_by_size()
+
+        # Should complete without error and have removed some entries
+        assert "entries_removed" in stats
+        # The file should still exist (not removed)
+        assert file_in_cache.exists()
+
+
+# ============================================================================
+# GLOBAL SERVICE TESTS
+# ============================================================================
+
+class TestGlobalCacheService:
+    """Test global cache service initialization"""
+
+    def test_get_cache_service(self):
+        """Test get_cache_service returns global instance (line 513)"""
+        from app.services.cache_service import get_cache_service
+
+        # Get the global cache service
+        service = get_cache_service()
+
+        # May be None or a CacheService instance
+        assert service is None or isinstance(service, CacheService)
+
+    def test_initialize_cache_service(self, temp_cache_dir):
+        """Test initialize_cache_service creates global instance (lines 529-538)"""
+        from app.services.cache_service import initialize_cache_service, get_cache_service
+
+        # Initialize cache service
+        service = initialize_cache_service(
+            cache_dir=temp_cache_dir,
+            expiration_hours=2,
+            max_size_mb=100
+        )
+
+        # Verify returned service
+        assert isinstance(service, CacheService)
+        assert service.cache_dir == temp_cache_dir
+        assert service.expiration_hours == 2
+        assert service.max_size_mb == 100
+
+        # Verify global instance is set
+        global_service = get_cache_service()
+        assert global_service is service

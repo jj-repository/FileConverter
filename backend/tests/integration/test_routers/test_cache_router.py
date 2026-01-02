@@ -382,3 +382,83 @@ class TestCacheEndpointValidation:
 
         # Both should have same structure
         assert set(data1.keys()) == set(data2.keys())
+
+
+class TestCacheErrorHandling:
+    """Test cache error handling when cache is disabled or not initialized"""
+
+    def test_get_info_when_cache_disabled(self, client, monkeypatch):
+        """Test GET /info when cache is disabled (line 20)"""
+        # Temporarily disable cache
+        monkeypatch.setattr("app.routers.cache.settings.CACHE_ENABLED", False)
+
+        response = client.get("/api/cache/info")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["enabled"] is False
+        assert "message" in data
+        assert "disabled" in data["message"].lower()
+
+    def test_get_info_when_cache_service_none(self, client, monkeypatch):
+        """Test GET /info when cache service is not initialized (line 27)"""
+        from unittest.mock import patch
+
+        # Mock get_cache_service to return None
+        with patch("app.routers.cache.get_cache_service", return_value=None):
+            response = client.get("/api/cache/info")
+
+            assert response.status_code == 503
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "not initialized" in detail.lower()
+
+    def test_cleanup_when_cache_disabled(self, client, monkeypatch):
+        """Test POST /cleanup when cache is disabled (line 43)"""
+        # Temporarily disable cache
+        monkeypatch.setattr("app.routers.cache.settings.CACHE_ENABLED", False)
+
+        response = client.post("/api/cache/cleanup")
+
+        assert response.status_code == 400
+        data = response.json()
+        detail = data.get("detail", str(data))
+        assert "disabled" in detail.lower()
+
+    def test_cleanup_when_cache_service_none(self, client, monkeypatch):
+        """Test POST /cleanup when cache service is not initialized (line 47)"""
+        from unittest.mock import patch
+
+        # Mock get_cache_service to return None
+        with patch("app.routers.cache.get_cache_service", return_value=None):
+            response = client.post("/api/cache/cleanup")
+
+            assert response.status_code == 503
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "not initialized" in detail.lower()
+
+    def test_clear_when_cache_disabled(self, client, monkeypatch):
+        """Test DELETE /clear when cache is disabled (line 66)"""
+        # Temporarily disable cache
+        monkeypatch.setattr("app.routers.cache.settings.CACHE_ENABLED", False)
+
+        response = client.delete("/api/cache/clear")
+
+        assert response.status_code == 400
+        data = response.json()
+        detail = data.get("detail", str(data))
+        assert "disabled" in detail.lower()
+
+    def test_clear_when_cache_service_none(self, client, monkeypatch):
+        """Test DELETE /clear when cache service is not initialized (line 70)"""
+        from unittest.mock import patch
+
+        # Mock get_cache_service to return None
+        with patch("app.routers.cache.get_cache_service", return_value=None):
+            response = client.delete("/api/cache/clear")
+
+            assert response.status_code == 503
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "not initialized" in detail.lower()

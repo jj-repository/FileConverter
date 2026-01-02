@@ -659,3 +659,66 @@ class TestSpreadsheetConversionFormats:
 
             assert response2.status_code == 200
             assert response2.json()["output_file"].endswith(".csv")
+
+
+class TestSpreadsheetErrorHandling:
+    """Test error handling and cleanup in spreadsheet router"""
+
+    def test_convert_cleanup_on_conversion_error(self, client, sample_csv, monkeypatch):
+        """Test that files are cleaned up when conversion fails (lines 89-96)"""
+        from unittest.mock import patch
+
+        # Mock convert_with_cache to raise exception after input file is saved
+        with patch("app.services.spreadsheet_converter.SpreadsheetConverter.convert_with_cache", side_effect=Exception("Conversion error")):
+            with open(sample_csv, 'rb') as f:
+                response = client.post(
+                    "/api/spreadsheet/convert",
+                    files={"file": ("test.csv", f, "text/csv")},
+                    data={"output_format": "xlsx"}
+                )
+
+            # Should return 500 error
+            assert response.status_code == 500
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "Conversion failed" in detail or "error" in detail.lower()
+
+    def test_convert_cleanup_output_path_on_error(self, client, sample_csv, monkeypatch):
+        """Test cleanup of output_path when error occurs after conversion (line 94)"""
+        from unittest.mock import patch, MagicMock
+        from pathlib import Path
+
+        # Mock to make conversion succeed, then raise exception when building response
+        mock_output_path = MagicMock(spec=Path)
+        mock_output_path.name = "test_converted.xlsx"
+
+        with patch("app.services.spreadsheet_converter.SpreadsheetConverter.convert_with_cache", return_value=mock_output_path):
+            # Mock ConversionResponse to raise exception
+            with patch("app.routers.spreadsheet.ConversionResponse", side_effect=Exception("Response error")):
+                with open(sample_csv, 'rb') as f:
+                    response = client.post(
+                        "/api/spreadsheet/convert",
+                        files={"file": ("test.csv", f, "text/csv")},
+                        data={"output_format": "xlsx"}
+                    )
+
+                # Should return 500 error
+                assert response.status_code == 500
+
+    def test_info_cleanup_on_error(self, client, sample_csv, monkeypatch):
+        """Test that temp file is cleaned up on error in /info endpoint (lines 146-149)"""
+        from unittest.mock import patch
+
+        # Mock get_spreadsheet_info to raise exception
+        with patch("app.services.spreadsheet_converter.SpreadsheetConverter.get_spreadsheet_info", side_effect=Exception("Metadata error")):
+            with open(sample_csv, 'rb') as f:
+                response = client.post(
+                    "/api/spreadsheet/info",
+                    files={"file": ("test.csv", f, "text/csv")}
+                )
+
+            # Should return 500 error
+            assert response.status_code == 500
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "Failed to get spreadsheet info" in detail or "error" in detail.lower()

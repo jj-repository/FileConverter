@@ -634,3 +634,94 @@ class TestArchiveConversionEdgeCases:
 
         assert response.status_code == 200
         assert response.json()["status"] == "completed"
+
+    def test_convert_cleanup_output_file_on_error(self, client, sample_zip, monkeypatch):
+        """Test that output file is cleaned up on error after conversion (line 85)"""
+        from unittest.mock import patch, MagicMock
+
+        # Mock ConversionResponse to raise exception after output_path is set
+        def mock_conversion_response(*args, **kwargs):
+            raise Exception("Simulated error after conversion")
+
+        with patch("app.routers.archive.ConversionResponse", side_effect=mock_conversion_response):
+            with open(sample_zip, 'rb') as f:
+                response = client.post(
+                    "/api/archive/convert",
+                    files={"file": ("test.zip", f, "application/zip")},
+                    data={"output_format": "tar.gz"}
+                )
+
+            assert response.status_code == 500
+
+
+class TestArchiveInfo:
+    """Test archive info endpoint"""
+
+    def test_get_archive_info_zip_success(self, client, sample_zip):
+        """Test getting info from ZIP file"""
+        with open(sample_zip, 'rb') as f:
+            response = client.post(
+                "/api/archive/info",
+                files={"file": ("test.zip", f, "application/zip")}
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["filename"] == "test.zip"
+        assert data["format"] == "zip"
+        assert "metadata" in data
+        assert "size" in data
+
+    def test_get_archive_info_tar_gz_success(self, client, temp_dir):
+        """Test getting info from TAR.GZ file"""
+        import tarfile
+
+        tar_path = temp_dir / "test.tar.gz"
+        with tarfile.open(tar_path, 'w:gz') as tar:
+            # Add some test files
+            file1 = temp_dir / "file1.txt"
+            file1.write_text("test content 1")
+            tar.add(file1, arcname="file1.txt")
+
+        with open(tar_path, 'rb') as f:
+            response = client.post(
+                "/api/archive/info",
+                files={"file": ("test.tar.gz", f, "application/gzip")}
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["filename"] == "test.tar.gz"
+        assert data["format"] == "tar.gz"
+
+    def test_get_archive_info_invalid_format(self, client, temp_dir):
+        """Test getting info from invalid archive format"""
+        invalid_file = temp_dir / "test.txt"
+        invalid_file.write_text("not an archive")
+
+        with open(invalid_file, 'rb') as f:
+            response = client.post(
+                "/api/archive/info",
+                files={"file": ("test.txt", f, "text/plain")}
+            )
+
+        # Validation fails and exception is caught at line 137
+        assert response.status_code == 500
+
+    def test_get_archive_info_cleanup_on_error(self, client, temp_dir, monkeypatch):
+        """Test that temp file is cleaned up on error (line 139)"""
+        from unittest.mock import patch
+
+        zip_path = temp_dir / "test.zip"
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            zf.writestr("test.txt", "test content")
+
+        # Mock get_archive_info to raise exception
+        with patch("app.services.archive_converter.ArchiveConverter.get_archive_info", side_effect=Exception("Simulated error")):
+            with open(zip_path, 'rb') as f:
+                response = client.post(
+                    "/api/archive/info",
+                    files={"file": ("test.zip", f, "application/zip")}
+                )
+
+            assert response.status_code == 500

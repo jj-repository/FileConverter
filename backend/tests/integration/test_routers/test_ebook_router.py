@@ -666,3 +666,51 @@ class TestEbookConversionFormats:
             # Could potentially convert back if TXT to EPUB is supported
             output_file = convert_response.json()["output_file"]
             assert output_file.endswith(".txt")
+
+
+class TestEbookErrorHandling:
+    """Test error handling and cleanup in ebook router"""
+
+    def test_info_value_error_handling(self, client, temp_dir):
+        """Test that ValueError is handled in /info endpoint (lines 173-174)"""
+        from unittest.mock import patch
+
+        # Create a valid ebook file
+        epub_path = temp_dir / "test.epub"
+        epub_path.write_bytes(b"fake epub content")
+
+        # Mock get_info to raise ValueError
+        with patch("app.services.ebook_converter.EbookConverter.get_info", side_effect=ValueError("Invalid ebook format")):
+            with open(epub_path, 'rb') as f:
+                response = client.post(
+                    "/api/ebook/info",
+                    files={"file": ("test.epub", f, "application/epub+zip")}
+                )
+
+            # Should return 400 error for ValueError
+            assert response.status_code == 400
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "Invalid ebook format" in detail or "invalid" in detail.lower()
+
+    def test_info_general_error_handling(self, client, temp_dir):
+        """Test that general exceptions are handled in /info endpoint (lines 175-179)"""
+        from unittest.mock import patch
+
+        # Create a valid ebook file
+        epub_path = temp_dir / "test.epub"
+        epub_path.write_bytes(b"fake epub content")
+
+        # Mock get_info to raise a general exception
+        with patch("app.services.ebook_converter.EbookConverter.get_info", side_effect=Exception("Metadata extraction failed")):
+            with open(epub_path, 'rb') as f:
+                response = client.post(
+                    "/api/ebook/info",
+                    files={"file": ("test.epub", f, "application/epub+zip")}
+                )
+
+            # Should return 500 error for general exception
+            assert response.status_code == 500
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "Failed to extract info" in detail or "error" in detail.lower()

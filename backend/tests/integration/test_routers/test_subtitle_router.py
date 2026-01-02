@@ -681,3 +681,126 @@ Symbols: © ® ™ € ¥
             )
 
         assert response.status_code == 200
+
+    def test_convert_cleanup_output_file_on_error(self, client, sample_srt_subtitle, monkeypatch):
+        """Test that output file is cleaned up on error after conversion (line 91)"""
+        from unittest.mock import patch
+
+        # Mock ConversionResponse to raise exception after output_path is set
+        def mock_conversion_response(*args, **kwargs):
+            raise Exception("Simulated error after conversion")
+
+        with patch("app.routers.subtitle.ConversionResponse", side_effect=mock_conversion_response):
+            with open(sample_srt_subtitle, 'rb') as f:
+                response = client.post(
+                    "/api/subtitle/convert",
+                    files={"file": ("test.srt", f, "text/plain")},
+                    data={"output_format": "vtt"}
+                )
+
+            assert response.status_code == 500
+
+
+class TestSubtitleAdjustTiming:
+    """Test subtitle timing adjustment endpoint"""
+
+    def test_adjust_timing_delay_subtitle(self, client, sample_srt_subtitle):
+        """Test adjusting subtitle timing with positive offset (delay)"""
+        with open(sample_srt_subtitle, 'rb') as f:
+            response = client.post(
+                "/api/subtitle/adjust-timing",
+                files={"file": ("test.srt", f, "text/plain")},
+                data={"offset_ms": 1000}  # Delay by 1 second
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "completed"
+        assert "1000ms" in data["message"]
+        assert "download_url" in data
+
+    def test_adjust_timing_advance_subtitle(self, client, sample_srt_subtitle):
+        """Test adjusting subtitle timing with negative offset (advance)"""
+        with open(sample_srt_subtitle, 'rb') as f:
+            response = client.post(
+                "/api/subtitle/adjust-timing",
+                files={"file": ("test.srt", f, "text/plain")},
+                data={"offset_ms": -500}  # Advance by 0.5 seconds
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "completed"
+        assert "-500ms" in data["message"]
+
+    def test_adjust_timing_invalid_format(self, client, temp_dir):
+        """Test adjusting timing with invalid file format"""
+        invalid_file = temp_dir / "test.txt"
+        invalid_file.write_text("not a subtitle file")
+
+        with open(invalid_file, 'rb') as f:
+            response = client.post(
+                "/api/subtitle/adjust-timing",
+                files={"file": ("test.txt", f, "text/plain")},
+                data={"offset_ms": 1000}
+            )
+
+        assert response.status_code == 400
+
+    def test_adjust_timing_cleanup_on_error(self, client, sample_srt_subtitle, monkeypatch):
+        """Test that files are cleaned up on error during timing adjustment (line 148)"""
+        from unittest.mock import patch
+
+        # Mock adjust_timing to raise exception
+        with patch("app.services.subtitle_converter.SubtitleConverter.adjust_timing", side_effect=Exception("Timing error")):
+            with open(sample_srt_subtitle, 'rb') as f:
+                response = client.post(
+                    "/api/subtitle/adjust-timing",
+                    files={"file": ("test.srt", f, "text/plain")},
+                    data={"offset_ms": 1000}
+                )
+
+            assert response.status_code == 500
+
+    def test_adjust_timing_cleanup_output_file_on_error(self, client, sample_srt_subtitle, monkeypatch):
+        """Test that output file is cleaned up on error after timing adjustment (line 148)"""
+        from unittest.mock import patch
+
+        # Mock ConversionResponse to raise exception after output_path is set
+        def mock_conversion_response(*args, **kwargs):
+            raise Exception("Simulated error after conversion")
+
+        with patch("app.routers.subtitle.ConversionResponse", side_effect=mock_conversion_response):
+            with open(sample_srt_subtitle, 'rb') as f:
+                response = client.post(
+                    "/api/subtitle/adjust-timing",
+                    files={"file": ("test.srt", f, "text/plain")},
+                    data={"offset_ms": 1000}
+                )
+
+            assert response.status_code == 500
+
+
+class TestSubtitleInfoCleanup:
+    """Test subtitle info endpoint cleanup"""
+
+    def test_get_subtitle_info_cleanup_on_error(self, client, temp_dir, monkeypatch):
+        """Test that temp file is cleaned up on error in /info endpoint (line 202)"""
+        from unittest.mock import patch
+
+        srt_path = temp_dir / "test.srt"
+        srt_content = """1
+00:00:01,000 --> 00:00:05,000
+Test subtitle
+"""
+        srt_path.write_text(srt_content)
+
+        # Mock get_subtitle_info to raise exception
+        with patch("app.services.subtitle_converter.SubtitleConverter.get_subtitle_info", side_effect=Exception("Simulated error")):
+            with open(srt_path, 'rb') as f:
+                response = client.post(
+                    "/api/subtitle/info",
+                    files={"file": ("test.srt", f, "text/plain")}
+                )
+
+            assert response.status_code == 500

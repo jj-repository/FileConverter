@@ -1072,3 +1072,96 @@ class TestFontSuccessPaths:
         assert response.json()["status"] == "completed"
 
         output_file.unlink(missing_ok=True)
+
+
+class TestFontErrorHandling:
+    """Test error handling in font router"""
+
+    def test_convert_value_error_handling(self, client, temp_dir):
+        """Test that ValueError is handled in /convert endpoint (lines 92-93)"""
+        from unittest.mock import patch
+
+        # Create a font file
+        font_path = temp_dir / "test.ttf"
+        font_path.write_bytes(b"fake ttf")
+
+        # Mock validate_file_extension to raise ValueError
+        with patch("app.routers.font.validate_file_extension", side_effect=ValueError("Invalid font format")):
+            with open(font_path, 'rb') as f:
+                response = client.post(
+                    "/api/font/convert",
+                    files={"file": ("test.ttf", f, "font/ttf")},
+                    data={"output_format": "woff"}
+                )
+
+            # Should return 400 error for ValueError
+            assert response.status_code == 400
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "Invalid font format" in detail or "invalid" in detail.lower()
+
+    def test_optimize_value_error_handling(self, client, temp_dir):
+        """Test that ValueError is handled in /optimize endpoint (lines 152-153)"""
+        from unittest.mock import patch
+
+        # Create a font file
+        font_path = temp_dir / "test.ttf"
+        font_path.write_bytes(b"fake ttf")
+
+        # Mock validate_file_extension to raise ValueError
+        with patch("app.routers.font.validate_file_extension", side_effect=ValueError("Invalid font for optimization")):
+            with open(font_path, 'rb') as f:
+                response = client.post(
+                    "/api/font/optimize",
+                    files={"file": ("test.ttf", f, "font/ttf")}
+                )
+
+            # Should return 400 error for ValueError
+            assert response.status_code == 400
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "Invalid font" in detail or "invalid" in detail.lower()
+
+    def test_info_value_error_handling(self, client, temp_dir):
+        """Test that ValueError is handled in /info endpoint (line 240)"""
+        from unittest.mock import patch
+
+        # Create a font file
+        font_path = temp_dir / "test.ttf"
+        font_path.write_bytes(b"fake ttf")
+
+        # Mock validate_file_extension to raise ValueError
+        with patch("app.routers.font.validate_file_extension", side_effect=ValueError("Invalid font for info")):
+            with open(font_path, 'rb') as f:
+                response = client.post(
+                    "/api/font/info",
+                    files={"file": ("test.ttf", f, "font/ttf")}
+                )
+
+            # Should return 400 error for ValueError
+            assert response.status_code == 400
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "Invalid font" in detail or "invalid" in detail.lower()
+
+    def test_info_general_error_cleanup(self, client, temp_dir):
+        """Test cleanup on general error in /info endpoint (line 244)"""
+        from unittest.mock import patch
+
+        # Create a font file
+        font_path = temp_dir / "test.ttf"
+        font_path.write_bytes(b"fake ttf")
+
+        # Mock get_info to raise exception
+        with patch("app.services.font_converter.FontConverter.get_info", side_effect=Exception("Info extraction failed")):
+            with open(font_path, 'rb') as f:
+                response = client.post(
+                    "/api/font/info",
+                    files={"file": ("test.ttf", f, "font/ttf")}
+                )
+
+            # Should return 500 error for general exception
+            assert response.status_code == 500
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "Failed to extract info" in detail or "error" in detail.lower()

@@ -1846,6 +1846,46 @@ class TestDataEdgeCases:
     """Test edge cases to reach 100% coverage"""
 
     @pytest.mark.asyncio
+    async def test_xml_parser_with_entity_attribute(self, temp_dir):
+        """Test XML parsing fallback with parser that supports entity attribute (line 218)"""
+        from unittest.mock import patch, MagicMock
+
+        converter = DataConverter()
+
+        input_file = temp_dir / "test.xml"
+        xml_content = """<?xml version="1.0"?>
+<root>
+    <record><name>Alice</name><age>30</age></record>
+</root>"""
+        input_file.write_text(xml_content)
+
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
+            settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+            # Create a mock parser that supports entity attribute and SetParamEntityParsing
+            mock_parser = MagicMock()
+            mock_parser.entity = {}
+            mock_inner_parser = MagicMock()
+            mock_inner_parser.SetParamEntityParsing = MagicMock(return_value=None)
+            mock_parser.parser = mock_inner_parser
+
+            # Temporarily disable defusedxml and mock XMLParser
+            with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
+                with patch('xml.etree.ElementTree.XMLParser', return_value=mock_parser):
+                    # This should use the fallback XML parser and execute line 218
+                    result = await converter.convert(
+                        input_path=input_file,
+                        output_format="json",
+                        options={},
+                        session_id="test-session"
+                    )
+
+                    assert result.exists()
+                    assert result.suffix == ".json"
+                    # Verify that SetParamEntityParsing was called
+                    mock_inner_parser.SetParamEntityParsing.assert_called_once_with(0)
+
+    @pytest.mark.asyncio
     async def test_unsupported_input_format_in_conversion(self, temp_dir):
         """Test unsupported input format error in conversion (line 146)"""
         converter = DataConverter()

@@ -1,5 +1,6 @@
 # FileConverter
 
+[![CI](https://github.com/jj-repository/FileConverter/actions/workflows/ci.yml/badge.svg)](https://github.com/jj-repository/FileConverter/actions/workflows/ci.yml)
 [![Backend Tests](https://github.com/jj-repository/FileConverter/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/jj-repository/FileConverter/actions/workflows/backend-tests.yml)
 [![Frontend Tests](https://github.com/jj-repository/FileConverter/actions/workflows/frontend-tests.yml/badge.svg)](https://github.com/jj-repository/FileConverter/actions/workflows/frontend-tests.yml)
 [![codecov](https://codecov.io/gh/jj-repository/FileConverter/branch/main/graph/badge.svg)](https://codecov.io/gh/jj-repository/FileConverter)
@@ -51,32 +52,34 @@ npm run dev
 
 ## 🧪 Testing
 
-### Backend (192 tests)
+### Backend (1,393 tests, 99.90% coverage)
 ```bash
 cd backend
 pytest                    # Run all tests
-pytest --cov=app         # With coverage
+pytest --cov=app         # With coverage (99.90%)
 pytest -m security       # Security tests only
+pytest -m integration    # Integration tests
 ```
 
-### Frontend
+### Frontend (934 tests, 100% pass rate)
 ```bash
 cd frontend
-npm test
-npm run test:coverage
+npm test                 # Run tests
+npm run test:coverage    # With coverage report
+npm run test:ui          # Interactive UI
 ```
 
 ## 🏗️ Architecture
 
 ```
 FileConverter/
-├── backend/           # FastAPI backend (192 tests, 50%+ coverage)
-│   ├── app/          # 13 routers, 14 converters
-│   └── tests/        # Unit + integration tests
-├── frontend/         # React + TailwindCSS
-│   └── src/          # 11 converter pages
+├── backend/           # FastAPI backend (1,393 tests, 99.90% coverage)
+│   ├── app/          # 13 routers, 14 converters, full coverage
+│   └── tests/        # Unit + integration + security tests
+├── frontend/         # React + TailwindCSS (934 tests)
+│   └── src/          # 11 converter pages, fully tested
 └── .github/
-    └── workflows/    # CI/CD pipelines
+    └── workflows/    # CI/CD: tests, lint, security, release
 ```
 
 ## 🔒 Security

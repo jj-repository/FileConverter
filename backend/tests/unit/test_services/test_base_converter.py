@@ -452,3 +452,68 @@ class TestBaseConverterCacheIntegration:
                             # Should call convert because cached file was deleted
                             mock_convert.assert_called_once()
                             assert result == output_file
+
+
+class TestAbstractMethods:
+    """Test abstract method implementations to reach 100% coverage"""
+
+    @pytest.mark.asyncio
+    async def test_convert_abstract_method_pass_statement(self):
+        """Test that abstract convert method has pass statement (line 175)"""
+        # Call the abstract method directly to cover the pass statement
+        from app.services.base_converter import BaseConverter
+
+        # Create a minimal concrete subclass that calls the base method
+        class TestConverter(BaseConverter):
+            async def convert(self, input_path, output_format, options, session_id):
+                # Dummy implementation
+                output_file = settings.UPLOAD_DIR / "test_output.txt"
+                output_file.write_text("converted")
+                return output_file
+
+            async def get_supported_formats(self):
+                # Call parent's abstract method to cover line 185
+                await super().get_supported_formats()
+                return {"input": ["txt"], "output": ["pdf"]}
+
+        converter = TestConverter()
+
+        # Call get_supported_formats which will execute line 185
+        formats = await converter.get_supported_formats()
+        assert "input" in formats
+        assert "output" in formats
+
+    @pytest.mark.asyncio
+    async def test_get_supported_formats_abstract_method_pass_statement(self, temp_dir):
+        """Test that abstract get_supported_formats method has pass statement (line 185)"""
+        from app.services.base_converter import BaseConverter
+
+        # Create a minimal concrete subclass that calls the base convert method
+        class TestConverter(BaseConverter):
+            async def convert(self, input_path, output_format, options, session_id):
+                # Call parent's abstract method to cover line 175
+                await super().convert(input_path, output_format, options, session_id)
+                # Then do actual conversion
+                output_file = settings.UPLOAD_DIR / "test_output.txt"
+                output_file.write_text("converted")
+                return output_file
+
+            async def get_supported_formats(self):
+                return {"input": ["txt"], "output": ["pdf"]}
+
+        converter = TestConverter()
+
+        # Call convert which will execute line 175
+        input_file = temp_dir / "test.txt"
+        input_file.write_text("test content")
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        result = await converter.convert(
+            input_path=input_file,
+            output_format="pdf",
+            options={},
+            session_id="test-session"
+        )
+
+        assert result.exists()

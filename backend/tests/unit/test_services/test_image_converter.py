@@ -1084,6 +1084,214 @@ class TestAdditionalConversions:
 
 
 # ============================================================================
+# IMPORT AVAILABILITY TESTS
+# ============================================================================
+
+class TestImportAvailability:
+    """Test import availability flags"""
+
+    def test_heif_import_success(self):
+        """Test HEIF import when pillow_heif is available (lines 9-10)"""
+        from unittest.mock import patch, MagicMock
+        import sys
+
+        # Mock pillow_heif as available
+        mock_pillow_heif = MagicMock()
+        mock_pillow_heif.register_heif_opener = MagicMock()
+
+        with patch.dict(sys.modules, {'pillow_heif': mock_pillow_heif}):
+            # Force module reload
+            import importlib
+            import app.services.image_converter
+            importlib.reload(app.services.image_converter)
+
+            # Verify HEIF_AVAILABLE is True
+            assert app.services.image_converter.HEIF_AVAILABLE is True
+            # Verify register_heif_opener was called
+            mock_pillow_heif.register_heif_opener.assert_called_once()
+
+            # Clean up - reload again to restore original state
+            importlib.reload(app.services.image_converter)
+
+    def test_svg_import_success(self):
+        """Test SVG import when cairosvg is available (line 17)"""
+        from unittest.mock import patch, MagicMock
+        import sys
+
+        # Mock cairosvg as available
+        mock_cairosvg = MagicMock()
+
+        with patch.dict(sys.modules, {'cairosvg': mock_cairosvg}):
+            # Force module reload
+            import importlib
+            import app.services.image_converter
+            importlib.reload(app.services.image_converter)
+
+            # Verify SVG_AVAILABLE is True
+            assert app.services.image_converter.SVG_AVAILABLE is True
+
+            # Clean up - reload again to restore original state
+            importlib.reload(app.services.image_converter)
+
+
+# ============================================================================
+# SVG CONVERSION WITH MOCKED DEPENDENCIES
+# ============================================================================
+
+class TestSVGConversionForced:
+    """Test SVG conversion with mocked cairosvg to ensure code coverage"""
+
+    @pytest.mark.asyncio
+    async def test_svg_to_png_with_mocked_cairosvg(self, temp_dir, mock_websocket_manager):
+        """Test SVG to PNG conversion with mocked cairosvg (lines 77-101)"""
+        from unittest.mock import patch, MagicMock
+        from pathlib import Path
+        import sys
+        import importlib
+
+        input_file = temp_dir / "test.svg"
+        svg_content = '''<?xml version="1.0"?>
+<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="blue"/>
+</svg>'''
+        input_file.write_text(svg_content)
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        settings.TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Create a mock PNG file that cairosvg would create
+        temp_png_path = settings.TEMP_DIR / f"{input_file.stem}_temp.png"
+
+        def mock_svg2png(url, write_to, output_width=None, output_height=None):
+            """Mock svg2png that creates a dummy PNG file"""
+            from PIL import Image
+            # Create a simple PNG file
+            img = Image.new('RGB', (output_width or 800, output_height or 600), color='blue')
+            img.save(write_to)
+
+        # Create mock cairosvg module
+        mock_cairosvg_module = MagicMock()
+        mock_cairosvg_module.svg2png = mock_svg2png
+
+        # Mock cairosvg in sys.modules before reloading the module
+        with patch.dict(sys.modules, {'cairosvg': mock_cairosvg_module}):
+            # Reload the module so it picks up the mocked cairosvg
+            import app.services.image_converter
+            importlib.reload(app.services.image_converter)
+
+            # Create converter after reload
+            converter = app.services.image_converter.ImageConverter(mock_websocket_manager)
+
+            # Mock asyncio.to_thread to run synchronously
+            with patch('asyncio.to_thread', side_effect=lambda f, *args, **kwargs: f(*args, **kwargs)):
+                # Test SVG to PNG conversion
+                result = await converter.convert(
+                    input_file,
+                    "png",
+                    {"width": 400, "height": 300},
+                    "test-session"
+                )
+
+                assert result.exists()
+                assert result.suffix == ".png"
+
+                # Cleanup
+                if result.exists():
+                    result.unlink()
+                if temp_png_path.exists():
+                    temp_png_path.unlink()
+
+            # Reload again to restore original state
+            importlib.reload(app.services.image_converter)
+
+    @pytest.mark.asyncio
+    async def test_svg_to_svg_copy_with_forced_svg_available(self, temp_dir, mock_websocket_manager):
+        """Test SVG to SVG conversion (just copies file) - lines 86-91"""
+        from unittest.mock import patch
+
+        converter = ImageConverter(mock_websocket_manager)
+
+        input_file = temp_dir / "test.svg"
+        svg_content = '<svg width="100" height="100"><rect width="100" height="100" fill="red"/></svg>'
+        input_file.write_text(svg_content)
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Mock SVG_AVAILABLE as True
+        with patch('app.services.image_converter.SVG_AVAILABLE', True):
+            result = await converter.convert(
+                input_file,
+                "svg",
+                {},
+                "test-session"
+            )
+
+            assert result.exists()
+            assert result.suffix == ".svg"
+            # Verify it's a copy by checking content
+            assert "rect" in result.read_text()
+
+            # Cleanup
+            if result.exists():
+                result.unlink()
+
+    @pytest.mark.asyncio
+    async def test_svg_to_jpeg_with_mocked_cairosvg(self, temp_dir, mock_websocket_manager):
+        """Test SVG to JPEG conversion (covers lines 93-100 with different output format)"""
+        from unittest.mock import patch, MagicMock
+        import sys
+        import importlib
+
+        input_file = temp_dir / "test.svg"
+        svg_content = '<svg width="100" height="100"><rect width="100" height="100" fill="green"/></svg>'
+        input_file.write_text(svg_content)
+
+        settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        settings.TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+        temp_png_path = settings.TEMP_DIR / f"{input_file.stem}_temp.png"
+
+        def mock_svg2png(url, write_to, output_width=None, output_height=None):
+            from PIL import Image
+            img = Image.new('RGB', (output_width or 800, output_height or 600), color='green')
+            img.save(write_to)
+
+        # Create mock cairosvg module
+        mock_cairosvg_module = MagicMock()
+        mock_cairosvg_module.svg2png = mock_svg2png
+
+        # Mock cairosvg in sys.modules before reloading the module
+        with patch.dict(sys.modules, {'cairosvg': mock_cairosvg_module}):
+            # Reload the module so it picks up the mocked cairosvg
+            import app.services.image_converter
+            importlib.reload(app.services.image_converter)
+
+            # Create converter after reload
+            converter = app.services.image_converter.ImageConverter(mock_websocket_manager)
+
+            # Mock asyncio.to_thread to avoid actual async execution
+            with patch('asyncio.to_thread', side_effect=lambda f, *args, **kwargs: f(*args, **kwargs)):
+                result = await converter.convert(
+                    input_file,
+                    "jpg",
+                    {"width": 300},
+                    "test-session"
+                )
+
+                assert result.exists()
+                assert result.suffix == ".jpg"
+
+                # Cleanup
+                if result.exists():
+                    result.unlink()
+                if temp_png_path.exists():
+                    temp_png_path.unlink()
+
+            # Reload again to restore original state
+            importlib.reload(app.services.image_converter)
+
+
+# ============================================================================
 # EDGE CASES
 # ============================================================================
 

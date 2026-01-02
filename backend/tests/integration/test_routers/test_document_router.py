@@ -500,3 +500,66 @@ class TestDocumentConversionFormats:
 
         assert response.status_code == 200
         assert response.json()["output_file"].endswith(".html")
+
+
+class TestDocumentErrorHandling:
+    """Test error handling and cleanup in document router"""
+
+    def test_convert_cleanup_on_conversion_error(self, client, sample_txt, monkeypatch):
+        """Test that files are cleaned up when conversion fails (lines 83-90)"""
+        from unittest.mock import patch
+
+        # Mock convert_with_cache to raise exception after input file is saved
+        with patch("app.services.document_converter.DocumentConverter.convert_with_cache", side_effect=Exception("Conversion error")):
+            with open(sample_txt, 'rb') as f:
+                response = client.post(
+                    "/api/document/convert",
+                    files={"file": ("test.txt", f, "text/plain")},
+                    data={"output_format": "pdf"}
+                )
+
+            # Should return 500 error
+            assert response.status_code == 500
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "Conversion failed" in detail or "error" in detail.lower()
+
+    def test_convert_cleanup_output_path_on_error(self, client, sample_txt, monkeypatch):
+        """Test cleanup of output_path when error occurs after conversion (line 88)"""
+        from unittest.mock import patch, MagicMock
+        from pathlib import Path
+
+        # Mock to make conversion succeed, then raise exception when building response
+        mock_output_path = MagicMock(spec=Path)
+        mock_output_path.name = "test_converted.pdf"
+
+        with patch("app.services.document_converter.DocumentConverter.convert_with_cache", return_value=mock_output_path):
+            # Mock ConversionResponse to raise exception
+            with patch("app.routers.document.ConversionResponse", side_effect=Exception("Response error")):
+                with open(sample_txt, 'rb') as f:
+                    response = client.post(
+                        "/api/document/convert",
+                        files={"file": ("test.txt", f, "text/plain")},
+                        data={"output_format": "pdf"}
+                    )
+
+                # Should return 500 error
+                assert response.status_code == 500
+
+    def test_info_cleanup_on_error(self, client, sample_txt, monkeypatch):
+        """Test that temp file is cleaned up on error in /info endpoint (line 146)"""
+        from unittest.mock import patch
+
+        # Mock get_document_metadata to raise exception
+        with patch("app.services.document_converter.DocumentConverter.get_document_metadata", side_effect=Exception("Metadata error")):
+            with open(sample_txt, 'rb') as f:
+                response = client.post(
+                    "/api/document/info",
+                    files={"file": ("test.txt", f, "text/plain")}
+                )
+
+            # Should return 500 error
+            assert response.status_code == 500
+            data = response.json()
+            detail = data.get("detail", str(data))
+            assert "Failed to get document info" in detail or "error" in detail.lower()

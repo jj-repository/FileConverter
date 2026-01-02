@@ -10,7 +10,6 @@ The CI/CD pipeline consists of multiple workflows:
 2. **Backend Tests** (`backend-tests.yml`) - Comprehensive backend testing
 3. **Frontend Tests** (`frontend-tests.yml`) - Comprehensive frontend testing
 4. **Build & Release** (`build-release.yml`) - Multi-platform builds and releases
-5. **Dependabot** (`dependabot.yml`) - Automated dependency updates
 
 ## ✅ Recent CI Fixes (January 2026)
 
@@ -173,25 +172,6 @@ npm run test:run -- --coverage
 - `linux-release/`: AppImage, .deb packages
 - `windows-release/`: .exe installer
 - `macos-release/`: .dmg and .zip files
-
-### 5. Dependabot Configuration
-
-**Update Schedule**: Weekly (Mondays)
-
-**Monitored Ecosystems**:
-1. **Python (pip)**: Backend dependencies
-2. **npm**: Frontend dependencies
-3. **GitHub Actions**: Workflow dependencies
-
-**Configuration**:
-- Max 5 PRs for pip/npm
-- Max 3 PRs for GitHub Actions
-- Auto-assigns to repository maintainers
-- Labels: `dependencies`, `backend`, `frontend`, `ci/cd`
-
-**Ignored Updates**:
-- FastAPI, Uvicorn: Major version updates blocked
-- React, React-DOM: Major version updates blocked
 
 ## 🚀 Running CI Locally
 
@@ -537,10 +517,10 @@ await batch_endpoint(files=[], output_format="png")
 4. ✅ Create release notes
 
 ### Maintenance
-1. ✅ Review Dependabot PRs weekly
-2. ✅ Keep GitHub Actions updated
-3. ✅ Monitor CI performance
-4. ✅ Update documentation
+1. ✅ Keep GitHub Actions updated
+2. ✅ Monitor CI performance
+3. ✅ Update documentation
+4. ✅ Review and update dependencies manually as needed
 
 ## 🔗 Useful Links
 

@@ -32,7 +32,7 @@ window.location = { href: '' } as any
 describe('BatchConverter', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useWebSocket).mockReturnValue({ progress: null, isConnected: false })
+    vi.mocked(useWebSocket).mockReturnValue({ progress: null as any, isConnected: false })
     window.location.href = ''
   })
 

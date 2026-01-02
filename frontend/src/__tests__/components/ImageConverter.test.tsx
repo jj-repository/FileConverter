@@ -16,12 +16,12 @@ vi.mock('react-i18next', () => ({
 
 // Mock useConverter hook
 const mockConverter = {
-  selectedFile: null,
+  selectedFile: null as File | null,
   outputFormat: 'png',
-  status: 'idle' as const,
-  error: null,
-  downloadUrl: null,
-  progress: null,
+  status: 'idle' as 'idle' | 'uploading' | 'converting' | 'completed' | 'failed' | 'error',
+  error: null as string | null,
+  downloadUrl: null as string | null,
+  progress: null as any,
   showFeedback: false,
   isDraggingOver: false,
   customFilename: '',

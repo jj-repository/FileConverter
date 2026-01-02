@@ -12,7 +12,7 @@ export const imageAPI = {
   convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
 
     if (options.quality !== undefined) {
       formData.append('quality', options.quality.toString());
@@ -53,7 +53,7 @@ export const videoAPI = {
   convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
 
     if (options.codec) {
       formData.append('codec', options.codec);
@@ -86,7 +86,7 @@ export const audioAPI = {
   convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
 
     if (options.bitrate) {
       formData.append('bitrate', options.bitrate);
@@ -119,7 +119,7 @@ export const documentAPI = {
   convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
 
     if (options.preserveFormatting !== undefined) {
       formData.append('preserve_formatting', options.preserveFormatting.toString());
@@ -149,7 +149,7 @@ export const dataAPI = {
   convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
 
     if (options.encoding) {
       formData.append('encoding', options.encoding);
@@ -186,7 +186,7 @@ export const archiveAPI = {
   convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
 
     if (options.compressionLevel !== undefined) {
       formData.append('compression_level', options.compressionLevel.toString());
@@ -217,7 +217,7 @@ export const spreadsheetAPI = {
   convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
 
     if (options.sheetName) {
       formData.append('sheet_name', options.sheetName);
@@ -257,7 +257,7 @@ export const subtitleAPI = {
   convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
 
     if (options.encoding) {
       formData.append('encoding', options.encoding);
@@ -310,7 +310,7 @@ export const ebookAPI = {
   convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
 
     const response = await api.post<ConversionResponse>('/ebook/convert', formData, {
       onUploadProgress: (progressEvent) => {
@@ -337,7 +337,7 @@ export const fontAPI = {
   convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
 
     if (options.subsetText) {
       formData.append('subset_text', options.subsetText);
@@ -394,7 +394,7 @@ export const batchAPI = {
       formData.append('files', file);
     });
 
-    formData.append('output_format', options.outputFormat);
+    formData.append('output_format', options.outputFormat!);
     formData.append('parallel', 'true');
 
     // Add all optional parameters

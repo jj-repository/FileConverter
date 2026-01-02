@@ -296,6 +296,7 @@ class TestWebSocketErrorHandling:
 
     def test_websocket_cleans_up_on_error(self, test_client):
         """Test WebSocket cleans up resources on error"""
+        import time
         session_id = "cleanup-error-test"
         session_validator.register_session(session_id)
 
@@ -311,6 +312,9 @@ class TestWebSocketErrorHandling:
                         pass
         except:
             pass
+
+        # Give async cleanup a moment to complete (timing issue on Python 3.12)
+        time.sleep(0.1)
 
         # Session should be cleaned up
         assert session_id not in ws_manager.active_connections

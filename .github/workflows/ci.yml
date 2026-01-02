@@ -33,6 +33,8 @@ jobs:
           sudo apt-get install -y \
             ffmpeg \
             pandoc \
+            texlive-latex-base \
+            texlive-fonts-recommended \
             libreoffice \
             imagemagick \
             ghostscript \

@@ -69,20 +69,20 @@ class CacheService:
 
     def generate_file_hash(self, file_path: Path) -> str:
         """
-        Generate MD5 hash of file content
+        Generate SHA-256 hash of file content
 
         Args:
             file_path: Path to file
 
         Returns:
-            MD5 hash as hex string
+            SHA-256 hash as hex string
         """
-        hash_md5 = hashlib.md5()
+        hash_sha256 = hashlib.sha256()
         try:
             with open(file_path, "rb") as f:
                 for chunk in iter(lambda: f.read(4096), b""):
-                    hash_md5.update(chunk)
-            return hash_md5.hexdigest()
+                    hash_sha256.update(chunk)
+            return hash_sha256.hexdigest()
         except Exception as e:
             logger.error(f"Error generating file hash for {file_path}: {e}")
             raise
@@ -95,11 +95,11 @@ class CacheService:
             options: Conversion options dictionary
 
         Returns:
-            MD5 hash (first 8 chars) of sorted options
+            SHA-256 hash (first 8 chars) of sorted options
         """
         # Sort options for consistent hashing
         options_str = json.dumps(options, sort_keys=True)
-        options_hash = hashlib.md5(options_str.encode()).hexdigest()
+        options_hash = hashlib.sha256(options_str.encode()).hexdigest()
         return options_hash[:8]
 
     def generate_cache_key(self, file_path: Path, output_format: str, options: Dict[str, Any]) -> str:
@@ -275,8 +275,8 @@ class CacheService:
             # Don't fail conversion if cache storage fails
             try:
                 self._remove_cache_entry(cache_key)
-            except:
-                pass
+            except (OSError, IOError, PermissionError) as cleanup_error:
+                logger.warning(f"Failed to cleanup cache entry {cache_key}: {cleanup_error}")
 
     def _remove_cache_entry(self, cache_key: str) -> None:
         """

@@ -1600,7 +1600,7 @@ class TestGetDataInfo:
 
     @pytest.mark.asyncio
     async def test_get_xml_info_without_defusedxml(self, temp_dir):
-        """Test extracting metadata from XML file (without defusedxml)"""
+        """Test that XML info extraction is disabled without defusedxml for security"""
         converter = DataConverter()
 
         xml_file = temp_dir / "test.xml"
@@ -1610,13 +1610,13 @@ class TestGetDataInfo:
 </data>"""
         xml_file.write_text(xml_content)
 
-        # Mock DEFUSEDXML_AVAILABLE as False
+        # Mock DEFUSEDXML_AVAILABLE as False - XML parsing should be disabled for security
         with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
             info = await converter.get_data_info(xml_file)
 
-            assert info["format"] == "xml"
-            assert info["root_tag"] == "data"
-            assert info["children"] == 1
+            # Should return error since XML parsing is disabled without defusedxml
+            assert "error" in info
+            assert "defusedxml" in info["error"].lower()
 
     @pytest.mark.asyncio
     async def test_get_info_unsupported_format(self, temp_dir):
@@ -1649,11 +1649,11 @@ class TestGetDataInfo:
 # ============================================================================
 
 class TestDefusedXMLFallback:
-    """Test XML parsing fallback when defusedxml is not available"""
+    """Test XML parsing is disabled when defusedxml is not available (security)"""
 
     @pytest.mark.asyncio
     async def test_xml_conversion_without_defusedxml(self, temp_dir):
-        """Test XML conversion when defusedxml is not available"""
+        """Test XML conversion is blocked when defusedxml is not available for security"""
         converter = DataConverter()
 
         input_file = temp_dir / "test.xml"
@@ -1666,27 +1666,18 @@ class TestDefusedXMLFallback:
 </data>"""
         input_file.write_text(xml_content)
 
-        output_file = settings.UPLOAD_DIR / "test_converted.json"
-
         with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
             with patch.object(converter, 'send_progress', new=AsyncMock()):
-                output_file.parent.mkdir(parents=True, exist_ok=True)
+                # Should raise ValueError because XML parsing is disabled for security
+                with pytest.raises(ValueError) as exc_info:
+                    await converter.convert(
+                        input_path=input_file,
+                        output_format="json",
+                        options={},
+                        session_id="test-session"
+                    )
 
-                result = await converter.convert(
-                    input_path=input_file,
-                    output_format="json",
-                    options={},
-                    session_id="test-session"
-                )
-
-                assert result == output_file
-                assert output_file.exists()
-
-                # Verify JSON content was still parsed correctly
-                with open(output_file, 'r') as f:
-                    data = json.load(f)
-                    assert len(data) == 1
-                    assert data[0]["name"] == "Alice"
+                assert "defusedxml" in str(exc_info.value).lower()
 
     def test_defusedxml_import_error_handling(self):
         """Test that ImportError for defusedxml is handled correctly"""
@@ -1791,8 +1782,7 @@ city: New York
 
     @pytest.mark.asyncio
     async def test_xml_parsing_fallback_when_defusedxml_unavailable(self, temp_dir):
-        """Test XML parsing uses fallback when defusedxml is not available"""
-        import sys
+        """Test XML parsing is blocked when defusedxml is not available for security"""
         from unittest.mock import patch
 
         converter = DataConverter()
@@ -1809,16 +1799,16 @@ city: New York
 
             # Temporarily disable defusedxml
             with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
-                # This should use the fallback XML parser
-                result = await converter.convert(
-                    input_path=input_file,
-                    output_format="json",
-                    options={},
-                    session_id="test-session"
-                )
+                # Should raise ValueError because XML parsing is disabled for security
+                with pytest.raises(ValueError) as exc_info:
+                    await converter.convert(
+                        input_path=input_file,
+                        output_format="json",
+                        options={},
+                        session_id="test-session"
+                    )
 
-                assert result.exists()
-                assert result.suffix == ".json"
+                assert "defusedxml" in str(exc_info.value).lower()
 
 
 class TestDataImportFallback:
@@ -1847,7 +1837,7 @@ class TestDataEdgeCases:
 
     @pytest.mark.asyncio
     async def test_xml_parser_with_entity_attribute(self, temp_dir):
-        """Test XML parsing fallback with parser that supports entity attribute (line 218)"""
+        """Test XML parsing is blocked without defusedxml regardless of parser capabilities"""
         from unittest.mock import patch, MagicMock
 
         converter = DataConverter()
@@ -1869,21 +1859,19 @@ class TestDataEdgeCases:
             mock_inner_parser.SetParamEntityParsing = MagicMock(return_value=None)
             mock_parser.parser = mock_inner_parser
 
-            # Temporarily disable defusedxml and mock XMLParser
+            # Temporarily disable defusedxml - XML parsing should be blocked for security
             with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
                 with patch('xml.etree.ElementTree.XMLParser', return_value=mock_parser):
-                    # This should use the fallback XML parser and execute line 218
-                    result = await converter.convert(
-                        input_path=input_file,
-                        output_format="json",
-                        options={},
-                        session_id="test-session"
-                    )
+                    # Should raise ValueError because XML parsing is disabled for security
+                    with pytest.raises(ValueError) as exc_info:
+                        await converter.convert(
+                            input_path=input_file,
+                            output_format="json",
+                            options={},
+                            session_id="test-session"
+                        )
 
-                    assert result.exists()
-                    assert result.suffix == ".json"
-                    # Verify that SetParamEntityParsing was called
-                    mock_inner_parser.SetParamEntityParsing.assert_called_once_with(0)
+                    assert "defusedxml" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
     async def test_unsupported_input_format_in_conversion(self, temp_dir):

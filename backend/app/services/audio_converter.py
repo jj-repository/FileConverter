@@ -114,6 +114,10 @@ class AudioConverter(BaseConverter):
         # Build FFmpeg command with validated parameters
         codec = self.get_audio_codec(output_format, options.get('codec'))
 
+        # Validate codec against whitelist
+        if codec not in settings.ALLOWED_AUDIO_CODECS:
+            raise ValueError(f"Invalid audio codec: {codec}. Allowed values: {settings.ALLOWED_AUDIO_CODECS}")
+
         # Validate bitrate
         bitrate = options.get('bitrate', '192k')
         if bitrate not in settings.ALLOWED_BITRATES:
@@ -169,12 +173,9 @@ class AudioConverter(BaseConverter):
 
             last_progress = 10
 
-            # Timeout: 10 minutes for audio conversion
-            timeout_seconds = 600
-
             try:
                 # Read output line by line with timeout
-                async with asyncio.timeout(timeout_seconds):
+                async with asyncio.timeout(settings.SUBPROCESS_TIMEOUT):
                     async for line in process.stdout:
                         line_str = line.decode('utf-8', errors='ignore')
 
@@ -197,7 +198,7 @@ class AudioConverter(BaseConverter):
                 # Kill process on timeout
                 process.kill()
                 await process.wait()
-                raise Exception(f"Audio conversion timed out after {timeout_seconds} seconds")
+                raise Exception(f"Audio conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds")
 
             if process.returncode != 0:
                 stderr = await process.stderr.read()

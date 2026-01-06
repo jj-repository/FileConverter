@@ -129,7 +129,7 @@ async def get_document_info(file: UploadFile = File(...)):
         metadata = await document_converter.get_document_metadata(temp_path)
 
         # Get file size before cleanup
-        file_size = temp_path.stat().st_size if temp_path.exists() else 0
+        file_size = temp_path.stat().st_size
 
         # Clean up
         cleanup_file(temp_path)

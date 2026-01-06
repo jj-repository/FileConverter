@@ -130,15 +130,16 @@ async def get_spreadsheet_info(file: UploadFile = File(...)):
         # Save file temporarily
         temp_path = await save_upload_file(file, settings.TEMP_DIR)
 
-        # Get metadata
+        # Get metadata and file size before cleanup
         metadata = await spreadsheet_converter.get_spreadsheet_info(temp_path)
+        file_size = temp_path.stat().st_size
 
         # Clean up
         cleanup_file(temp_path)
 
         return FileInfo(
             filename=file.filename,
-            size=temp_path.stat().st_size if temp_path.exists() else 0,
+            size=file_size,
             format=input_format,
             metadata=metadata
         )

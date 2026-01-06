@@ -57,12 +57,18 @@ class WebSocketRateLimiter:
         """Remove one connection from the count for an IP"""
         current_time = time.time()
         if ip_address in self.connections and self.connections[ip_address]:
-            # Remove the oldest connection timestamp
-            self.connections[ip_address] = [
+            # Filter for valid timestamps first
+            filtered = [
                 timestamp
                 for timestamp in self.connections[ip_address]
                 if current_time - timestamp < self.time_window
-            ][1:]  # Remove first element
+            ]
+            # Remove oldest connection if multiple remain, otherwise clean up
+            if len(filtered) > 1:
+                self.connections[ip_address] = filtered[1:]
+            else:
+                # Clean up empty or single-entry lists to prevent memory leaks
+                del self.connections[ip_address]
 
 
 class SessionValidator:

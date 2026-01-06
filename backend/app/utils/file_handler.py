@@ -74,7 +74,11 @@ async def get_video_info(file_path: Path) -> Dict[str, Any]:
 
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=settings.SUBPROCESS_TIMEOUT)
         if result.returncode == 0:
-            data = json.loads(result.stdout)
+            try:
+                data = json.loads(result.stdout)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse ffprobe output as JSON: {e}")
+                return {"error": "Invalid ffprobe output"}
 
             # Extract video stream info
             video_stream = next(
@@ -114,7 +118,11 @@ async def get_audio_info(file_path: Path) -> Dict[str, Any]:
 
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=settings.SUBPROCESS_TIMEOUT)
         if result.returncode == 0:
-            data = json.loads(result.stdout)
+            try:
+                data = json.loads(result.stdout)
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse ffprobe audio output as JSON: {e}")
+                return {"error": "Invalid ffprobe output"}
 
             # Extract audio stream info
             audio_stream = next(

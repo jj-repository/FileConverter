@@ -184,15 +184,16 @@ async def get_subtitle_info(file: UploadFile = File(...)):
         # Save file temporarily
         temp_path = await save_upload_file(file, settings.TEMP_DIR)
 
-        # Get metadata
+        # Get metadata and file size before cleanup
         metadata = await subtitle_converter.get_subtitle_info(temp_path)
+        file_size = temp_path.stat().st_size
 
         # Clean up
         cleanup_file(temp_path)
 
         return FileInfo(
             filename=file.filename,
-            size=temp_path.stat().st_size if temp_path.exists() else 0,
+            size=file_size,
             format=input_format,
             metadata=metadata
         )

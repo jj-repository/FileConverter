@@ -5,8 +5,13 @@ from app.utils.binary_paths import get_ffmpeg_path, get_ffprobe_path, get_pandoc
 
 
 class Settings(BaseSettings):
-    # Server settings
-    HOST: str = "0.0.0.0"
+    # Server settings - default to localhost for security
+    # For production deployment:
+    #   - Set HOST="0.0.0.0" via environment variable to accept external connections
+    #   - Ensure proper firewall rules and reverse proxy (nginx/caddy) are configured
+    #   - Enable HTTPS via reverse proxy, not directly in this app
+    #   - Update ALLOWED_ORIGINS to match your production domain
+    HOST: str = "127.0.0.1"
     PORT: int = 8000
     DEBUG: bool = False
 
@@ -55,7 +60,7 @@ class Settings(BaseSettings):
 
     # FFmpeg allowed options (whitelist for security)
     ALLOWED_VIDEO_CODECS: Set[str] = {"libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4", "h264"}
-    ALLOWED_AUDIO_CODECS: Set[str] = {"aac", "libmp3lame", "libvorbis", "libopus", "flac", "pcm_s16le"}
+    ALLOWED_AUDIO_CODECS: Set[str] = {"aac", "libmp3lame", "libvorbis", "libopus", "flac", "pcm_s16le", "wmav2"}
     ALLOWED_RESOLUTIONS: Set[str] = {"original", "480p", "720p", "1080p", "4k", "2k"}
     ALLOWED_BITRATES: Set[str] = {"500k", "1M", "2M", "3M", "4M", "5M", "8M", "10M", "128k", "192k", "256k", "320k"}
     ALLOWED_SAMPLE_RATES: Set[str] = {"44100", "48000", "96000", "22050"}

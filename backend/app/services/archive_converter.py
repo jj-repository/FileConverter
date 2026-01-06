@@ -140,18 +140,50 @@ class ArchiveConverter(BaseConverter):
             raise ValueError(f"Unknown archive format: {file_path.suffix}")
 
     async def _extract_archive(self, archive_path: Path, extract_to: Path, format: str):
-        """Extract archive to directory"""
+        """Extract archive to directory with security validation"""
         if format == 'zip':
             with zipfile.ZipFile(archive_path, 'r') as zf:
-                zf.extractall(extract_to)
+                # Security: validate all members before extraction
+                safe_members = []
+                for member in zf.namelist():
+                    # Check for path traversal attempts
+                    if member.startswith('/') or '..' in member or member.startswith('\\'):
+                        raise ValueError(f"Unsafe zip member: {member}")
+                    # Check for absolute Windows paths
+                    if len(member) > 1 and member[1] == ':':
+                        raise ValueError(f"Unsafe zip member (absolute path): {member}")
+                    # Verify the resolved path stays within extract directory
+                    member_path = (extract_to / member).resolve()
+                    if not str(member_path).startswith(str(extract_to.resolve())):
+                        raise ValueError(f"Path traversal detected: {member}")
+                    safe_members.append(member)
+                # Extract only validated members
+                for member in safe_members:
+                    zf.extract(member, extract_to)
 
         elif format in ['tar', 'tar.gz', 'tgz', 'tar.bz2', 'tbz2']:
             with tarfile.open(archive_path, 'r:*') as tf:
-                # Security: prevent path traversal
+                # Security: comprehensive path traversal prevention
+                safe_members = []
                 for member in tf.getmembers():
-                    if member.name.startswith('/') or '..' in member.name:
+                    # Check for path traversal attempts
+                    if member.name.startswith('/') or '..' in member.name or member.name.startswith('\\'):
                         raise ValueError(f"Unsafe archive member: {member.name}")
-                tf.extractall(extract_to)
+                    # Check for absolute Windows paths
+                    if len(member.name) > 1 and member.name[1] == ':':
+                        raise ValueError(f"Unsafe archive member (absolute path): {member.name}")
+                    # Check symlinks point within extract directory
+                    if member.issym() or member.islnk():
+                        link_target = member.linkname
+                        if link_target.startswith('/') or '..' in link_target:
+                            raise ValueError(f"Unsafe symlink target: {member.name} -> {link_target}")
+                    # Verify the resolved path stays within extract directory
+                    member_path = (extract_to / member.name).resolve()
+                    if not str(member_path).startswith(str(extract_to.resolve())):
+                        raise ValueError(f"Path traversal detected: {member.name}")
+                    safe_members.append(member)
+                # Extract only validated members
+                tf.extractall(extract_to, members=safe_members)
 
         elif format == 'gz':
             # Single file gzip
@@ -164,6 +196,18 @@ class ArchiveConverter(BaseConverter):
             if not SEVENZ_AVAILABLE:
                 raise ValueError("7z support not available. Install py7zr.")
             with py7zr.SevenZipFile(archive_path, mode='r') as archive:
+                # Security: validate all members before extraction
+                for name in archive.getnames():
+                    # Check for path traversal attempts
+                    if name.startswith('/') or '..' in name or name.startswith('\\'):
+                        raise ValueError(f"Unsafe 7z member: {name}")
+                    # Check for absolute Windows paths
+                    if len(name) > 1 and name[1] == ':':
+                        raise ValueError(f"Unsafe 7z member (absolute path): {name}")
+                    # Verify the resolved path stays within extract directory
+                    member_path = (extract_to / name).resolve()
+                    if not str(member_path).startswith(str(extract_to.resolve())):
+                        raise ValueError(f"Path traversal detected: {name}")
                 archive.extractall(path=extract_to)
 
         else:

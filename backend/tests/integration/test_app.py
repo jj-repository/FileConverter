@@ -38,7 +38,7 @@ class TestAppEndpoints:
         assert "message" in data
         assert data["message"] == "FileConverter API"
         assert "version" in data
-        assert data["version"] == "1.0.0"
+        assert data["version"] == "1.1.0"
         assert "endpoints" in data
 
         # Verify all major endpoints are listed
@@ -473,7 +473,7 @@ class TestAppConfiguration:
 
     def test_app_version_configured(self):
         """Test that app version is configured correctly"""
-        assert app.version == "1.0.0"
+        assert app.version == "1.1.0"
 
     def test_app_description_configured(self):
         """Test that app description is configured correctly"""

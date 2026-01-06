@@ -103,7 +103,7 @@ class DocumentConverter(BaseConverter):
 
         await self.send_progress(session_id, 20, "converting", "Converting document with Pandoc")
 
-        # Run Pandoc conversion
+        # Run Pandoc conversion with timeout
         try:
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -113,8 +113,18 @@ class DocumentConverter(BaseConverter):
 
             await self.send_progress(session_id, 50, "converting", "Processing document")
 
-            # Wait for process to complete
-            stdout, stderr = await process.communicate()
+            # Wait for process to complete with timeout
+            try:
+                async with asyncio.timeout(settings.SUBPROCESS_TIMEOUT):
+                    stdout, stderr = await process.communicate()
+            except asyncio.TimeoutError:
+                # Kill the process if it times out
+                try:
+                    process.kill()
+                    await process.wait()
+                except Exception:
+                    pass
+                raise Exception(f"Document conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds")
 
             if process.returncode != 0:
                 error_msg = stderr.decode('utf-8', errors='ignore')

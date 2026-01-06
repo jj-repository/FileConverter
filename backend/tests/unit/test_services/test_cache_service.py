@@ -72,7 +72,7 @@ class TestCacheKeyGeneration:
 
         # Same file should produce same hash
         assert hash1 == hash2
-        assert len(hash1) == 32  # MD5 hash length
+        assert len(hash1) == 64  # SHA-256 hash length
 
     def test_different_files_different_hash(self, temp_dir, temp_cache_dir):
         """Test different files produce different hashes"""
@@ -120,7 +120,7 @@ class TestCacheKeyGeneration:
         # Verify format: {file_hash}_{output_format}_{options_hash}
         parts = cache_key.split("_")
         assert len(parts) == 3
-        assert len(parts[0]) == 32  # File hash (MD5)
+        assert len(parts[0]) == 64  # File hash (SHA-256)
         assert parts[1] == "png"  # Output format
         assert len(parts[2]) == 8  # Options hash
 
@@ -705,8 +705,9 @@ class TestCacheErrorHandling:
 
         # Mock write_metadata to fail (causing exception in store_result)
         # and also mock _remove_cache_entry to fail (cleanup fails)
+        # Note: _remove_cache_entry cleanup only catches (OSError, IOError, PermissionError)
         with patch.object(cache, "write_metadata", side_effect=Exception("Metadata write failed")):
-            with patch.object(cache, "_remove_cache_entry", side_effect=Exception("Remove failed")):
+            with patch.object(cache, "_remove_cache_entry", side_effect=OSError("Remove failed")):
                 # Should not raise exception (both errors are caught and ignored)
                 cache.store_result(cache_key, "input.jpg", output_file, "png", {})
 

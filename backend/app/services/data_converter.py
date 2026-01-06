@@ -3,14 +3,20 @@ from typing import Dict, Any
 import pandas as pd
 import json
 
-# Use defusedxml for parsing XML (XXE protection)
+# Use defusedxml for parsing XML (XXE protection) - REQUIRED for security
 try:
     from defusedxml import ElementTree as DefusedET
     DEFUSEDXML_AVAILABLE = True
 except ImportError:
     DEFUSEDXML_AVAILABLE = False
+    import warnings
+    warnings.warn(
+        "defusedxml is not installed. XML parsing will be disabled for security. "
+        "Install with: pip install defusedxml",
+        RuntimeWarning
+    )
 
-# Use standard ElementTree for creating XML (defusedxml doesn't support Element creation)
+# Use standard ElementTree for creating XML only (defusedxml doesn't support Element creation)
 import xml.etree.ElementTree as ET
 
 import csv
@@ -206,20 +212,13 @@ class DataConverter(BaseConverter):
 
     async def _xml_to_dataframe(self, xml_path: Path, encoding: str) -> pd.DataFrame:
         """Convert simple XML to DataFrame with XXE protection"""
-        # Use defusedxml for parsing if available (XXE protection)
-        if DEFUSEDXML_AVAILABLE:
-            tree = DefusedET.parse(xml_path)
-        else:
-            # Fallback: standard ET with manual XXE protection
-            parser = ET.XMLParser()
-            # Disable entity processing to prevent XXE attacks
-            try:
-                parser.entity = {}  # type: ignore
-                parser.parser.SetParamEntityParsing(0)  # type: ignore
-            except AttributeError:
-                # Parser might not support these attributes
-                pass
-            tree = ET.parse(xml_path, parser=parser)
+        # SECURITY: Require defusedxml for XML parsing to prevent XXE attacks
+        if not DEFUSEDXML_AVAILABLE:
+            raise ValueError(
+                "XML parsing is disabled for security reasons. "
+                "Please install defusedxml: pip install defusedxml"
+            )
+        tree = DefusedET.parse(xml_path)
 
         root = tree.getroot()
 
@@ -278,11 +277,10 @@ class DataConverter(BaseConverter):
                             "size": file_path.stat().st_size,
                         }
             elif input_format == 'xml':
-                # Use defusedxml for parsing if available
-                if DEFUSEDXML_AVAILABLE:
-                    tree = DefusedET.parse(file_path)
-                else:
-                    tree = ET.parse(file_path)
+                # SECURITY: Require defusedxml for XML parsing
+                if not DEFUSEDXML_AVAILABLE:
+                    return {"error": "XML parsing disabled - defusedxml not installed"}
+                tree = DefusedET.parse(file_path)
                 root = tree.getroot()
                 return {
                     "format": "xml",

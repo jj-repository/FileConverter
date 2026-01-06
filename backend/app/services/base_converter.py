@@ -4,12 +4,33 @@ from typing import Dict, Any, Optional
 import asyncio
 import logging
 import shutil
+import time
 
 logger = logging.getLogger(__name__)
 
 # Global lock for cache file operations to prevent race conditions
-_cache_locks: Dict[str, asyncio.Lock] = {}
+_cache_locks: Dict[str, tuple[asyncio.Lock, float]] = {}  # cache_key -> (lock, last_used_timestamp)
 _cache_locks_lock = asyncio.Lock()
+_CACHE_LOCK_MAX_AGE = 300  # Remove unused locks after 5 minutes
+_CACHE_LOCK_MAX_SIZE = 1000  # Maximum number of locks to keep
+
+
+async def _cleanup_stale_locks():
+    """Remove locks that haven't been used recently"""
+    current_time = time.time()
+    stale_keys = []
+
+    for key, (lock, last_used) in _cache_locks.items():
+        # Only remove if lock is not currently held and is old enough
+        if not lock.locked() and (current_time - last_used) > _CACHE_LOCK_MAX_AGE:
+            stale_keys.append(key)
+
+    for key in stale_keys:
+        if key in _cache_locks and not _cache_locks[key][0].locked():
+            del _cache_locks[key]
+
+    if stale_keys:
+        logger.debug(f"Cleaned up {len(stale_keys)} stale cache locks")
 
 
 class WebSocketManager:
@@ -103,11 +124,19 @@ class BaseConverter(ABC):
 
                 # If cached file and output path are different, copy it
                 if cached_file != output_path:
-                    # Get or create lock for this cache file
+                    # Get or create lock for this cache file atomically
                     async with _cache_locks_lock:
+                        # Cleanup stale locks if we have too many
+                        if len(_cache_locks) > _CACHE_LOCK_MAX_SIZE:
+                            await _cleanup_stale_locks()
+
+                        current_time = time.time()
                         if cache_key not in _cache_locks:
-                            _cache_locks[cache_key] = asyncio.Lock()
-                        file_lock = _cache_locks[cache_key]
+                            _cache_locks[cache_key] = (asyncio.Lock(), current_time)
+                        else:
+                            # Update last used timestamp
+                            _cache_locks[cache_key] = (_cache_locks[cache_key][0], current_time)
+                        file_lock = _cache_locks[cache_key][0]
 
                     # Use file-specific lock to prevent concurrent copies
                     async with file_lock:

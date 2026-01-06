@@ -28,6 +28,8 @@ brotli==1.2.0
 PyYAML==6.0.2
 toml==0.10.2
 defusedxml==0.7.1
+python-magic==0.4.27
 pytest==8.3.4
 pytest-asyncio==0.24.0
+pytest-cov==6.0.0
 httpx==0.28.1

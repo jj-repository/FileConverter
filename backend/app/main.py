@@ -6,7 +6,7 @@ import asyncio
 import logging
 
 from app.config import settings, CACHE_DIR
-from app.routers import image, video, audio, document, data, archive, spreadsheet, subtitle, ebook, font, batch, websocket, cache
+from app.routers import image, video, audio, document, data, archive, spreadsheet, subtitle, ebook, font, batch, websocket, cache, version
 from app.middleware.error_handler import register_exception_handlers
 from app.services.cache_service import initialize_cache_service, get_cache_service
 
@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FileConverter API",
     description="A modern file conversion API supporting images, videos, audio, and documents",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 
@@ -100,30 +100,43 @@ async def cleanup_old_files():
     import time
     from pathlib import Path
 
+    def _sync_cleanup_directory(directory: Path, lifetime: float) -> None:
+        """Synchronous helper for file cleanup - runs in thread pool"""
+        current_time = time.time()
+        try:
+            for file_path in directory.glob("*"):
+                try:
+                    if file_path.is_file():
+                        file_age = current_time - file_path.stat().st_mtime
+                        if file_age > lifetime:
+                            file_path.unlink()
+                except (OSError, PermissionError) as e:
+                    logger.warning(f"Failed to cleanup file {file_path}: {e}")
+        except (OSError, PermissionError) as e:
+            logger.warning(f"Failed to scan directory {directory}: {e}")
+
     while True:
         try:
-            current_time = time.time()
-
-            # Cleanup temp directory
-            for file_path in settings.TEMP_DIR.glob("*"):
-                if file_path.is_file():
-                    file_age = current_time - file_path.stat().st_mtime
-                    if file_age > settings.TEMP_FILE_LIFETIME:
-                        file_path.unlink()
+            # Cleanup temp directory (run in thread to avoid blocking event loop)
+            await asyncio.to_thread(
+                _sync_cleanup_directory,
+                settings.TEMP_DIR,
+                settings.TEMP_FILE_LIFETIME
+            )
 
             # Cleanup upload directory (excluding cache directory)
-            for file_path in settings.UPLOAD_DIR.glob("*"):
-                if file_path.is_file():
-                    file_age = current_time - file_path.stat().st_mtime
-                    if file_age > settings.TEMP_FILE_LIFETIME:
-                        file_path.unlink()
+            await asyncio.to_thread(
+                _sync_cleanup_directory,
+                settings.UPLOAD_DIR,
+                settings.TEMP_FILE_LIFETIME
+            )
 
-            # Cleanup cache
+            # Cleanup cache (also blocking I/O, run in thread)
             if settings.CACHE_ENABLED:
                 cache_service = get_cache_service()
                 if cache_service:
                     logger.debug("Running periodic cache cleanup...")
-                    cleanup_stats = cache_service.cleanup_all()
+                    cleanup_stats = await asyncio.to_thread(cache_service.cleanup_all)
                     if cleanup_stats['expired_removed'] > 0 or cleanup_stats['size_limit_removed'] > 0:
                         logger.info(f"Periodic cache cleanup: {cleanup_stats}")
 
@@ -148,6 +161,7 @@ app.include_router(font.router, prefix="/api/font", tags=["Font Conversion"])
 app.include_router(batch.router, prefix="/api/batch", tags=["Batch Conversion"])
 app.include_router(websocket.router, prefix="/ws", tags=["WebSocket"])
 app.include_router(cache.router, prefix="/api/cache", tags=["Cache Management"])
+app.include_router(version.router)
 
 
 if __name__ == "__main__":

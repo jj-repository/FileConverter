@@ -11,7 +11,7 @@ import logging
 from ebooklib import epub
 from ebooklib.epub import EpubHtml
 from bs4 import BeautifulSoup
-from PyPDF2 import PdfWriter
+from pypdf import PdfWriter
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet

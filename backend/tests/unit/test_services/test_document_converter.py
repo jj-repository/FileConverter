@@ -440,7 +440,7 @@ class TestDocumentMetadata:
             test_file.write_bytes(b"%PDF-1.4 fake pdf")
 
             with patch('subprocess.run'):  # Mock Pandoc
-                with patch('PyPDF2.PdfReader') as mock_pdf_class:
+                with patch('pypdf.PdfReader') as mock_pdf_class:
                     # Mock PDF reader
                     mock_pdf = Mock()
                     mock_pdf.pages = [Mock(), Mock(), Mock()]  # 3 pages
@@ -535,7 +535,7 @@ class TestDocumentMetadata:
             test_file.write_bytes(b"%PDF-1.4\nfake pdf")
 
             # Mock PdfReader to raise an exception when accessing metadata
-            with patch('PyPDF2.PdfReader') as mock_reader:
+            with patch('pypdf.PdfReader') as mock_reader:
                 mock_pdf = MagicMock()
                 mock_pdf.metadata = MagicMock()
                 # Make metadata access raise exception

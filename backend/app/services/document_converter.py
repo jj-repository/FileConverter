@@ -213,7 +213,7 @@ class DocumentConverter(BaseConverter):
             # Special handling for PDF
             if input_format == "pdf":
                 try:
-                    from PyPDF2 import PdfReader
+                    from pypdf import PdfReader
                     pdf = await asyncio.to_thread(PdfReader, str(file_path))
                     metadata["page_count"] = len(pdf.pages)
 

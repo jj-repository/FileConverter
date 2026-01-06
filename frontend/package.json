@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Desktop file conversion application",
   "main": "electron/main.js",
+  "type": "module",
   "homepage": "https://github.com/jj-repository/FileConverter",
   "author": {
     "name": "FileConverter",

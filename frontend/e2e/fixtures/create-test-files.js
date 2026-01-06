@@ -2,8 +2,12 @@
  * Script to create test fixture files for E2E tests
  * Run with: node e2e/fixtures/create-test-files.js
  */
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Create a minimal 1x1 pixel PNG image (base64 decoded)
 // This is a valid PNG file

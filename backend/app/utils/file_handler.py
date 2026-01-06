@@ -157,7 +157,7 @@ async def get_document_info(file_path: Path) -> Dict[str, Any]:
 
         if file_extension == "pdf":
             try:
-                from PyPDF2 import PdfReader
+                from pypdf import PdfReader
                 reader = PdfReader(str(file_path))
                 info["pages"] = len(reader.pages)
                 if reader.metadata:

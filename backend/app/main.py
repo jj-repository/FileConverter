@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FileConverter API",
     description="A modern file conversion API supporting images, videos, audio, and documents",
-    version="1.1.0",
+    version="1.1.1",
     lifespan=lifespan,
 )
 

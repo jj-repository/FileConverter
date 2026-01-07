@@ -5,6 +5,7 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { videoAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { formatFileSize } from '../../utils/fileUtils';
 
 const VIDEO_FORMATS = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'm4v', '3gp', '3g2', 'mts', 'm2ts', 'vob', 'ts', 'ogv'];
 
@@ -39,13 +40,6 @@ export const VideoConverter: React.FC = () => {
 
   const handleConvert = async () => {
     await converter.handleConvert(videoAPI, { codec, resolution, bitrate });
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024 * 1024) {
-      return (bytes / 1024).toFixed(2) + ' KB';
-    }
-    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
   };
 
   return (

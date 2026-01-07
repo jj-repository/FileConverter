@@ -5,6 +5,7 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { audioAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { formatFileSize } from '../../utils/fileUtils';
 
 const AUDIO_FORMATS = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'opus', 'alac', 'ape', 'mka'];
 
@@ -50,13 +51,6 @@ export const AudioConverter: React.FC = () => {
     }
 
     await converter.handleConvert(audioAPI, options);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024 * 1024) {
-      return (bytes / 1024).toFixed(2) + ' KB';
-    }
-    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
   };
 
   const isLosslessFormat = (format: string) => {

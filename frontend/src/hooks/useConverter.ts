@@ -17,9 +17,17 @@ const sanitizeFilename = (filename: string): string => {
     .replace(/^\.+/, '');    // Remove leading dots
 };
 
+interface NotificationCallbacks {
+  showInfo?: (message: string) => void;
+  showSuccess?: (message: string) => void;
+  showError?: (message: string) => void;
+  showConfirm?: (message: string, onConfirm: () => void) => void;
+}
+
 interface UseConverterOptions {
   defaultOutputFormat: string;
   onConversionComplete?: (downloadUrl: string) => void;
+  notifications?: NotificationCallbacks;
 }
 
 interface ConvertOptions {
@@ -34,7 +42,20 @@ interface ConversionResponse {
 }
 
 export const useConverter = (options: UseConverterOptions) => {
-  const { defaultOutputFormat, onConversionComplete } = options;
+  const { defaultOutputFormat, onConversionComplete, notifications } = options;
+
+  // Notification helpers with fallbacks
+  const notify = {
+    info: notifications?.showInfo || ((msg: string) => { /* silent fallback */ }),
+    success: notifications?.showSuccess || ((msg: string) => { /* silent fallback */ }),
+    error: notifications?.showError || ((msg: string) => { /* silent fallback */ }),
+    confirm: notifications?.showConfirm || ((msg: string, onConfirm: () => void) => {
+      // Fallback to native confirm if no custom handler provided
+      if (window.confirm(msg)) {
+        onConfirm();
+      }
+    }),
+  };
 
   // State management
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -99,7 +120,7 @@ export const useConverter = (options: UseConverterOptions) => {
   // Output directory selection
   const handleSelectOutputDirectory = useCallback(async () => {
     if (!window.electron?.selectOutputDirectory) {
-      alert('Output directory selection is only available in the desktop app');
+      notify.info('Output directory selection is only available in the desktop app');
       return;
     }
 
@@ -130,17 +151,21 @@ export const useConverter = (options: UseConverterOptions) => {
       });
 
       if (result.success) {
-        if (window.electron.showItemInFolder) {
-          const shouldShow = confirm(`✅ File saved to:\n${result.path}\n\nDo you want to show it in folder?`);
-          if (shouldShow) {
-            await window.electron.showItemInFolder(result.path);
-          }
+        if (window.electron?.showItemInFolder) {
+          notify.confirm(
+            `File saved to:\n${result.path}\n\nDo you want to show it in folder?`,
+            async () => {
+              await window.electron?.showItemInFolder(result.path);
+            }
+          );
+        } else {
+          notify.success(`File saved to: ${result.path}`);
         }
       }
     } catch (err) {
-      alert(`Failed to save file: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      notify.error(`Failed to save file: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
-  }, [outputDirectory, outputFormat, customFilename]);
+  }, [outputDirectory, outputFormat, customFilename, notify]);
 
   // Upload progress callback
   const handleUploadProgress = useCallback((progress: number) => {
@@ -229,17 +254,19 @@ export const useConverter = (options: UseConverterOptions) => {
         });
 
         if (result.success) {
-          if (window.electron.showItemInFolder) {
-            const shouldShow = confirm(`File saved successfully to:\n${result.path}\n\nDo you want to show it in folder?`);
-            if (shouldShow) {
-              await window.electron.showItemInFolder(result.path);
-            }
+          if (window.electron?.showItemInFolder) {
+            notify.confirm(
+              `File saved successfully to:\n${result.path}\n\nDo you want to show it in folder?`,
+              async () => {
+                await window.electron?.showItemInFolder(result.path);
+              }
+            );
           } else {
-            alert(`File saved successfully to:\n${result.path}`);
+            notify.success(`File saved successfully to: ${result.path}`);
           }
         }
       } catch (err) {
-        alert(`Failed to download file: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        notify.error(`Failed to download file: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
     } else {
       // Browser download - validate URL is same-origin to prevent open redirect
@@ -247,7 +274,7 @@ export const useConverter = (options: UseConverterOptions) => {
         window.location.href = downloadUrl;
       }
     }
-  }, [downloadUrl, outputDirectory, outputFormat, customFilename]);
+  }, [downloadUrl, outputDirectory, outputFormat, customFilename, notify]);
 
   // Reset handler
   const handleReset = useCallback(() => {

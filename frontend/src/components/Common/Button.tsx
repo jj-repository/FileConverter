@@ -1,18 +1,18 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary';
   loading?: boolean;
 }
 
-export const Button: React.FC<ButtonProps> = ({
+export const Button = memo<ButtonProps>(function Button({
   children,
   variant = 'primary',
   loading = false,
   disabled,
   className = '',
   ...props
-}) => {
+}) {
   const baseClasses = 'btn';
   const variantClasses = variant === 'primary' ? 'btn-primary' : 'btn-secondary';
   const isDisabled = disabled || loading;
@@ -54,4 +54,4 @@ export const Button: React.FC<ButtonProps> = ({
       )}
     </button>
   );
-};
+});

@@ -30,8 +30,11 @@ from app.services.cache_service import CacheService, initialize_cache_service, g
 
 
 @pytest.fixture
-def client(temp_cache_dir):
+def client(temp_cache_dir, monkeypatch):
     """Create test client for API testing with initialized cache"""
+    # Enable DEBUG mode to bypass admin key requirement for tests
+    monkeypatch.setattr(settings, "DEBUG", True)
+
     # Initialize cache service for tests
     if settings.CACHE_ENABLED:
         initialize_cache_service(

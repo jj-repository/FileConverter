@@ -57,6 +57,9 @@ export const useWebSocket = (sessionId: string | null) => {
   }, []);
 
   useEffect(() => {
+    // Reset progress when sessionId changes to avoid stale data
+    setProgress(null);
+
     if (sessionId) {
       connect();
     }

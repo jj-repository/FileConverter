@@ -6,6 +6,7 @@ import { Card } from '../Common/Card';
 import { batchAPI, BatchConversionResult } from '../../services/api';
 import { ConversionStatus } from '../../types/conversion';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { formatFileSize, getFileIcon } from '../../utils/fileUtils';
 import type { AxiosError } from 'axios';
 
 const ALL_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'ico', 'mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'txt', 'pdf', 'docx', 'md', 'html', 'rtf'];
@@ -112,22 +113,6 @@ export const BatchConverter: React.FC = () => {
     setError(null);
     setSessionId(null);
     setZipUrl(null);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024 * 1024) {
-      return (bytes / 1024).toFixed(2) + ' KB';
-    }
-    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
-  };
-
-  const getFileIcon = (filename: string): string => {
-    const ext = filename.split('.').pop()?.toLowerCase() || '';
-    if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'ico'].includes(ext)) return '🖼️';
-    if (['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'].includes(ext)) return '🎥';
-    if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma'].includes(ext)) return '🎵';
-    if (['txt', 'pdf', 'docx', 'md', 'html', 'rtf'].includes(ext)) return '📄';
-    return '📁';
   };
 
   return (

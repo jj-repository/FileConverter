@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { BatchDropZone } from '../FileUpload/BatchDropZone';
 import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
+import { useToast } from '../Common/Toast';
 import { batchAPI, BatchConversionResult } from '../../services/api';
 import { ConversionStatus } from '../../types/conversion';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { formatFileSize, getFileIcon } from '../../utils/fileUtils';
 import type { AxiosError } from 'axios';
 
 const ALL_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'ico', 'mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'txt', 'pdf', 'docx', 'md', 'html', 'rtf'];
@@ -16,6 +18,7 @@ interface ApiErrorResponse {
 
 export const BatchConverter: React.FC = () => {
   const { t } = useTranslation();
+  const { showInfo } = useToast();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [outputFormat, setOutputFormat] = useState<string>('pdf');
   const [outputDirectory, setOutputDirectory] = useState<string | null>(null);
@@ -46,7 +49,7 @@ export const BatchConverter: React.FC = () => {
 
   const handleSelectFolder = async () => {
     if (!window.electron?.selectFolderFiles) {
-      alert('Folder selection is only available in the desktop app');
+      showInfo(t('messages.folderSelectionDesktopOnly'));
       return;
     }
 
@@ -68,13 +71,13 @@ export const BatchConverter: React.FC = () => {
       if (import.meta.env.DEV) {
         console.error('Error selecting folder:', err);
       }
-      setError('Failed to load folder files');
+      setError(t('messages.failedToLoadFolder'));
     }
   };
 
   const handleSelectOutputDirectory = async () => {
     if (!window.electron?.selectOutputDirectory) {
-      alert('Output directory selection is only available in the desktop app');
+      showInfo(t('messages.outputDirDesktopOnly'));
       return;
     }
 
@@ -87,7 +90,7 @@ export const BatchConverter: React.FC = () => {
       if (import.meta.env.DEV) {
         console.error('Error selecting output directory:', err);
       }
-      setError('Failed to select output directory');
+      setError(t('messages.failedToSelectDir'));
     }
   };
 
@@ -115,11 +118,11 @@ export const BatchConverter: React.FC = () => {
         setStatus('completed');
       } else {
         setStatus('failed');
-        setError('All conversions failed');
+        setError(t('messages.allConversionsFailed'));
       }
     } catch (err) {
       const axiosError = err as AxiosError<ApiErrorResponse>;
-      setError(axiosError.response?.data?.detail || 'Batch conversion failed');
+      setError(axiosError.response?.data?.detail || t('messages.batchConversionFailed'));
       setStatus('failed');
       setShowFeedback(true);
     }
@@ -134,7 +137,7 @@ export const BatchConverter: React.FC = () => {
         .map(r => r.output_file!);
 
       if (successfulFiles.length === 0) {
-        setError('No files to download');
+        setError(t('messages.noFilesToDownload'));
         return;
       }
 
@@ -147,7 +150,7 @@ export const BatchConverter: React.FC = () => {
       }
     } catch (err) {
       const axiosError = err as AxiosError<ApiErrorResponse>;
-      setError(axiosError.response?.data?.detail || 'Failed to create ZIP file');
+      setError(axiosError.response?.data?.detail || t('messages.failedToCreateZip'));
     }
   };
 
@@ -168,28 +171,12 @@ export const BatchConverter: React.FC = () => {
     setShowFeedback(false);
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024 * 1024) {
-      return (bytes / 1024).toFixed(2) + ' KB';
-    }
-    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
-  };
-
-  const getFileIcon = (filename: string): string => {
-    const ext = filename.split('.').pop()?.toLowerCase() || '';
-    if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'ico'].includes(ext)) return '🖼️';
-    if (['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'].includes(ext)) return '🎥';
-    if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma'].includes(ext)) return '🎵';
-    if (['txt', 'pdf', 'docx', 'md', 'html', 'rtf'].includes(ext)) return '📄';
-    return '📁';
-  };
-
   const totalFileSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Card>
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Batch Converter</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('converter.batch.title')}</h2>
 
         {selectedFiles.length === 0 ? (
           <div className="space-y-4">
@@ -202,7 +189,7 @@ export const BatchConverter: React.FC = () => {
             {window.electron?.isElectron && (
               <div className="flex gap-4">
                 <Button onClick={handleSelectFolder} variant="secondary" className="flex-1">
-                  📁 Select Entire Folder
+                  {t('common.selectFolder')}
                 </Button>
               </div>
             )}
@@ -221,14 +208,14 @@ export const BatchConverter: React.FC = () => {
               <div className="flex justify-between items-center mb-3">
                 <div>
                   <p className="font-medium text-gray-700">
-                    Selected Files ({selectedFiles.length})
+                    {t('messages.selectedFiles', { count: selectedFiles.length })}
                   </p>
                   <p className="text-sm text-gray-500">
-                    Total size: {formatFileSize(totalFileSize)}
+                    {t('messages.totalSize', { size: formatFileSize(totalFileSize) })}
                   </p>
                 </div>
                 <Button onClick={handleReset} variant="secondary" className="text-sm">
-                  Clear All
+                  {t('messages.clearAll')}
                 </Button>
               </div>
 
@@ -262,7 +249,7 @@ export const BatchConverter: React.FC = () => {
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <label htmlFor="batch-output-format" className="block text-sm font-medium text-gray-700 mb-2">
-                  Output Format (All files will be converted to this format)
+                  {t('common.outputFormat')}
                 </label>
                 <select
                   id="batch-output-format"
@@ -296,7 +283,7 @@ export const BatchConverter: React.FC = () => {
               {window.electron?.isElectron && (
                 <div>
                   <label htmlFor="batch-output-directory" className="block text-sm font-medium text-gray-700 mb-2">
-                    Output Directory (Optional)
+                    {t('common.outputDirectory')}
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -312,9 +299,9 @@ export const BatchConverter: React.FC = () => {
                       onClick={handleSelectOutputDirectory}
                       variant="secondary"
                       disabled={status === 'converting'}
-                      aria-label="Browse for output directory"
+                      aria-label={t('common.browse')}
                     >
-                      Browse
+                      {t('common.browse')}
                     </Button>
                   </div>
                 </div>
@@ -342,7 +329,7 @@ export const BatchConverter: React.FC = () => {
                   />
                 </div>
                 <p className="text-xs text-gray-500 text-center">
-                  Processing files in parallel...
+                  {t('messages.processingParallel')}
                 </p>
               </div>
             )}
@@ -353,7 +340,7 @@ export const BatchConverter: React.FC = () => {
                 aria-live="assertive"
                 className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
               >
-                <p className="font-medium">Conversion Error</p>
+                <p className="font-medium">{t('common.error')}</p>
                 <p className="text-sm mt-1">{error}</p>
               </div>
             )}
@@ -365,14 +352,14 @@ export const BatchConverter: React.FC = () => {
                   aria-live="polite"
                   className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
                 >
-                  <p className="font-medium">Batch conversion completed!</p>
+                  <p className="font-medium">{t('messages.conversionComplete')}</p>
                   <p className="text-sm mt-1">
-                    {results.filter(r => r.success).length} of {results.length} files converted successfully
+                    {t('messages.filesConverted', { success: results.filter(r => r.success).length, total: results.length })}
                   </p>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-medium text-gray-700 mb-3">Results</h3>
+                  <h3 className="font-medium text-gray-700 mb-3">{t('converter.batch.results')}</h3>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {results.map((result, index) => (
                       <div
@@ -397,7 +384,7 @@ export const BatchConverter: React.FC = () => {
                             variant="secondary"
                             className="text-sm ml-2"
                           >
-                            Download
+                            {t('common.download')}
                           </Button>
                         )}
                       </div>
@@ -410,28 +397,28 @@ export const BatchConverter: React.FC = () => {
             <div className="flex gap-4">
               {status === 'idle' ? (
                 <Button onClick={handleConvert} className="flex-1">
-                  Convert All {selectedFiles.length} Files
+                  {t('converter.batch.convertAll')} ({selectedFiles.length})
                 </Button>
               ) : status === 'converting' ? (
                 <Button disabled loading className="flex-1">
-                  Converting... ({progress?.progress.toFixed(0) || 0}%)
+                  {t('common.converting')} ({progress?.progress.toFixed(0) || 0}%)
                 </Button>
               ) : status === 'completed' ? (
                 <>
                   <Button onClick={handleDownloadAll} className="flex-1">
-                    Download All as ZIP
+                    {t('messages.downloadAllZip')}
                   </Button>
                   <Button onClick={handleReset} variant="secondary">
-                    Convert More
+                    {t('messages.convertMore')}
                   </Button>
                 </>
               ) : status === 'failed' ? (
                 <>
                   <Button onClick={handleConvert} className="flex-1">
-                    Retry
+                    {t('messages.retry')}
                   </Button>
                   <Button onClick={handleReset} variant="secondary">
-                    Reset
+                    {t('common.reset')}
                   </Button>
                 </>
               ) : null}

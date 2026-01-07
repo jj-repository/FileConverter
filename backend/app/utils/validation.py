@@ -2,12 +2,19 @@ from fastapi import UploadFile, HTTPException
 from pathlib import Path
 from typing import Set
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     import magic
     MAGIC_AVAILABLE = True
 except ImportError:
     MAGIC_AVAILABLE = False
+    logger.warning(
+        "python-magic is not installed. MIME type validation is disabled. "
+        "This is a security risk - install python-magic for production use: pip install python-magic"
+    )
 
 from app.config import settings
 
@@ -99,9 +106,15 @@ def validate_file_extension(filename: str, allowed_formats: Set[str]) -> str:
 
 
 def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
-    """Validate MIME type of uploaded file using python-magic"""
+    """
+    Validate MIME type of uploaded file using python-magic.
+
+    Security Note: If python-magic is not available, MIME validation is skipped.
+    This allows attackers to upload malicious files with renamed extensions.
+    Ensure python-magic is installed in production environments.
+    """
     if not MAGIC_AVAILABLE:
-        # python-magic not available, skip MIME validation
+        logger.debug("MIME type validation skipped - python-magic not available")
         return
 
     try:
@@ -116,10 +129,11 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
                 status_code=400,
                 detail=f"Invalid file type. Detected MIME type: {mime_type}"
             )
+    except HTTPException:
+        raise
     except Exception as e:
-        # If python-magic fails, skip MIME validation
-        # This is optional security layer
-        pass
+        # Log the error but don't fail - MIME validation is an additional security layer
+        logger.warning(f"MIME type validation failed: {e}")
 
 
 def get_file_type_from_format(file_format: str) -> str:

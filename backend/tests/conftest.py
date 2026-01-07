@@ -38,9 +38,13 @@ def event_loop():
 
 @pytest.fixture
 def test_client() -> Generator[TestClient, None, None]:
-    """FastAPI test client"""
+    """FastAPI test client with DEBUG mode enabled for admin endpoints"""
+    # Enable DEBUG mode to allow access to admin endpoints without API key
+    original_debug = settings.DEBUG
+    settings.DEBUG = True
     with TestClient(app) as client:
         yield client
+    settings.DEBUG = original_debug
 
 
 @pytest.fixture

@@ -72,6 +72,10 @@ class Settings(BaseSettings):
     # CORS settings (can be overridden via environment variable ALLOWED_ORIGINS as comma-separated list)
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
 
+    # Admin API key for cache management endpoints (set via ADMIN_API_KEY environment variable)
+    # If not set, admin endpoints will be disabled in production (non-DEBUG mode)
+    ADMIN_API_KEY: str = ""
+
     @property
     def cors_origins(self) -> list:
         """Parse ALLOWED_ORIGINS string into list"""

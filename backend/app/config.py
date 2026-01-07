@@ -69,6 +69,12 @@ class Settings(BaseSettings):
     # Subprocess timeout (in seconds)
     SUBPROCESS_TIMEOUT: int = 600  # 10 minutes max for conversions
 
+    # Security: Trusted proxy configuration
+    # Set TRUSTED_PROXIES to a comma-separated list of IP addresses or CIDR ranges
+    # that are allowed to set X-Forwarded-For headers. If empty, X-Forwarded-For is ignored.
+    # Example: TRUSTED_PROXIES="127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    TRUSTED_PROXIES: str = ""
+
     # CORS settings (can be overridden via environment variable ALLOWED_ORIGINS as comma-separated list)
     # In production (DEBUG=False), set ALLOWED_ORIGINS to your actual domain(s)
     # Example: ALLOWED_ORIGINS="https://myapp.com,https://www.myapp.com"

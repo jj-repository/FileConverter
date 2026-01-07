@@ -114,26 +114,19 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
     """
     Validate MIME type of uploaded file using python-magic.
 
-    SECURITY: If python-magic is not available:
-    - In DEBUG mode: Logs warning and allows operation (for development convenience)
-    - In production (DEBUG=False): Raises an error to prevent file type spoofing attacks
+    SECURITY: MIME validation is ALWAYS enforced regardless of DEBUG mode.
+    If python-magic is not available, file uploads are rejected to prevent
+    file type spoofing attacks.
 
-    Ensure python-magic is installed in all environments: pip install python-magic
+    Ensure python-magic is installed: pip install python-magic
     """
     if not MAGIC_AVAILABLE:
-        if settings.DEBUG:
-            # Allow in debug mode but log warning
-            logger.warning(
-                "MIME type validation skipped - python-magic not available. "
-                "This is only allowed in DEBUG mode."
-            )
-            return
-        else:
-            # SECURITY: In production, fail if MIME validation is unavailable
-            raise HTTPException(
-                status_code=503,
-                detail="File type validation unavailable. Please contact administrator."
-            )
+        # SECURITY: Always fail if MIME validation is unavailable
+        # Never skip validation, even in DEBUG mode
+        raise HTTPException(
+            status_code=503,
+            detail="File type validation unavailable. Install python-magic: pip install python-magic"
+        )
 
     try:
         mime = magic.Magic(mime=True)
@@ -143,6 +136,7 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
         is_valid = any(expected in mime_type for expected in expected_types)
 
         if not is_valid:
+            logger.warning(f"MIME type mismatch: expected {expected_types}, got {mime_type}")
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid file type. Detected MIME type: {mime_type}"
@@ -150,14 +144,13 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
     except HTTPException:
         raise
     except Exception as e:
-        # Log the error at warning level - MIME validation is an additional security layer
-        logger.warning(f"MIME type validation error: {e}")
-        if not settings.DEBUG:
-            # In production, fail closed on validation errors
-            raise HTTPException(
-                status_code=400,
-                detail="File type validation failed. Please try again with a valid file."
-            )
+        # Log the error - MIME validation errors are security-relevant
+        logger.error(f"MIME type validation error: {e}")
+        # Fail closed on validation errors
+        raise HTTPException(
+            status_code=400,
+            detail="File type validation failed. Please try again with a valid file."
+        )
 
 
 def get_file_type_from_format(file_format: str) -> str:
@@ -177,6 +170,12 @@ def get_file_type_from_format(file_format: str) -> str:
 def validate_download_filename(filename: str, base_dir: Path) -> Path:
     """
     Validate filename for download to prevent path traversal attacks.
+
+    SECURITY:
+    - Rejects path separators and null bytes
+    - Rejects parent directory references
+    - Rejects symlinks to prevent escaping the base directory
+    - Validates the resolved path is within base_dir
 
     Args:
         filename: The requested filename
@@ -199,10 +198,18 @@ def validate_download_filename(filename: str, base_dir: Path) -> Path:
     # Construct the full path
     file_path = base_dir / filename
 
-    # Resolve to absolute path to handle any symlinks
+    # SECURITY: Check if the path is a symlink BEFORE resolving
+    # This prevents symlink attacks that could escape the base directory
+    if file_path.is_symlink():
+        logger.warning(f"Symlink access attempt blocked: {filename}")
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Resolve to absolute path
     try:
-        resolved_path = file_path.resolve()
+        resolved_path = file_path.resolve(strict=True)  # strict=True raises if path doesn't exist
         resolved_base = base_dir.resolve()
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
     except (OSError, RuntimeError):
         raise HTTPException(status_code=400, detail="Invalid file path")
 
@@ -210,13 +217,47 @@ def validate_download_filename(filename: str, base_dir: Path) -> Path:
     try:
         resolved_path.relative_to(resolved_base)
     except ValueError:
+        logger.warning(f"Path traversal attempt blocked: {filename}")
         raise HTTPException(status_code=403, detail="Access denied")
 
-    # Check file exists and is a regular file
-    if not resolved_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-
+    # Check it's a regular file (not directory, device, etc.)
     if not resolved_path.is_file():
         raise HTTPException(status_code=400, detail="Not a file")
 
     return resolved_path
+
+
+def validate_subprocess_path(file_path: Path, allowed_dirs: list) -> Path:
+    """
+    Validate that a file path is within allowed directories before passing to subprocess.
+
+    SECURITY: Prevents processing of arbitrary files on the system by ensuring
+    the path is within one of the allowed directories.
+
+    Args:
+        file_path: The path to validate
+        allowed_dirs: List of allowed directory paths
+
+    Returns:
+        The validated resolved path
+
+    Raises:
+        HTTPException: If path is outside allowed directories
+    """
+    try:
+        resolved_path = file_path.resolve()
+    except (OSError, RuntimeError):
+        raise HTTPException(status_code=400, detail="Invalid file path")
+
+    # Check if the resolved path is within any allowed directory
+    for allowed_dir in allowed_dirs:
+        try:
+            allowed_resolved = Path(allowed_dir).resolve()
+            resolved_path.relative_to(allowed_resolved)
+            return resolved_path  # Path is valid
+        except ValueError:
+            continue  # Not in this directory, try next
+
+    # Path not in any allowed directory
+    logger.warning(f"Subprocess path validation failed: {file_path}")
+    raise HTTPException(status_code=403, detail="File access denied")

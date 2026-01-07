@@ -3,12 +3,170 @@ WebSocket security utilities for rate limiting and session validation
 """
 
 import time
+import ipaddress
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional, Set
 import logging
 from fastapi import HTTPException, Request
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
+
+
+class TrustedProxyValidator:
+    """
+    Validates that X-Forwarded-For headers come from trusted proxy sources.
+
+    SECURITY: Only trusts X-Forwarded-For header if the direct client IP
+    is in the configured trusted proxy list.
+    """
+
+    def __init__(self):
+        self._trusted_networks: Set[ipaddress.IPv4Network | ipaddress.IPv6Network] = set()
+        self._load_trusted_proxies()
+
+    def _load_trusted_proxies(self) -> None:
+        """Load trusted proxies from configuration."""
+        if not settings.TRUSTED_PROXIES:
+            return
+
+        for proxy in settings.TRUSTED_PROXIES.split(","):
+            proxy = proxy.strip()
+            if not proxy:
+                continue
+            try:
+                # Try parsing as a network (CIDR notation)
+                if "/" in proxy:
+                    network = ipaddress.ip_network(proxy, strict=False)
+                else:
+                    # Single IP - convert to /32 or /128 network
+                    ip = ipaddress.ip_address(proxy)
+                    if isinstance(ip, ipaddress.IPv4Address):
+                        network = ipaddress.ip_network(f"{proxy}/32")
+                    else:
+                        network = ipaddress.ip_network(f"{proxy}/128")
+                self._trusted_networks.add(network)
+            except ValueError as e:
+                logger.warning(f"Invalid trusted proxy configuration '{proxy}': {e}")
+
+    def is_trusted_proxy(self, ip: str) -> bool:
+        """Check if an IP address is a trusted proxy."""
+        if not self._trusted_networks:
+            return False
+
+        try:
+            client_ip = ipaddress.ip_address(ip)
+            return any(client_ip in network for network in self._trusted_networks)
+        except ValueError:
+            return False
+
+    def get_client_ip(self, request: Request) -> str:
+        """
+        Get the real client IP, respecting X-Forwarded-For only from trusted proxies.
+
+        Args:
+            request: FastAPI request object
+
+        Returns:
+            The client IP address
+        """
+        direct_ip = request.client.host if request.client else "unknown"
+
+        # Only trust X-Forwarded-For if it comes from a trusted proxy
+        if self.is_trusted_proxy(direct_ip):
+            forwarded_for = request.headers.get("X-Forwarded-For")
+            if forwarded_for:
+                # Take the first IP in the chain (original client)
+                # X-Forwarded-For format: client, proxy1, proxy2, ...
+                client_ip = forwarded_for.split(",")[0].strip()
+                # Validate it's a real IP address
+                try:
+                    ipaddress.ip_address(client_ip)
+                    return client_ip
+                except ValueError:
+                    logger.warning(f"Invalid IP in X-Forwarded-For header: {client_ip}")
+                    return direct_ip
+
+        return direct_ip
+
+
+class AdminAuthRateLimiter:
+    """
+    Rate limiter specifically for admin authentication failures.
+
+    Prevents brute force attacks on admin API key by rate limiting
+    failed authentication attempts per IP.
+    """
+
+    def __init__(self, max_failures: int = 5, lockout_seconds: int = 300):
+        """
+        Initialize admin auth rate limiter.
+
+        Args:
+            max_failures: Maximum failed attempts before lockout
+            lockout_seconds: Duration of lockout in seconds (default: 5 minutes)
+        """
+        self.max_failures = max_failures
+        self.lockout_seconds = lockout_seconds
+        self.failures: Dict[str, List[float]] = defaultdict(list)
+        self.lockouts: Dict[str, float] = {}
+
+    def record_failure(self, ip: str) -> None:
+        """Record a failed authentication attempt."""
+        current_time = time.time()
+
+        # Clean up old failures
+        self.failures[ip] = [
+            t for t in self.failures[ip]
+            if current_time - t < self.lockout_seconds
+        ]
+
+        # Record new failure
+        self.failures[ip].append(current_time)
+
+        # Check if lockout threshold reached
+        if len(self.failures[ip]) >= self.max_failures:
+            self.lockouts[ip] = current_time
+            logger.warning(
+                f"Admin auth lockout triggered for IP: {ip} "
+                f"(failed {len(self.failures[ip])} times)"
+            )
+
+    def is_locked_out(self, ip: str) -> Tuple[bool, Optional[int]]:
+        """
+        Check if an IP is locked out.
+
+        Returns:
+            Tuple of (is_locked_out, seconds_remaining)
+        """
+        if ip not in self.lockouts:
+            return False, None
+
+        current_time = time.time()
+        lockout_time = self.lockouts[ip]
+        elapsed = current_time - lockout_time
+
+        if elapsed >= self.lockout_seconds:
+            # Lockout expired - clean up
+            del self.lockouts[ip]
+            self.failures[ip] = []
+            return False, None
+
+        remaining = int(self.lockout_seconds - elapsed)
+        return True, remaining
+
+    def clear_failures(self, ip: str) -> None:
+        """Clear failure count for an IP (on successful auth)."""
+        if ip in self.failures:
+            del self.failures[ip]
+        if ip in self.lockouts:
+            del self.lockouts[ip]
+
+    def reset(self) -> None:
+        """Reset all state. Useful for testing."""
+        self.failures.clear()
+        self.lockouts.clear()
 
 
 class WebSocketRateLimiter:
@@ -200,6 +358,8 @@ class ConversionRateLimiter:
 rate_limiter = WebSocketRateLimiter(max_connections_per_ip=10, time_window=60)
 session_validator = SessionValidator()
 conversion_rate_limiter = ConversionRateLimiter(max_requests_per_ip=30, time_window=60)
+trusted_proxy_validator = TrustedProxyValidator()
+admin_auth_rate_limiter = AdminAuthRateLimiter(max_failures=5, lockout_seconds=300)
 
 
 async def check_rate_limit(request: Request) -> None:
@@ -211,14 +371,8 @@ async def check_rate_limit(request: Request) -> None:
     Raises:
         HTTPException: 429 Too Many Requests if rate limit exceeded
     """
-    # Get client IP from request
-    # Check X-Forwarded-For header for proxied requests, fall back to direct client
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        # Take the first IP in the chain (original client)
-        client_ip = forwarded_for.split(",")[0].strip()
-    else:
-        client_ip = request.client.host if request.client else "unknown"
+    # Get client IP using trusted proxy validation
+    client_ip = trusted_proxy_validator.get_client_ip(request)
 
     is_allowed, reason = conversion_rate_limiter.is_allowed(client_ip)
 
@@ -229,3 +383,12 @@ async def check_rate_limit(request: Request) -> None:
             detail=reason,
             headers={"Retry-After": str(conversion_rate_limiter.time_window)}
         )
+
+
+def get_client_ip(request: Request) -> str:
+    """
+    Get client IP using trusted proxy validation.
+
+    This is a helper function for use in other modules.
+    """
+    return trusted_proxy_validator.get_client_ip(request)

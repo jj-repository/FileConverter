@@ -101,20 +101,35 @@ async def convert_spreadsheet(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
 
 
+# MIME type mapping for spreadsheet formats
+SPREADSHEET_MIME_TYPES = {
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "xls": "application/vnd.ms-excel",
+    "ods": "application/vnd.oasis.opendocument.spreadsheet",
+    "csv": "text/csv",
+    "tsv": "text/tab-separated-values",
+}
+
+
 @router.get("/download/{filename}")
 async def download_spreadsheet(filename: str):
     """Download converted spreadsheet file"""
     # Validate filename to prevent path traversal
     file_path = validate_download_filename(filename, settings.UPLOAD_DIR)
 
+    # Determine MIME type from extension
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    media_type = SPREADSHEET_MIME_TYPES.get(ext, "application/octet-stream")
+
     return FileResponse(
         path=str(file_path),
         filename=filename,
-        media_type="application/octet-stream"
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
 
-@router.get("/formats")
+@router.get("/formats", dependencies=[Depends(check_rate_limit)])
 async def get_supported_formats():
     """Get list of supported spreadsheet formats"""
     formats = await spreadsheet_converter.get_supported_formats()
@@ -124,7 +139,7 @@ async def get_supported_formats():
     }
 
 
-@router.post("/info", response_model=FileInfo)
+@router.post("/info", response_model=FileInfo, dependencies=[Depends(check_rate_limit)])
 async def get_spreadsheet_info(file: UploadFile = File(...)):
     """Get metadata about a spreadsheet file"""
     try:

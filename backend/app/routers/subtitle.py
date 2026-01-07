@@ -154,20 +154,35 @@ async def adjust_subtitle_timing(
         raise HTTPException(status_code=500, detail=f"Timing adjustment failed: {str(e)}")
 
 
+# MIME type mapping for subtitle formats
+SUBTITLE_MIME_TYPES = {
+    "srt": "application/x-subrip",
+    "vtt": "text/vtt",
+    "ass": "text/x-ass",
+    "ssa": "text/x-ssa",
+    "sub": "text/x-sub",
+}
+
+
 @router.get("/download/{filename}")
 async def download_subtitle(filename: str):
     """Download converted subtitle file"""
     # Validate filename to prevent path traversal
     file_path = validate_download_filename(filename, settings.UPLOAD_DIR)
 
+    # Determine MIME type from extension
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    media_type = SUBTITLE_MIME_TYPES.get(ext, "text/plain")
+
     return FileResponse(
         path=str(file_path),
         filename=filename,
-        media_type="text/plain"
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
 
-@router.get("/formats")
+@router.get("/formats", dependencies=[Depends(check_rate_limit)])
 async def get_supported_formats():
     """Get list of supported subtitle formats"""
     formats = await subtitle_converter.get_supported_formats()
@@ -177,7 +192,7 @@ async def get_supported_formats():
     }
 
 
-@router.post("/info", response_model=FileInfo)
+@router.post("/info", response_model=FileInfo, dependencies=[Depends(check_rate_limit)])
 async def get_subtitle_info(file: UploadFile = File(...)):
     """Get metadata about a subtitle file"""
     try:

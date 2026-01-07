@@ -474,7 +474,8 @@ class TestEbookDownload:
         download_response = client.get(f"/api/ebook/download/{output_filename}")
 
         assert download_response.status_code == 200
-        assert download_response.headers["content-type"] == "application/octet-stream"
+        # Should return proper MIME type for the file format (txt)
+        assert download_response.headers["content-type"] == "text/plain; charset=utf-8"
         assert len(download_response.content) > 0
 
     def test_download_nonexistent_file(self, client):

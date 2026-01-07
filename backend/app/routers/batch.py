@@ -211,9 +211,15 @@ async def download_file(filename: str):
     # Validate filename to prevent path traversal
     file_path = validate_download_filename(filename, settings.UPLOAD_DIR)
 
+    # Determine MIME type - batch downloads are typically ZIP files
+    if filename.endswith(".zip"):
+        media_type = "application/zip"
+    else:
+        media_type = "application/octet-stream"
 
     return FileResponse(
         path=str(file_path),
         filename=filename,
-        media_type="application/octet-stream"
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )

@@ -28,15 +28,15 @@ class TestSettingsCorsOrigins:
         assert "http://localhost:5173" in origins
 
     def test_cors_origins_from_list(self):
-        """Test cors_origins property when ALLOWED_ORIGINS is already a list (line 75)"""
+        """Test cors_origins property when ALLOWED_ORIGINS is already a list"""
         from app.config import Settings
 
         settings = Settings()
-        # Set ALLOWED_ORIGINS as a list instead of string
+        # Set ALLOWED_ORIGINS as a list instead of string (for testing flexibility)
         settings.ALLOWED_ORIGINS = ["http://example.com", "http://test.com"]
 
         origins = settings.cors_origins
-        # Should return the list as-is (line 75: return self.ALLOWED_ORIGINS)
+        # Should return the list as-is when already a list
         assert isinstance(origins, list)
         assert len(origins) == 2
         assert "http://example.com" in origins

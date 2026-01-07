@@ -399,7 +399,8 @@ class TestSpreadsheetDownload:
         download_response = client.get(f"/api/spreadsheet/download/{output_filename}")
 
         assert download_response.status_code == 200
-        assert download_response.headers["content-type"] == "application/octet-stream"
+        # Should return proper MIME type for the file format (tsv)
+        assert download_response.headers["content-type"] == "text/tab-separated-values; charset=utf-8"
         assert len(download_response.content) > 0
 
     def test_download_nonexistent_file(self, client):

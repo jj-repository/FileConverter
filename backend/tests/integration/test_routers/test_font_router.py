@@ -354,7 +354,8 @@ class TestFontDownload:
             download_response = client.get(f"/api/font/download/{output_filename}")
 
             assert download_response.status_code == 200
-            assert download_response.headers["content-type"] == "application/octet-stream"
+            # Should return proper MIME type for the file format (woff)
+            assert download_response.headers["content-type"] == "font/woff"
             assert len(download_response.content) > 0
 
     def test_download_nonexistent_file(self, client):

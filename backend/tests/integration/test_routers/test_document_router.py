@@ -318,7 +318,8 @@ class TestDocumentDownload:
         download_response = client.get(f"/api/document/download/{output_filename}")
 
         assert download_response.status_code == 200
-        assert download_response.headers["content-type"] == "application/octet-stream"
+        # Should return proper MIME type for the file format
+        assert download_response.headers["content-type"] == "application/pdf"
         assert len(download_response.content) > 0
 
     def test_download_nonexistent_file(self, client):

@@ -93,6 +93,15 @@ async def convert_ebook(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
 
 
+# MIME type mapping for ebook formats
+EBOOK_MIME_TYPES = {
+    "epub": "application/epub+zip",
+    "txt": "text/plain",
+    "html": "text/html",
+    "pdf": "application/pdf",
+}
+
+
 @router.get("/download/{filename}")
 async def download_ebook(filename: str):
     """
@@ -109,14 +118,19 @@ async def download_ebook(filename: str):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
 
+    # Determine MIME type from extension
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    media_type = EBOOK_MIME_TYPES.get(ext, "application/octet-stream")
+
     return FileResponse(
         path=file_path,
         filename=filename,
-        media_type="application/octet-stream"
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
 
-@router.get("/formats")
+@router.get("/formats", dependencies=[Depends(check_rate_limit)])
 async def get_ebook_formats():
     """
     Get supported eBook formats
@@ -136,7 +150,7 @@ async def get_ebook_formats():
     }
 
 
-@router.post("/info")
+@router.post("/info", dependencies=[Depends(check_rate_limit)])
 async def get_ebook_info(file: UploadFile = File(...)):
     """
     Get information about an eBook file

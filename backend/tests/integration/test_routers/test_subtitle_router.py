@@ -313,7 +313,8 @@ class TestSubtitleDownload:
         download_response = client.get(f"/api/subtitle/download/{output_filename}")
 
         assert download_response.status_code == 200
-        assert download_response.headers["content-type"].startswith("text/plain")
+        # Should return proper MIME type for the file format (VTT)
+        assert download_response.headers["content-type"].startswith("text/vtt")
         assert len(download_response.content) > 0
         # Should contain VTT markers
         assert b"WEBVTT" in download_response.content or len(download_response.content) > 0

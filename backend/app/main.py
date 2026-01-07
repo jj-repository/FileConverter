@@ -1,11 +1,46 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
 import asyncio
 import logging
 
 from app.config import settings, CACHE_DIR
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses"""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+
+        # Prevent clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+
+        # Prevent MIME type sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # XSS protection (legacy but still useful)
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Control referrer information
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Prevent caching of sensitive data
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+
+        # Content Security Policy - restrict resource loading
+        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+
+        # Permissions Policy - disable unnecessary browser features
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+
+        return response
+
+
 from app.routers import image, video, audio, document, data, archive, spreadsheet, subtitle, ebook, font, batch, websocket, cache, version
 from app.middleware.error_handler import register_exception_handlers
 from app.services.cache_service import initialize_cache_service, get_cache_service
@@ -52,13 +87,16 @@ app = FastAPI(
 # Register exception handlers
 register_exception_handlers(app)
 
-# CORS middleware
+# Security headers middleware (must be added first to wrap all responses)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# CORS middleware - restrict methods and headers for security
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],  # Only needed methods
+    allow_headers=["Content-Type", "Authorization", "X-Admin-Key", "X-Requested-With"],
 )
 
 # Mount static files directory for uploads/downloads

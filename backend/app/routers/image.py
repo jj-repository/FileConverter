@@ -93,20 +93,42 @@ async def convert_image(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
 
 
+# MIME type mapping for image formats
+IMAGE_MIME_TYPES = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
+    "gif": "image/gif",
+    "bmp": "image/bmp",
+    "tiff": "image/tiff",
+    "ico": "image/x-icon",
+    "heic": "image/heic",
+    "heif": "image/heif",
+    "svg": "image/svg+xml",
+    "tga": "image/x-tga",
+}
+
+
 @router.get("/download/{filename}")
 async def download_image(filename: str):
     """Download converted image file"""
     # Validate filename to prevent path traversal
     file_path = validate_download_filename(filename, settings.UPLOAD_DIR)
 
+    # Determine MIME type from extension
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    media_type = IMAGE_MIME_TYPES.get(ext, "application/octet-stream")
+
     return FileResponse(
         path=str(file_path),
         filename=filename,
-        media_type="application/octet-stream"
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
 
-@router.get("/formats")
+@router.get("/formats", dependencies=[Depends(check_rate_limit)])
 async def get_supported_formats():
     """Get list of supported image formats"""
     formats = await image_converter.get_supported_formats()
@@ -116,7 +138,7 @@ async def get_supported_formats():
     }
 
 
-@router.post("/info", response_model=FileInfo)
+@router.post("/info", response_model=FileInfo, dependencies=[Depends(check_rate_limit)])
 async def get_image_info(file: UploadFile = File(...)):
     """Get metadata about an image file"""
     try:

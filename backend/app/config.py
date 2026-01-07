@@ -70,7 +70,9 @@ class Settings(BaseSettings):
     SUBPROCESS_TIMEOUT: int = 600  # 10 minutes max for conversions
 
     # CORS settings (can be overridden via environment variable ALLOWED_ORIGINS as comma-separated list)
-    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+    # In production (DEBUG=False), set ALLOWED_ORIGINS to your actual domain(s)
+    # Example: ALLOWED_ORIGINS="https://myapp.com,https://www.myapp.com"
+    ALLOWED_ORIGINS: str = ""
 
     # Admin API key for cache management endpoints (set via ADMIN_API_KEY environment variable)
     # If not set, admin endpoints will be disabled in production (non-DEBUG mode)
@@ -78,10 +80,41 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list:
-        """Parse ALLOWED_ORIGINS string into list"""
-        if isinstance(self.ALLOWED_ORIGINS, str):
-            return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
-        return self.ALLOWED_ORIGINS
+        """Parse ALLOWED_ORIGINS string into list.
+
+        In DEBUG mode, allows localhost origins for development.
+        In production, requires explicit ALLOWED_ORIGINS configuration.
+        """
+        # If explicit origins are configured, use those
+        if self.ALLOWED_ORIGINS:
+            # Handle both string and list types (list for testing)
+            if isinstance(self.ALLOWED_ORIGINS, list):
+                origins = self.ALLOWED_ORIGINS
+            else:
+                origins = [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+
+            # In production, warn if localhost origins are configured
+            if not self.DEBUG:
+                localhost_origins = [o for o in origins if "localhost" in o or "127.0.0.1" in o]
+                if localhost_origins:
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        f"Localhost origins configured in production mode: {localhost_origins}. "
+                        "This may be a security risk."
+                    )
+            return origins
+
+        # In DEBUG mode only, allow localhost origins for development
+        if self.DEBUG:
+            return [
+                "http://localhost:5173",
+                "http://localhost:3000",
+                "http://127.0.0.1:5173",
+                "http://127.0.0.1:3000",
+            ]
+
+        # Production with no configured origins - return empty list (no CORS)
+        return []
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -6,8 +6,13 @@ import { Card } from '../Common/Card';
 import { batchAPI, BatchConversionResult } from '../../services/api';
 import { ConversionStatus } from '../../types/conversion';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import type { AxiosError } from 'axios';
 
 const ALL_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'ico', 'mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'txt', 'pdf', 'docx', 'md', 'html', 'rtf'];
+
+interface ApiErrorResponse {
+  detail?: string;
+}
 
 export const BatchConverter: React.FC = () => {
   const { t } = useTranslation();
@@ -18,7 +23,7 @@ export const BatchConverter: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [results, setResults] = useState<BatchConversionResult[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [_zipUrl, setZipUrl] = useState<string | null>(null);
+  const [zipUrl, setZipUrl] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
 
   const { progress } = useWebSocket(sessionId);
@@ -112,8 +117,9 @@ export const BatchConverter: React.FC = () => {
         setStatus('failed');
         setError('All conversions failed');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Batch conversion failed');
+    } catch (err) {
+      const axiosError = err as AxiosError<ApiErrorResponse>;
+      setError(axiosError.response?.data?.detail || 'Batch conversion failed');
       setStatus('failed');
       setShowFeedback(true);
     }
@@ -135,15 +141,21 @@ export const BatchConverter: React.FC = () => {
       const response = await batchAPI.createZip(sessionId, successfulFiles);
       setZipUrl(response.download_url);
 
-      // Automatically trigger download
-      window.location.href = response.download_url;
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create ZIP file');
+      // Automatically trigger download - validate URL is same-origin
+      if (response.download_url.startsWith('/') || response.download_url.startsWith(window.location.origin)) {
+        window.location.href = response.download_url;
+      }
+    } catch (err) {
+      const axiosError = err as AxiosError<ApiErrorResponse>;
+      setError(axiosError.response?.data?.detail || 'Failed to create ZIP file');
     }
   };
 
   const handleDownloadSingle = (downloadUrl: string) => {
-    window.location.href = downloadUrl;
+    // Validate URL is same-origin to prevent open redirect
+    if (downloadUrl.startsWith('/') || downloadUrl.startsWith(window.location.origin)) {
+      window.location.href = downloadUrl;
+    }
   };
 
   const handleReset = () => {

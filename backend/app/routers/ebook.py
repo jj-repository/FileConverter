@@ -10,7 +10,7 @@ import logging
 
 from app.config import settings
 from app.services.ebook_converter import EbookConverter
-from app.utils.validation import validate_file_size, validate_file_extension
+from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse
 from app.utils.websocket_security import session_validator
 
@@ -104,7 +104,7 @@ async def download_ebook(filename: str):
     Returns:
         FileResponse with the converted file
     """
-    file_path = settings.UPLOAD_DIR / filename
+    file_path = validate_download_filename(filename, settings.UPLOAD_DIR)
 
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")

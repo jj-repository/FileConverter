@@ -4,6 +4,19 @@ import { useWebSocket } from './useWebSocket';
 import { API_BASE_URL, AUTO_DOWNLOAD_DELAY, FORCE_RERENDER_DELAY } from '../config/constants';
 import { getFriendlyErrorMessage } from '../utils/errorMessages';
 
+/**
+ * Sanitize filename to prevent path traversal attacks
+ * Removes path separators, parent directory references, and null bytes
+ */
+const sanitizeFilename = (filename: string): string => {
+  // Remove path separators and parent directory references
+  return filename
+    .replace(/[/\\]/g, '_')  // Replace path separators with underscore
+    .replace(/\.\./g, '_')   // Remove parent directory references
+    .replace(/\0/g, '')      // Remove null bytes
+    .replace(/^\.+/, '');    // Remove leading dots
+};
+
 interface UseConverterOptions {
   defaultOutputFormat: string;
   onConversionComplete?: (downloadUrl: string) => void;
@@ -205,7 +218,9 @@ export const useConverter = (options: UseConverterOptions) => {
       try {
         const urlParts = downloadUrl.split('/');
         const defaultFilename = urlParts[urlParts.length - 1] || `converted.${outputFormat}`;
-        const filename = customFilename ? `${customFilename}.${outputFormat}` : defaultFilename;
+        // Sanitize filename to prevent path traversal attacks
+        const safeCustomFilename = customFilename ? sanitizeFilename(customFilename) : null;
+        const filename = safeCustomFilename ? `${safeCustomFilename}.${outputFormat}` : sanitizeFilename(defaultFilename);
 
         const result = await window.electron.downloadFile({
           url: `${API_BASE_URL}${downloadUrl}`,
@@ -227,8 +242,10 @@ export const useConverter = (options: UseConverterOptions) => {
         alert(`Failed to download file: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
     } else {
-      // Browser download
-      window.location.href = downloadUrl;
+      // Browser download - validate URL is same-origin to prevent open redirect
+      if (downloadUrl.startsWith('/') || downloadUrl.startsWith(window.location.origin)) {
+        window.location.href = downloadUrl;
+      }
     }
   }, [downloadUrl, outputDirectory, outputFormat, customFilename]);
 

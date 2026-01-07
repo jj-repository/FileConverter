@@ -2,7 +2,7 @@
 eBook Conversion Router
 Handles EPUB and other eBook format conversion endpoints
 """
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uuid
@@ -12,13 +12,13 @@ from app.config import settings
 from app.services.ebook_converter import EbookConverter
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/convert", response_model=ConversionResponse)
+@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_ebook(
     file: UploadFile = File(...),
     output_format: str = Form(...),

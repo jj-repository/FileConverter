@@ -2,7 +2,7 @@
 Font Conversion Router
 Handles font format conversion endpoints
 """
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 from typing import Optional
@@ -13,13 +13,13 @@ from app.config import settings
 from app.services.font_converter import FontConverter
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/convert", response_model=ConversionResponse)
+@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_font(
     file: UploadFile = File(...),
     output_format: str = Form(...),
@@ -99,7 +99,7 @@ async def convert_font(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
 
 
-@router.post("/optimize", response_model=ConversionResponse)
+@router.post("/optimize", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def optimize_font(
     file: UploadFile = File(...),
 ):

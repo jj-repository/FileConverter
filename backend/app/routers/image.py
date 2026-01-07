@@ -1,28 +1,28 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Query, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uuid
-from typing import Optional
+from typing import Optional, Annotated
 
 from app.services.image_converter import ImageConverter
 from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 
 router = APIRouter()
 image_converter = ImageConverter()
 
 
-@router.post("/convert", response_model=ConversionResponse)
+@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_image(
     file: UploadFile = File(...),
     output_format: str = Form(...),
-    quality: Optional[int] = Form(95),
-    width: Optional[int] = Form(None),
-    height: Optional[int] = Form(None),
+    quality: Annotated[Optional[int], Form(ge=1, le=100, description="Quality for JPEG/WEBP (1-100)")] = 95,
+    width: Annotated[Optional[int], Form(ge=1, le=10000, description="Width for resize (1-10000 pixels)")] = None,
+    height: Annotated[Optional[int], Form(ge=1, le=10000, description="Height for resize (1-10000 pixels)")] = None,
 ):
     """
     Convert an image to a different format
@@ -30,8 +30,8 @@ async def convert_image(
     - **file**: Image file to convert
     - **output_format**: Target format (png, jpg, webp, gif, bmp, tiff, ico)
     - **quality**: Quality for JPEG/WEBP (1-100, default: 95)
-    - **width**: Optional width for resize
-    - **height**: Optional height for resize
+    - **width**: Optional width for resize (1-10000 pixels)
+    - **height**: Optional height for resize (1-10000 pixels)
     """
     session_id = str(uuid.uuid4())
     session_validator.register_session(session_id)

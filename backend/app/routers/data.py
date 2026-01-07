@@ -1,36 +1,41 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uuid
-from typing import Optional
+from typing import Optional, Annotated, Literal
 
 from app.services.data_converter import DataConverter
 from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 
 router = APIRouter()
 data_converter = DataConverter()
 
 
-@router.post("/convert", response_model=ConversionResponse)
+# Whitelist types for data parameters
+DataEncoding = Literal["utf-8", "utf-16", "ascii", "latin-1", "iso-8859-1", "cp1252"]
+DataDelimiter = Literal[",", ";", "\t", "|", ":"]
+
+
+@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_data(
     file: UploadFile = File(...),
     output_format: str = Form(...),
-    encoding: Optional[str] = Form("utf-8"),
-    delimiter: Optional[str] = Form(","),
-    pretty: Optional[bool] = Form(True),
+    encoding: Annotated[Optional[DataEncoding], Form(description="Character encoding")] = "utf-8",
+    delimiter: Annotated[Optional[DataDelimiter], Form(description="Delimiter for CSV files")] = ",",
+    pretty: Annotated[Optional[bool], Form(description="Pretty print JSON output")] = True,
 ):
     """
     Convert a data file to a different format
 
     - **file**: Data file to convert (CSV, JSON, XML)
     - **output_format**: Target format (csv, json, xml)
-    - **encoding**: Character encoding (default: utf-8)
-    - **delimiter**: Delimiter for CSV files (default: ,)
+    - **encoding**: Character encoding (utf-8, utf-16, ascii, latin-1, iso-8859-1, cp1252)
+    - **delimiter**: Delimiter for CSV files (comma, semicolon, tab, pipe, colon)
     - **pretty**: Pretty print JSON output (default: true)
     """
     session_id = str(uuid.uuid4())

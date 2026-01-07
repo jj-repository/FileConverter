@@ -1,39 +1,44 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uuid
-from typing import Optional
+from typing import Optional, Annotated, Literal
 
 from app.services.audio_converter import AudioConverter
 from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_download_filename,  validate_file_size, validate_file_extension
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 
 router = APIRouter()
 audio_converter = AudioConverter()
 
 
-@router.post("/convert", response_model=ConversionResponse)
+# Whitelist types for audio parameters
+AudioCodec = Literal["aac", "libmp3lame", "libvorbis", "libopus", "flac", "pcm_s16le", "wmav2"]
+AudioBitrate = Literal["128k", "192k", "256k", "320k"]
+
+
+@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_audio(
     file: UploadFile = File(...),
     output_format: str = Form(...),
-    codec: Optional[str] = Form(None),
-    bitrate: Optional[str] = Form("192k"),
-    sample_rate: Optional[int] = Form(None),
-    channels: Optional[int] = Form(None),
+    codec: Annotated[Optional[AudioCodec], Form(description="Audio codec (auto-selected if not specified)")] = None,
+    bitrate: Annotated[Optional[AudioBitrate], Form(description="Audio bitrate")] = "192k",
+    sample_rate: Annotated[Optional[int], Form(ge=8000, le=192000, description="Sample rate in Hz (8000-192000)")] = None,
+    channels: Annotated[Optional[int], Form(ge=1, le=2, description="Number of channels (1=mono, 2=stereo)")] = None,
 ):
     """
     Convert an audio file to a different format
 
     - **file**: Audio file to convert
     - **output_format**: Target format (mp3, wav, flac, aac, ogg, m4a, wma)
-    - **codec**: Audio codec (optional, will auto-select based on format)
-    - **bitrate**: Audio bitrate (e.g., 128k, 192k, 320k, default: 192k)
-    - **sample_rate**: Sample rate in Hz (e.g., 44100, 48000, optional)
-    - **channels**: Number of channels (1=mono, 2=stereo, optional)
+    - **codec**: Audio codec (aac, libmp3lame, libvorbis, libopus, flac, pcm_s16le, wmav2)
+    - **bitrate**: Audio bitrate (128k, 192k, 256k, 320k)
+    - **sample_rate**: Sample rate in Hz (22050, 44100, 48000, 96000)
+    - **channels**: Number of channels (1=mono, 2=stereo)
     """
     session_id = str(uuid.uuid4())
     session_validator.register_session(session_id)

@@ -841,7 +841,7 @@ class TestBatchAdvancedOptions:
                 files=files,
                 data={
                     "output_format": "webm",
-                    "codec": "vp9",
+                    "codec": "libvpx-vp9",  # Must use whitelisted codec value
                     "resolution": "720p",
                     "bitrate": "2M"
                 }

@@ -1,37 +1,43 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uuid
-from typing import Optional
+from typing import Optional, Annotated, Literal
 
 from app.services.video_converter import VideoConverter
 from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_download_filename,  validate_file_size, validate_file_extension
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 
 router = APIRouter()
 video_converter = VideoConverter()
 
 
-@router.post("/convert", response_model=ConversionResponse)
+# Whitelist types for video parameters
+VideoCodec = Literal["libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4", "h264"]
+VideoResolution = Literal["original", "480p", "720p", "1080p", "4k", "2k"]
+VideoBitrate = Literal["500k", "1M", "2M", "3M", "4M", "5M", "8M", "10M"]
+
+
+@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_video(
     file: UploadFile = File(...),
     output_format: str = Form(...),
-    codec: Optional[str] = Form(None),
-    resolution: Optional[str] = Form("original"),
-    bitrate: Optional[str] = Form("2M"),
+    codec: Annotated[Optional[VideoCodec], Form(description="Video codec")] = None,
+    resolution: Annotated[Optional[VideoResolution], Form(description="Target resolution")] = "original",
+    bitrate: Annotated[Optional[VideoBitrate], Form(description="Video bitrate")] = "2M",
 ):
     """
     Convert a video to a different format
 
     - **file**: Video file to convert
     - **output_format**: Target format (mp4, avi, mov, mkv, webm, flv, wmv)
-    - **codec**: Video codec (libx264, libx265, libvpx-vp9, default: libx264)
-    - **resolution**: Target resolution (480p, 720p, 1080p, 4k, original, default: original)
-    - **bitrate**: Video bitrate (e.g., 2M, 5M, default: 2M)
+    - **codec**: Video codec (libx264, libx265, libvpx, libvpx-vp9, mpeg4, h264)
+    - **resolution**: Target resolution (original, 480p, 720p, 1080p, 2k, 4k)
+    - **bitrate**: Video bitrate (500k, 1M, 2M, 3M, 4M, 5M, 8M, 10M)
     """
     session_id = str(uuid.uuid4())
     session_validator.register_session(session_id)

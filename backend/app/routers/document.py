@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uuid
@@ -9,14 +9,14 @@ from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_download_filename,  validate_file_size, validate_file_extension
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 
 router = APIRouter()
 document_converter = DocumentConverter()
 
 
-@router.post("/convert", response_model=ConversionResponse)
+@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_document(
     file: UploadFile = File(...),
     output_format: str = Form(...),

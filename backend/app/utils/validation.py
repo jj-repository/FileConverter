@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Set
 import os
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -11,10 +12,14 @@ try:
     MAGIC_AVAILABLE = True
 except ImportError:
     MAGIC_AVAILABLE = False
-    logger.warning(
-        "python-magic is not installed. MIME type validation is disabled. "
-        "This is a security risk - install python-magic for production use: pip install python-magic"
+    # SECURITY WARNING: Log at ERROR level and print to stderr to ensure visibility
+    security_warning = (
+        "SECURITY WARNING: python-magic is not installed. MIME type validation is DISABLED. "
+        "This is a significant security risk - attackers can upload malicious files with "
+        "renamed extensions. Install python-magic for production use: pip install python-magic"
     )
+    logger.error(security_warning)
+    print(f"\n{'='*80}\n{security_warning}\n{'='*80}\n", file=sys.stderr)
 
 from app.config import settings
 
@@ -109,13 +114,26 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
     """
     Validate MIME type of uploaded file using python-magic.
 
-    Security Note: If python-magic is not available, MIME validation is skipped.
-    This allows attackers to upload malicious files with renamed extensions.
-    Ensure python-magic is installed in production environments.
+    SECURITY: If python-magic is not available:
+    - In DEBUG mode: Logs warning and allows operation (for development convenience)
+    - In production (DEBUG=False): Raises an error to prevent file type spoofing attacks
+
+    Ensure python-magic is installed in all environments: pip install python-magic
     """
     if not MAGIC_AVAILABLE:
-        logger.debug("MIME type validation skipped - python-magic not available")
-        return
+        if settings.DEBUG:
+            # Allow in debug mode but log warning
+            logger.warning(
+                "MIME type validation skipped - python-magic not available. "
+                "This is only allowed in DEBUG mode."
+            )
+            return
+        else:
+            # SECURITY: In production, fail if MIME validation is unavailable
+            raise HTTPException(
+                status_code=503,
+                detail="File type validation unavailable. Please contact administrator."
+            )
 
     try:
         mime = magic.Magic(mime=True)
@@ -132,8 +150,14 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
     except HTTPException:
         raise
     except Exception as e:
-        # Log the error but don't fail - MIME validation is an additional security layer
-        logger.warning(f"MIME type validation failed: {e}")
+        # Log the error at warning level - MIME validation is an additional security layer
+        logger.warning(f"MIME type validation error: {e}")
+        if not settings.DEBUG:
+            # In production, fail closed on validation errors
+            raise HTTPException(
+                status_code=400,
+                detail="File type validation failed. Please try again with a valid file."
+            )
 
 
 def get_file_type_from_format(file_format: str) -> str:

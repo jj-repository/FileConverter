@@ -503,7 +503,13 @@ class TestValidateFileExtension:
 # ============================================================================
 
 class TestValidateMimeType:
-    """Test validate_mime_type() - MIME type validation"""
+    """Test validate_mime_type() - MIME type validation
+
+    NOTE: MIME validation behavior changed for security:
+    - In DEBUG mode: Validation is skipped silently if python-magic unavailable
+    - In production (DEBUG=False): Raises HTTP 503 if python-magic unavailable
+    - In production: Raises HTTP 400 on validation errors
+    """
 
     def test_magic_availability_check(self):
         """Test that MAGIC_AVAILABLE is properly set based on magic import"""
@@ -522,15 +528,29 @@ class TestValidateMimeType:
         """Test that valid MIME type is accepted"""
         expected_types = {"image/jpeg", "image/jpg"}
 
-        # Should not raise - either python-magic available or gracefully skipped
-        validate_mime_type(sample_image_jpg, expected_types)
+        # In DEBUG mode, validation is skipped if python-magic unavailable
+        with patch('app.utils.validation.settings.DEBUG', True):
+            validate_mime_type(sample_image_jpg, expected_types)
 
     @pytest.mark.security
-    def test_mime_validation_without_magic(self, sample_image_jpg):
-        """Test that validation gracefully skips if python-magic unavailable"""
-        with patch('app.utils.validation.MAGIC_AVAILABLE', False):
-            # Should not raise even with wrong expected types
+    def test_mime_validation_without_magic_debug_mode(self, sample_image_jpg):
+        """Test that validation gracefully skips if python-magic unavailable (DEBUG mode)"""
+        with patch('app.utils.validation.MAGIC_AVAILABLE', False), \
+             patch('app.utils.validation.settings.DEBUG', True):
+            # In DEBUG mode, should not raise even with wrong expected types
             validate_mime_type(sample_image_jpg, {"video/mp4"})
+
+    @pytest.mark.security
+    def test_mime_validation_without_magic_production_mode(self, sample_image_jpg):
+        """Test that validation raises 503 if python-magic unavailable (production mode)"""
+        with patch('app.utils.validation.MAGIC_AVAILABLE', False), \
+             patch('app.utils.validation.settings.DEBUG', False):
+            # In production mode, should raise 503 (service unavailable)
+            with pytest.raises(HTTPException) as exc_info:
+                validate_mime_type(sample_image_jpg, {"video/mp4"})
+
+            assert exc_info.value.status_code == 503
+            assert "validation unavailable" in exc_info.value.detail.lower()
 
     @pytest.mark.security
     @pytest.mark.skipif(not hasattr(__import__('app.utils.validation', fromlist=['MAGIC_AVAILABLE']), 'magic'),
@@ -577,8 +597,8 @@ class TestValidateMimeType:
             validate_mime_type(sample_image_jpg, {"image"})
 
     @pytest.mark.security
-    def test_mime_validation_exception_handled_gracefully(self, sample_image_jpg):
-        """Test that exceptions in python-magic are handled gracefully"""
+    def test_mime_validation_exception_handled_debug_mode(self, sample_image_jpg):
+        """Test that exceptions in python-magic are handled gracefully in DEBUG mode"""
         # Create a mock magic module
         mock_magic_module = Mock()
         mock_magic_class = Mock()
@@ -586,14 +606,35 @@ class TestValidateMimeType:
         mock_magic_module.Magic = mock_magic_class
 
         with patch('app.utils.validation.MAGIC_AVAILABLE', True), \
+             patch('app.utils.validation.settings.DEBUG', True), \
              patch.dict('sys.modules', {'magic': mock_magic_module}):
 
-            # Should not raise - validation should be skipped on error
+            # In DEBUG mode, should not raise - validation should be skipped on error
             validate_mime_type(sample_image_jpg, {"video/mp4"})
 
     @pytest.mark.security
-    def test_mime_validation_from_file_exception(self, sample_image_jpg):
-        """Test that exceptions from magic.from_file() are handled gracefully"""
+    def test_mime_validation_exception_production_mode(self, sample_image_jpg):
+        """Test that exceptions in python-magic raise 400 in production mode"""
+        # Create a mock magic module
+        mock_magic_module = Mock()
+        mock_magic_class = Mock()
+        mock_magic_class.side_effect = Exception("magic library error")
+        mock_magic_module.Magic = mock_magic_class
+
+        with patch('app.utils.validation.MAGIC_AVAILABLE', True), \
+             patch('app.utils.validation.settings.DEBUG', False), \
+             patch.dict('sys.modules', {'magic': mock_magic_module}):
+
+            # In production mode, should raise 400 on validation errors
+            with pytest.raises(HTTPException) as exc_info:
+                validate_mime_type(sample_image_jpg, {"video/mp4"})
+
+            assert exc_info.value.status_code == 400
+            assert "validation failed" in exc_info.value.detail.lower()
+
+    @pytest.mark.security
+    def test_mime_validation_from_file_exception_debug_mode(self, sample_image_jpg):
+        """Test that from_file() exceptions are handled gracefully in DEBUG mode"""
         # Create a mock magic module
         mock_magic_module = Mock()
         mock_mime_instance = Mock()
@@ -602,9 +643,10 @@ class TestValidateMimeType:
         mock_magic_module.Magic.return_value = mock_mime_instance
 
         with patch('app.utils.validation.MAGIC_AVAILABLE', True), \
+             patch('app.utils.validation.settings.DEBUG', True), \
              patch.dict('sys.modules', {'magic': mock_magic_module}):
 
-            # Should not raise - validation should be skipped on error
+            # In DEBUG mode, should not raise - validation should be skipped on error
             validate_mime_type(sample_image_jpg, {"video/mp4"})
 
 
@@ -702,16 +744,16 @@ class TestMimeTypeMismatchWithMagic:
 
     @pytest.mark.security
     def test_mime_mismatch_with_forced_magic(self, sample_image_jpg):
-        """Test MIME type mismatch detection (lines 109-115, 119-122)
+        """Test MIME type mismatch detection - should raise HTTP 400
 
-        Note: The validate_mime_type function has a catch-all exception handler
-        that prevents HTTPException from propagating. This test verifies that
-        the function executes without error when magic is available.
+        When magic is available and detects a MIME type mismatch,
+        the function should raise an HTTPException with status 400.
         """
         from unittest.mock import MagicMock
 
         # Skip test if magic is not available (can't test the feature)
-        if not validate_mime_type.__globals__.get('MAGIC_AVAILABLE', False):
+        from app.utils import validation
+        if not validation.MAGIC_AVAILABLE:
             pytest.skip("python-magic not available, can't test MIME validation")
 
         # Create a mock for the magic.Magic class to return specific MIME type
@@ -720,10 +762,12 @@ class TestMimeTypeMismatchWithMagic:
 
         # Patch the magic.Magic class in the validation module
         with patch('app.utils.validation.magic.Magic', return_value=mock_mime_instance):
-            # The function should complete without raising an exception
-            # (HTTPException is caught by the except block on lines 119-122)
-            validate_mime_type(sample_image_jpg, {"video/mp4", "video/mpeg"})
-            # Test passes if no exception is raised
+            # MIME mismatch should raise 400
+            with pytest.raises(HTTPException) as exc_info:
+                validate_mime_type(sample_image_jpg, {"video/mp4", "video/mpeg"})
+
+            assert exc_info.value.status_code == 400
+            assert "Invalid file type" in exc_info.value.detail
 
 
 class TestValidateDownloadFilenameDotDot:

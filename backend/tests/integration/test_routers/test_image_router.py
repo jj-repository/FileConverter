@@ -167,7 +167,11 @@ class TestImageConvert:
                 "Unsupported file format" in str(error_msg))
 
     def test_convert_invalid_quality(self, client, sample_image):
-        """Test conversion with invalid quality value"""
+        """Test conversion with invalid quality value
+
+        NOTE: Now validated at router level with Pydantic Field constraints.
+        Invalid values return 422 Unprocessable Entity instead of 500.
+        """
         with open(sample_image, 'rb') as f:
             response = client.post(
                 "/api/image/convert",
@@ -175,13 +179,18 @@ class TestImageConvert:
                 data={"output_format": "jpg", "quality": 150}  # Invalid: >100
             )
 
-        assert response.status_code == 500
+        # Pydantic validation returns 422 for out-of-range values
+        assert response.status_code == 422
         response_data = response.json()
-        error_msg = response_data.get("detail") or response_data.get("error")
-        assert "Invalid quality" in str(error_msg)
+        # Pydantic error format includes validation details
+        assert "detail" in response_data
 
     def test_convert_negative_dimensions(self, client, sample_image):
-        """Test conversion with negative dimensions"""
+        """Test conversion with negative dimensions
+
+        NOTE: Now validated at router level with Pydantic Field constraints.
+        Negative values return 422 Unprocessable Entity instead of 500.
+        """
         with open(sample_image, 'rb') as f:
             response = client.post(
                 "/api/image/convert",
@@ -189,13 +198,17 @@ class TestImageConvert:
                 data={"output_format": "png", "width": -100}
             )
 
-        assert response.status_code == 500
+        # Pydantic validation returns 422 for negative values
+        assert response.status_code == 422
         response_data = response.json()
-        error_msg = response_data.get("detail") or response_data.get("error")
-        assert "Invalid width" in str(error_msg)
+        assert "detail" in response_data
 
     def test_convert_oversized_dimensions(self, client, sample_image):
-        """Test conversion with oversized dimensions"""
+        """Test conversion with oversized dimensions
+
+        NOTE: Now validated at router level with Pydantic Field constraints.
+        Values >10000 return 422 Unprocessable Entity instead of 500.
+        """
         with open(sample_image, 'rb') as f:
             response = client.post(
                 "/api/image/convert",
@@ -203,10 +216,10 @@ class TestImageConvert:
                 data={"output_format": "png", "width": 20000}  # >10000
             )
 
-        assert response.status_code == 500
+        # Pydantic validation returns 422 for out-of-range values
+        assert response.status_code == 422
         response_data = response.json()
-        error_msg = response_data.get("detail") or response_data.get("error")
-        assert "Invalid width" in str(error_msg)
+        assert "detail" in response_data
 
 
 class TestImageFormats:

@@ -12,14 +12,17 @@ router = APIRouter()
 async def verify_admin_key(x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key")) -> None:
     """
     Verify admin API key for protected endpoints.
-    In DEBUG mode, allows access without key for development convenience.
-    In production, requires ADMIN_API_KEY to be set and matched.
-    """
-    # In debug mode, allow access without key for development
-    if settings.DEBUG:
-        return
 
-    # In production, require admin key
+    SECURITY: Admin key is ALWAYS required, even in DEBUG mode.
+    This prevents accidental exposure of admin endpoints if DEBUG=True is
+    inadvertently deployed to production.
+
+    To use admin endpoints:
+    1. Set ADMIN_API_KEY environment variable
+    2. Pass the key in X-Admin-Key header
+    """
+    # SECURITY: Always require admin key - never bypass based on DEBUG mode
+    # This prevents accidental exposure if DEBUG=True is deployed to production
     if not settings.ADMIN_API_KEY:
         raise HTTPException(
             status_code=403,

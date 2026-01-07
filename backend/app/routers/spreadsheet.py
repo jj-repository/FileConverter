@@ -1,29 +1,34 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uuid
-from typing import Optional
+from typing import Optional, Annotated, Literal
 
 from app.services.spreadsheet_converter import SpreadsheetConverter
 from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 
 router = APIRouter()
 spreadsheet_converter = SpreadsheetConverter()
 
 
-@router.post("/convert", response_model=ConversionResponse)
+# Whitelist types for spreadsheet parameters
+SpreadsheetEncoding = Literal["utf-8", "utf-16", "ascii", "latin-1", "iso-8859-1", "cp1252"]
+SpreadsheetDelimiter = Literal[",", ";", "\t", "|"]
+
+
+@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_spreadsheet(
     file: UploadFile = File(...),
     output_format: str = Form(...),
     sheet_name: Optional[str] = Form(None),
     include_all_sheets: Optional[bool] = Form(False),
-    encoding: Optional[str] = Form("utf-8"),
-    delimiter: Optional[str] = Form(None),
+    encoding: Annotated[Optional[SpreadsheetEncoding], Form(description="Character encoding")] = "utf-8",
+    delimiter: Annotated[Optional[SpreadsheetDelimiter], Form(description="Delimiter for CSV files")] = None,
 ):
     """
     Convert a spreadsheet to a different format

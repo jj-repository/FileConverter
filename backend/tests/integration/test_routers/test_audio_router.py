@@ -179,8 +179,8 @@ class TestAudioConvert:
                 data={"output_format": "mp3", "codec": "invalid_codec"}
             )
 
-        # Invalid codec may fail during conversion
-        assert response.status_code in [400, 500]
+        # Should return 422 (Pydantic validation for Literal type whitelist)
+        assert response.status_code == 422
 
     def test_convert_invalid_output_format(self, client, sample_audio):
         """Test conversion with invalid output format"""

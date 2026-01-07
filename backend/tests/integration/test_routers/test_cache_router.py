@@ -29,11 +29,14 @@ from app.config import settings
 from app.services.cache_service import CacheService, initialize_cache_service, get_cache_service
 
 
+TEST_ADMIN_API_KEY = "test_admin_key_12345"
+
+
 @pytest.fixture
 def client(temp_cache_dir, monkeypatch):
     """Create test client for API testing with initialized cache"""
-    # Enable DEBUG mode to bypass admin key requirement for tests
-    monkeypatch.setattr(settings, "DEBUG", True)
+    # Set ADMIN_API_KEY for testing protected endpoints
+    monkeypatch.setattr(settings, "ADMIN_API_KEY", TEST_ADMIN_API_KEY)
 
     # Initialize cache service for tests
     if settings.CACHE_ENABLED:
@@ -44,6 +47,12 @@ def client(temp_cache_dir, monkeypatch):
         )
 
     return TestClient(app)
+
+
+@pytest.fixture
+def admin_headers():
+    """Headers with admin API key for protected endpoints"""
+    return {"X-Admin-Key": TEST_ADMIN_API_KEY}
 
 
 @pytest.fixture
@@ -135,13 +144,13 @@ class TestCacheInfo:
 class TestCacheClear:
     """Test DELETE /api/cache/clear endpoint"""
 
-    def test_clear_cache_endpoint_exists(self, client):
+    def test_clear_cache_endpoint_exists(self, client, admin_headers):
         """Test that clear cache endpoint exists and is callable"""
         # The clear endpoint has a type annotation bug (Dict[str, str] but returns bool)
         # that causes a validation error. This test verifies it's reachable.
         from fastapi.exceptions import ResponseValidationError
         try:
-            response = client.delete("/api/cache/clear")
+            response = client.delete("/api/cache/clear", headers=admin_headers)
             # If we get here without exception, check the status
             assert response.status_code == 200
         except ResponseValidationError:
@@ -149,7 +158,7 @@ class TestCacheClear:
             # The endpoint does work, but has a response validation error
             pass
 
-    def test_cache_can_be_cleared(self, client):
+    def test_cache_can_be_cleared(self, client, admin_headers):
         """Test that cache clearing functionality works"""
         # Verify cache info exists before clear attempt
         info_response = client.get("/api/cache/info")
@@ -158,7 +167,7 @@ class TestCacheClear:
         # Clear cache - may raise validation error due to endpoint bug
         from fastapi.exceptions import ResponseValidationError
         try:
-            response = client.delete("/api/cache/clear")
+            response = client.delete("/api/cache/clear", headers=admin_headers)
             assert response.status_code == 200
         except ResponseValidationError:
             # Endpoint has type annotation issue but clearing still happens
@@ -170,13 +179,13 @@ class TestCacheClear:
         assert info_after.json()["stats"]["hits"] == 0
         assert info_after.json()["stats"]["misses"] == 0
 
-    def test_clear_cache_response_format(self, client):
+    def test_clear_cache_response_format(self, client, admin_headers):
         """Test that clear cache endpoint is properly defined"""
         # This endpoint has a type annotation mismatch that causes validation error
         # Verify it exists and is callable even if response validation fails
         from fastapi.exceptions import ResponseValidationError
         try:
-            response = client.delete("/api/cache/clear")
+            response = client.delete("/api/cache/clear", headers=admin_headers)
             assert response.status_code == 200
         except ResponseValidationError:
             # Type annotation bug in endpoint: returns bool in success field
@@ -187,9 +196,9 @@ class TestCacheClear:
 class TestCacheCleanup:
     """Test POST /api/cache/cleanup endpoint"""
 
-    def test_cleanup_cache_success(self, client):
+    def test_cleanup_cache_success(self, client, admin_headers):
         """Test successful cache cleanup"""
-        response = client.post("/api/cache/cleanup")
+        response = client.post("/api/cache/cleanup", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -198,9 +207,9 @@ class TestCacheCleanup:
         assert "message" in data
         assert "cleanup" in data["message"].lower()
 
-    def test_cleanup_returns_stats(self, client):
+    def test_cleanup_returns_stats(self, client, admin_headers):
         """Test that cleanup returns statistics"""
-        response = client.post("/api/cache/cleanup")
+        response = client.post("/api/cache/cleanup", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -208,22 +217,22 @@ class TestCacheCleanup:
         stats = data["stats"]
         assert isinstance(stats, dict)
 
-    def test_cleanup_removes_expired_entries(self, client):
+    def test_cleanup_removes_expired_entries(self, client, admin_headers):
         """Test that cleanup removes expired entries"""
         # First get initial cache info
         info_response_1 = client.get("/api/cache/info")
         initial_count = info_response_1.json()["entry_count"]
 
         # Run cleanup
-        cleanup_response = client.post("/api/cache/cleanup")
+        cleanup_response = client.post("/api/cache/cleanup", headers=admin_headers)
 
         assert cleanup_response.status_code == 200
         data = cleanup_response.json()
         assert "stats" in data
 
-    def test_cleanup_response_format(self, client):
+    def test_cleanup_response_format(self, client, admin_headers):
         """Test that cleanup returns proper response format"""
-        response = client.post("/api/cache/cleanup")
+        response = client.post("/api/cache/cleanup", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -314,13 +323,13 @@ class TestCacheStatisticsAfterOperations:
         data = response.json()
         assert data["entry_count"] >= 0
 
-    def test_cache_stats_after_clear_reset(self, client):
+    def test_cache_stats_after_clear_reset(self, client, admin_headers):
         """Test that cache stats are reset after clear"""
         from fastapi.exceptions import ResponseValidationError
 
         # Clear cache - endpoint may have type annotation issue
         try:
-            clear_response = client.delete("/api/cache/clear")
+            clear_response = client.delete("/api/cache/clear", headers=admin_headers)
             assert clear_response.status_code == 200
         except ResponseValidationError:
             # Type annotation bug but clearing still happens
@@ -349,13 +358,13 @@ class TestCacheEndpointValidation:
         data = response.json()
         assert isinstance(data, dict)
 
-    def test_clear_cache_returns_json(self, client):
+    def test_clear_cache_returns_json(self, client, admin_headers):
         """Test that clear cache endpoint handles requests"""
         from fastapi.exceptions import ResponseValidationError
 
         # Endpoint has type annotation mismatch but is callable
         try:
-            response = client.delete("/api/cache/clear")
+            response = client.delete("/api/cache/clear", headers=admin_headers)
             assert response.status_code == 200
             data = response.json()
             assert isinstance(data, dict)
@@ -364,9 +373,9 @@ class TestCacheEndpointValidation:
             # but type hint says Dict[str, str]
             pass
 
-    def test_cleanup_cache_returns_json(self, client):
+    def test_cleanup_cache_returns_json(self, client, admin_headers):
         """Test that cleanup cache returns valid JSON"""
-        response = client.post("/api/cache/cleanup")
+        response = client.post("/api/cache/cleanup", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -416,50 +425,50 @@ class TestCacheErrorHandling:
             detail = data.get("detail", str(data))
             assert "not initialized" in detail.lower()
 
-    def test_cleanup_when_cache_disabled(self, client, monkeypatch):
+    def test_cleanup_when_cache_disabled(self, client, admin_headers, monkeypatch):
         """Test POST /cleanup when cache is disabled (line 43)"""
         # Temporarily disable cache
         monkeypatch.setattr("app.routers.cache.settings.CACHE_ENABLED", False)
 
-        response = client.post("/api/cache/cleanup")
+        response = client.post("/api/cache/cleanup", headers=admin_headers)
 
         assert response.status_code == 400
         data = response.json()
         detail = data.get("detail", str(data))
         assert "disabled" in detail.lower()
 
-    def test_cleanup_when_cache_service_none(self, client, monkeypatch):
+    def test_cleanup_when_cache_service_none(self, client, admin_headers, monkeypatch):
         """Test POST /cleanup when cache service is not initialized (line 47)"""
         from unittest.mock import patch
 
         # Mock get_cache_service to return None
         with patch("app.routers.cache.get_cache_service", return_value=None):
-            response = client.post("/api/cache/cleanup")
+            response = client.post("/api/cache/cleanup", headers=admin_headers)
 
             assert response.status_code == 503
             data = response.json()
             detail = data.get("detail", str(data))
             assert "not initialized" in detail.lower()
 
-    def test_clear_when_cache_disabled(self, client, monkeypatch):
+    def test_clear_when_cache_disabled(self, client, admin_headers, monkeypatch):
         """Test DELETE /clear when cache is disabled (line 66)"""
         # Temporarily disable cache
         monkeypatch.setattr("app.routers.cache.settings.CACHE_ENABLED", False)
 
-        response = client.delete("/api/cache/clear")
+        response = client.delete("/api/cache/clear", headers=admin_headers)
 
         assert response.status_code == 400
         data = response.json()
         detail = data.get("detail", str(data))
         assert "disabled" in detail.lower()
 
-    def test_clear_when_cache_service_none(self, client, monkeypatch):
+    def test_clear_when_cache_service_none(self, client, admin_headers, monkeypatch):
         """Test DELETE /clear when cache service is not initialized (line 70)"""
         from unittest.mock import patch
 
         # Mock get_cache_service to return None
         with patch("app.routers.cache.get_cache_service", return_value=None):
-            response = client.delete("/api/cache/clear")
+            response = client.delete("/api/cache/clear", headers=admin_headers)
 
             assert response.status_code == 503
             data = response.json()

@@ -258,8 +258,8 @@ class TestVideoConvert:
                 }
             )
 
-        # Should return error - either 400 or 500
-        assert response.status_code in [400, 500]
+        # Should return 422 (Pydantic validation for Literal type whitelist)
+        assert response.status_code == 422
 
     def test_convert_invalid_output_format(self, client, sample_video):
         """Test conversion with invalid output format"""

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from fastapi.responses import FileResponse
-from typing import List, Optional
+from typing import List, Optional, Annotated, Literal
 import uuid
 
 from app.services.batch_converter import BatchConverter
@@ -8,29 +8,35 @@ from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_download_filename,  validate_file_size
 from app.config import settings
 from app.models.conversion import BatchConversionResponse, BatchZipResponse
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 
 router = APIRouter()
 batch_converter = BatchConverter()
 
 
-@router.post("/convert", response_model=BatchConversionResponse)
+# Whitelist types for batch parameters (reuse from other routers)
+VideoCodec = Literal["libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4", "h264"]
+VideoResolution = Literal["original", "480p", "720p", "1080p", "4k", "2k"]
+VideoBitrate = Literal["500k", "1M", "2M", "3M", "4M", "5M", "8M", "10M", "128k", "192k", "256k", "320k"]
+
+
+@router.post("/convert", response_model=BatchConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_batch(
     files: List[UploadFile] = File(...),
     output_format: str = Form(...),
     parallel: Optional[bool] = Form(True),
-    # Image options
-    quality: Optional[int] = Form(None),
-    width: Optional[int] = Form(None),
-    height: Optional[int] = Form(None),
-    # Video options
-    codec: Optional[str] = Form(None),
-    resolution: Optional[str] = Form(None),
-    bitrate: Optional[str] = Form(None),
-    # Audio options
-    sample_rate: Optional[int] = Form(None),
-    channels: Optional[int] = Form(None),
+    # Image options with validation
+    quality: Annotated[Optional[int], Form(ge=1, le=100, description="Image quality (1-100)")] = None,
+    width: Annotated[Optional[int], Form(ge=1, le=10000, description="Image width (1-10000)")] = None,
+    height: Annotated[Optional[int], Form(ge=1, le=10000, description="Image height (1-10000)")] = None,
+    # Video options with validation
+    codec: Annotated[Optional[VideoCodec], Form(description="Video codec")] = None,
+    resolution: Annotated[Optional[VideoResolution], Form(description="Video resolution")] = None,
+    bitrate: Annotated[Optional[VideoBitrate], Form(description="Video/audio bitrate")] = None,
+    # Audio options with validation
+    sample_rate: Annotated[Optional[int], Form(ge=8000, le=192000, description="Audio sample rate (8000-192000)")] = None,
+    channels: Annotated[Optional[int], Form(ge=1, le=2, description="Audio channels (1=mono, 2=stereo)")] = None,
     # Document options
     preserve_formatting: Optional[bool] = Form(None),
     toc: Optional[bool] = Form(None),

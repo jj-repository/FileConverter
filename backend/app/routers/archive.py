@@ -1,33 +1,33 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uuid
-from typing import Optional
+from typing import Optional, Annotated
 
 from app.services.archive_converter import ArchiveConverter
 from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 
 router = APIRouter()
 archive_converter = ArchiveConverter()
 
 
-@router.post("/convert", response_model=ConversionResponse)
+@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_archive(
     file: UploadFile = File(...),
     output_format: str = Form(...),
-    compression_level: Optional[int] = Form(6),
+    compression_level: Annotated[Optional[int], Form(ge=0, le=9, description="Compression level (0=none, 9=maximum)")] = 6,
 ):
     """
     Convert an archive to a different format
 
     - **file**: Archive file to convert (ZIP, TAR, TAR.GZ, 7Z, etc.)
     - **output_format**: Target format (zip, tar, tar.gz, 7z, etc.)
-    - **compression_level**: Compression level 0-9 (default: 6)
+    - **compression_level**: Compression level 0-9 (0=none, 9=maximum, default: 6)
     """
     session_id = str(uuid.uuid4())
     session_validator.register_session(session_id)

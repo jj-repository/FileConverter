@@ -1,27 +1,31 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import uuid
-from typing import Optional
+from typing import Optional, Annotated, Literal
 
 from app.services.subtitle_converter import SubtitleConverter
 from app.utils.file_handler import save_upload_file, cleanup_file
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
-from app.utils.websocket_security import session_validator
+from app.utils.websocket_security import session_validator, check_rate_limit
 
 
 router = APIRouter()
 subtitle_converter = SubtitleConverter()
 
 
-@router.post("/convert", response_model=ConversionResponse)
+# Whitelist types for subtitle parameters
+SubtitleEncoding = Literal["utf-8", "utf-16", "ascii", "latin-1", "iso-8859-1", "cp1252"]
+
+
+@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def convert_subtitle(
     file: UploadFile = File(...),
     output_format: str = Form(...),
-    encoding: Optional[str] = Form("utf-8"),
-    fps: Optional[float] = Form(23.976),
+    encoding: Annotated[Optional[SubtitleEncoding], Form(description="Character encoding")] = "utf-8",
+    fps: Annotated[Optional[float], Form(ge=1.0, le=120.0, description="Frame rate for SUB format (1-120)")] = 23.976,
     keep_html_tags: Optional[bool] = Form(False),
 ):
     """
@@ -93,10 +97,10 @@ async def convert_subtitle(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
 
 
-@router.post("/adjust-timing", response_model=ConversionResponse)
+@router.post("/adjust-timing", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
 async def adjust_subtitle_timing(
     file: UploadFile = File(...),
-    offset_ms: int = Form(...),
+    offset_ms: Annotated[int, Form(ge=-3600000, le=3600000, description="Time offset in ms (-1 hour to +1 hour)")] = ...,
 ):
     """
     Adjust subtitle timing by offset

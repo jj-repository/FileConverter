@@ -687,6 +687,20 @@ def cleanup_test_files():
 
 
 # ============================================================================
+# RATE LIMITER FIXTURES
+# ============================================================================
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Reset rate limiter state before each test to prevent 429 errors"""
+    from app.utils.websocket_security import conversion_rate_limiter
+    conversion_rate_limiter.reset()
+    yield
+    # Reset again after test for clean state
+    conversion_rate_limiter.reset()
+
+
+# ============================================================================
 # BINARY PATH MOCKS
 # ============================================================================
 

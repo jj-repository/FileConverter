@@ -92,10 +92,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     """Handle HTTP exceptions"""
+    # Sanitize error details in production to prevent information leakage
+    error_detail = exc.detail if settings.DEBUG else sanitize_error_message(str(exc.detail)) if exc.detail else None
+
     return JSONResponse(
         status_code=exc.status_code,
         content={
-            "error": exc.detail,
+            "error": error_detail,
             "type": "HTTPException",
         },
     )

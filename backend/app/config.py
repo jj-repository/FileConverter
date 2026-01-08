@@ -1,7 +1,16 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 from pathlib import Path
 from typing import Set
+import logging
+import sys
 from app.utils.binary_paths import get_ffmpeg_path, get_ffprobe_path, get_pandoc_path
+
+# Configure logger for config warnings
+_config_logger = logging.getLogger(__name__)
+
+# Minimum length for admin API key (16 characters provides reasonable entropy)
+MIN_ADMIN_API_KEY_LENGTH = 16
 
 
 class Settings(BaseSettings):
@@ -82,7 +91,24 @@ class Settings(BaseSettings):
 
     # Admin API key for cache management endpoints (set via ADMIN_API_KEY environment variable)
     # If not set, admin endpoints will be disabled in production (non-DEBUG mode)
+    # Must be at least MIN_ADMIN_API_KEY_LENGTH characters when set
     ADMIN_API_KEY: str = ""
+
+    @field_validator('ADMIN_API_KEY')
+    @classmethod
+    def validate_admin_api_key(cls, v: str) -> str:
+        """Validate ADMIN_API_KEY has sufficient length when set"""
+        if v and len(v) < MIN_ADMIN_API_KEY_LENGTH:
+            warning_msg = (
+                f"SECURITY WARNING: ADMIN_API_KEY is set but too short "
+                f"(minimum {MIN_ADMIN_API_KEY_LENGTH} characters required, got {len(v)}). "
+                f"Admin endpoints will be disabled. Use a longer, randomly generated key."
+            )
+            _config_logger.warning(warning_msg)
+            print(f"\n{'='*80}\n{warning_msg}\n{'='*80}\n", file=sys.stderr)
+            # Return empty string to disable admin endpoints with weak key
+            return ""
+        return v
 
     @property
     def cors_origins(self) -> list:

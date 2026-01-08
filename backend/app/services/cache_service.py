@@ -9,6 +9,7 @@ import hashlib
 import json
 import logging
 import shutil
+import threading
 import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
@@ -60,7 +61,8 @@ class CacheService:
         self.max_size_mb = max_size_mb
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-        # Statistics
+        # Statistics with thread-safe access
+        self._stats_lock = threading.Lock()
         self.stats = {
             "hits": 0,
             "misses": 0,
@@ -187,6 +189,11 @@ class CacheService:
             logger.error(f"Error writing cache metadata for {metadata.cache_key}: {e}")
             raise
 
+    def _increment_stat(self, stat_name: str) -> None:
+        """Thread-safe increment of a statistics counter"""
+        with self._stats_lock:
+            self.stats[stat_name] += 1
+
     def get_cached_result(self, cache_key: str) -> Optional[CacheMetadata]:
         """
         Get cached conversion result if it exists and is not expired
@@ -197,12 +204,12 @@ class CacheService:
         Returns:
             CacheMetadata if cache hit and not expired, None otherwise
         """
-        self.stats["total_requests"] += 1
+        self._increment_stat("total_requests")
 
         metadata = self.read_metadata(cache_key)
 
         if metadata is None:
-            self.stats["misses"] += 1
+            self._increment_stat("misses")
             logger.debug(f"Cache miss: {cache_key}")
             return None
 
@@ -210,7 +217,7 @@ class CacheService:
         if metadata.is_expired():
             logger.debug(f"Cache expired: {cache_key}")
             self._remove_cache_entry(cache_key)
-            self.stats["misses"] += 1
+            self._increment_stat("misses")
             return None
 
         # Verify output file exists
@@ -218,10 +225,10 @@ class CacheService:
         if not output_file_path.exists():
             logger.warning(f"Cache entry exists but output file missing: {cache_key}")
             self._remove_cache_entry(cache_key)
-            self.stats["misses"] += 1
+            self._increment_stat("misses")
             return None
 
-        self.stats["hits"] += 1
+        self._increment_stat("hits")
         logger.info(f"Cache hit: {cache_key} (hit rate: {self.get_hit_rate():.2%})")
         return metadata
 
@@ -460,15 +467,26 @@ class CacheService:
         total_size = self.get_total_cache_size()
         entry_count = sum(1 for p in self.cache_dir.iterdir() if p.is_dir())
 
+        with self._stats_lock:
+            stats_copy = self.stats.copy()
+            hit_rate = self._calculate_hit_rate_unlocked()
+
         return {
             "cache_dir": str(self.cache_dir),
             "total_size_mb": total_size / (1024 * 1024),
             "max_size_mb": self.max_size_mb,
             "entry_count": entry_count,
             "expiration_hours": self.expiration_hours,
-            "stats": self.stats.copy(),
-            "hit_rate": self.get_hit_rate()
+            "stats": stats_copy,
+            "hit_rate": hit_rate
         }
+
+    def _calculate_hit_rate_unlocked(self) -> float:
+        """Calculate hit rate without acquiring lock (caller must hold lock)"""
+        total = self.stats["total_requests"]
+        if total == 0:
+            return 0.0
+        return self.stats["hits"] / total
 
     def get_hit_rate(self) -> float:
         """
@@ -477,10 +495,8 @@ class CacheService:
         Returns:
             Hit rate as decimal (0.0 to 1.0)
         """
-        total = self.stats["total_requests"]
-        if total == 0:
-            return 0.0
-        return self.stats["hits"] / total
+        with self._stats_lock:
+            return self._calculate_hit_rate_unlocked()
 
     def clear_all(self) -> None:
         """
@@ -494,12 +510,13 @@ class CacheService:
                 self._remove_cache_entry(cache_path.name)
                 removed += 1
 
-        # Reset statistics
-        self.stats = {
-            "hits": 0,
-            "misses": 0,
-            "total_requests": 0
-        }
+        # Reset statistics with thread safety
+        with self._stats_lock:
+            self.stats = {
+                "hits": 0,
+                "misses": 0,
+                "total_requests": 0
+            }
 
         logger.info(f"Cleared {removed} cache entries and reset statistics")
 

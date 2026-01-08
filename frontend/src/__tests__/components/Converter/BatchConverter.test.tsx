@@ -32,7 +32,7 @@ window.location = { href: '' } as any
 describe('BatchConverter', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useWebSocket).mockReturnValue({ progress: null as any, isConnected: false })
+    vi.mocked(useWebSocket).mockReturnValue({ progress: null as any, isConnected: false, reconnectAttempt: 0, maxReconnectAttempts: 5, reconnect: vi.fn() })
     window.location.href = ''
   })
 
@@ -381,7 +381,7 @@ describe('BatchConverter', () => {
         message: 'Converting files...',
       }
 
-      vi.mocked(useWebSocket).mockReturnValue({ progress: mockProgress, isConnected: true })
+      vi.mocked(useWebSocket).mockReturnValue({ progress: mockProgress, isConnected: true, reconnectAttempt: 0, maxReconnectAttempts: 5, reconnect: vi.fn() })
 
       render(<BatchConverter />)
 
@@ -494,7 +494,7 @@ describe('BatchConverter', () => {
         message: 'Converting files...',
       }
 
-      vi.mocked(useWebSocket).mockReturnValue({ progress: mockProgress, isConnected: true })
+      vi.mocked(useWebSocket).mockReturnValue({ progress: mockProgress, isConnected: true, reconnectAttempt: 0, maxReconnectAttempts: 5, reconnect: vi.fn() })
 
       render(<BatchConverter />)
 
@@ -510,7 +510,7 @@ describe('BatchConverter', () => {
         message: 'Processing files...',
       }
 
-      vi.mocked(useWebSocket).mockReturnValue({ progress: mockProgress, isConnected: true })
+      vi.mocked(useWebSocket).mockReturnValue({ progress: mockProgress, isConnected: true, reconnectAttempt: 0, maxReconnectAttempts: 5, reconnect: vi.fn() })
 
       render(<BatchConverter />)
 

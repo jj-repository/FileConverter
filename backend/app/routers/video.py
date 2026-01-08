@@ -6,7 +6,7 @@ from typing import Optional, Annotated, Literal
 
 from app.services.video_converter import VideoConverter
 from app.utils.file_handler import save_upload_file, cleanup_file, make_content_disposition
-from app.utils.validation import validate_download_filename,  validate_file_size, validate_file_extension
+from app.utils.validation import validate_download_filename, validate_file_size, validate_file_extension, validate_mime_type, VIDEO_MIME_TYPES
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
 from app.utils.websocket_security import session_validator, check_rate_limit
@@ -59,6 +59,9 @@ async def convert_video(
 
         # Save uploaded file
         input_path = await save_upload_file(file, settings.TEMP_DIR)
+
+        # Validate MIME type to prevent file type spoofing
+        validate_mime_type(input_path, VIDEO_MIME_TYPES)
 
         # Convert video
         options = {

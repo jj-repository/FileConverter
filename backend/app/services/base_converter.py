@@ -8,11 +8,24 @@ import time
 
 logger = logging.getLogger(__name__)
 
-# Global lock for cache file operations to prevent race conditions
+# Global lock management for cache file operations to prevent race conditions
+# when multiple requests try to convert the same file simultaneously.
+#
+# Design rationale:
+# - Each unique cache key gets its own lock to allow parallel conversions of different files
+# - Locks are stored with timestamps to enable cleanup of unused locks
+# - A meta-lock (_cache_locks_lock) protects the locks dictionary itself
+#
+# Configuration:
+# - _CACHE_LOCK_MAX_AGE: Time in seconds before an unused lock is eligible for cleanup.
+#   Set to 5 minutes (300s) to balance memory usage vs lock recreation overhead.
+# - _CACHE_LOCK_MAX_SIZE: Maximum number of locks to maintain. Prevents unbounded memory
+#   growth in high-traffic scenarios. 1000 locks = ~1000 concurrent unique conversions.
+#   If exceeded, oldest locks are removed during cleanup.
 _cache_locks: Dict[str, tuple[asyncio.Lock, float]] = {}  # cache_key -> (lock, last_used_timestamp)
 _cache_locks_lock = asyncio.Lock()
-_CACHE_LOCK_MAX_AGE = 300  # Remove unused locks after 5 minutes
-_CACHE_LOCK_MAX_SIZE = 1000  # Maximum number of locks to keep
+_CACHE_LOCK_MAX_AGE = 300  # seconds (5 minutes)
+_CACHE_LOCK_MAX_SIZE = 1000  # maximum concurrent unique file locks
 
 
 async def _cleanup_stale_locks():

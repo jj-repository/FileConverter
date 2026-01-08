@@ -182,6 +182,7 @@ class VideoConverter(BaseConverter):
             )
 
             last_progress = 10
+            stderr_output = b""
 
             try:
                 # Read output line by line with timeout
@@ -202,16 +203,28 @@ class VideoConverter(BaseConverter):
                                 f"Converting video: {int(progress)}%"
                             )
 
-                    # Wait for process to complete
-                    await process.wait()
+                    # Wait for process to complete and consume remaining stderr
+                    _, stderr_output = await process.communicate()
             except asyncio.TimeoutError:
                 process.kill()
-                await process.wait()
+                # Ensure streams are consumed to prevent resource leaks
+                try:
+                    await process.communicate()
+                except Exception:
+                    pass
                 raise Exception(f"Conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds")
+            except Exception:
+                # Ensure process is terminated and streams consumed on any error
+                if process.returncode is None:
+                    process.kill()
+                    try:
+                        await process.communicate()
+                    except Exception:
+                        pass
+                raise
 
             if process.returncode != 0:
-                stderr = await process.stderr.read()
-                error_msg = stderr.decode('utf-8', errors='ignore')
+                error_msg = stderr_output.decode('utf-8', errors='ignore') if stderr_output else "Unknown error"
                 raise Exception(f"FFmpeg conversion failed: {error_msg[:200]}")
 
             await self.send_progress(session_id, 98, "converting", "Finalizing video")

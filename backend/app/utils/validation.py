@@ -24,6 +24,72 @@ except ImportError:
 from app.config import settings
 
 
+# MIME type sets for validation - used to verify uploaded files match their claimed type
+# These are partial matches (e.g., "image" matches "image/png", "image/jpeg", etc.)
+IMAGE_MIME_TYPES: Set[str] = {"image"}
+VIDEO_MIME_TYPES: Set[str] = {"video"}
+AUDIO_MIME_TYPES: Set[str] = {"audio"}
+DOCUMENT_MIME_TYPES: Set[str] = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml",
+    "application/rtf",
+    "application/vnd.oasis.opendocument.text",
+    "text/plain",
+    "text/html",
+    "text/markdown",
+}
+ARCHIVE_MIME_TYPES: Set[str] = {
+    "application/zip",
+    "application/x-tar",
+    "application/gzip",
+    "application/x-gzip",
+    "application/x-bzip2",
+    "application/x-7z-compressed",
+    "application/x-compressed",
+}
+SPREADSHEET_MIME_TYPES: Set[str] = {
+    "application/vnd.openxmlformats-officedocument.spreadsheetml",
+    "application/vnd.ms-excel",
+    "application/vnd.oasis.opendocument.spreadsheet",
+    "text/csv",
+    "text/tab-separated-values",
+}
+DATA_MIME_TYPES: Set[str] = {
+    "application/json",
+    "application/xml",
+    "text/xml",
+    "text/csv",
+    "text/plain",
+    "application/x-yaml",
+    "text/yaml",
+    "application/toml",
+}
+SUBTITLE_MIME_TYPES: Set[str] = {
+    "text/plain",
+    "text/vtt",
+    "text/x-ssa",
+    "application/x-subrip",
+}
+EBOOK_MIME_TYPES: Set[str] = {
+    "application/epub+zip",
+    "text/plain",
+    "text/html",
+    "application/pdf",
+}
+FONT_MIME_TYPES: Set[str] = {
+    "font/ttf",
+    "font/otf",
+    "font/woff",
+    "font/woff2",
+    "application/font-sfnt",
+    "application/x-font-ttf",
+    "application/x-font-otf",
+    "application/font-woff",
+    "application/font-woff2",
+}
+
+
 def validate_file_size(file: UploadFile, file_type: str) -> None:
     """Validate file size based on file type"""
     # Get file size

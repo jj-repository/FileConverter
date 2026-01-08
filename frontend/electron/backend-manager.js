@@ -138,7 +138,7 @@ class BackendManager {
       }
 
       const args = [
-        '--host', '0.0.0.0',
+        '--host', '127.0.0.1',  // Bind to localhost only for security
         '--port', this.port.toString()
       ];
 
@@ -165,7 +165,7 @@ class BackendManager {
       const args = [
         '-m', 'uvicorn',
         'app.main:app',
-        '--host', '0.0.0.0',
+        '--host', '127.0.0.1',  // Bind to localhost only for security
         '--port', this.port.toString(),
         '--log-level', 'info'
       ];

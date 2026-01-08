@@ -19,10 +19,10 @@ class MockWebSocket {
     ;(global as any).lastWebSocket = this
   }
 
-  close() {
+  close(code: number = 1000, reason: string = '') {
     this.readyState = 3 // CLOSED
     if (this.onclose) {
-      this.onclose(new CloseEvent('close'))
+      this.onclose(new CloseEvent('close', { code, reason }))
     }
   }
 
@@ -495,7 +495,7 @@ describe('useWebSocket', () => {
       })
 
       await waitFor(() => {
-        expect(console.log).toHaveBeenCalledWith('WebSocket disconnected')
+        expect(console.log).toHaveBeenCalledWith('WebSocket disconnected (code: 1000, reason: none)')
       })
     })
   })

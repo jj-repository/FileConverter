@@ -179,7 +179,11 @@ class AdminAuthRateLimiter:
 
 
 class WebSocketRateLimiter:
-    """Rate limiter for WebSocket connections"""
+    """Rate limiter for WebSocket connections.
+
+    THREAD SAFETY: Uses a lock to protect access to shared state
+    in high-concurrency scenarios.
+    """
 
     def __init__(self, max_connections_per_ip: int = 10, time_window: int = 60):
         """
@@ -192,6 +196,7 @@ class WebSocketRateLimiter:
         self.max_connections_per_ip = max_connections_per_ip
         self.time_window = time_window
         self.connections: Dict[str, List[float]] = defaultdict(list)
+        self._lock = threading.Lock()  # Thread safety for concurrent access
 
     def is_allowed(self, ip_address: str) -> Tuple[bool, str]:
         """
@@ -205,38 +210,41 @@ class WebSocketRateLimiter:
         """
         current_time = time.time()
 
-        # Clean up old connection timestamps
-        self.connections[ip_address] = [
-            timestamp
-            for timestamp in self.connections[ip_address]
-            if current_time - timestamp < self.time_window
-        ]
-
-        # Check if limit exceeded
-        if len(self.connections[ip_address]) >= self.max_connections_per_ip:
-            logger.warning(f"Rate limit exceeded for IP: {ip_address}")
-            return False, f"Too many connections. Maximum {self.max_connections_per_ip} connections per {self.time_window} seconds."
-
-        # Record new connection
-        self.connections[ip_address].append(current_time)
-        return True, ""
-
-    def remove_connection(self, ip_address: str):
-        """Remove one connection from the count for an IP"""
-        current_time = time.time()
-        if ip_address in self.connections and self.connections[ip_address]:
-            # Filter for valid timestamps first
-            filtered = [
+        with self._lock:
+            # Clean up old connection timestamps
+            self.connections[ip_address] = [
                 timestamp
                 for timestamp in self.connections[ip_address]
                 if current_time - timestamp < self.time_window
             ]
-            # Remove oldest connection if multiple remain, otherwise clean up
-            if len(filtered) > 1:
-                self.connections[ip_address] = filtered[1:]
-            else:
-                # Clean up empty or single-entry lists to prevent memory leaks
-                del self.connections[ip_address]
+
+            # Check if limit exceeded
+            if len(self.connections[ip_address]) >= self.max_connections_per_ip:
+                logger.warning(f"Rate limit exceeded for IP: {ip_address}")
+                return False, f"Too many connections. Maximum {self.max_connections_per_ip} connections per {self.time_window} seconds."
+
+            # Record new connection
+            self.connections[ip_address].append(current_time)
+            return True, ""
+
+    def remove_connection(self, ip_address: str):
+        """Remove one connection from the count for an IP"""
+        current_time = time.time()
+
+        with self._lock:
+            if ip_address in self.connections and self.connections[ip_address]:
+                # Filter for valid timestamps first
+                filtered = [
+                    timestamp
+                    for timestamp in self.connections[ip_address]
+                    if current_time - timestamp < self.time_window
+                ]
+                # Remove oldest connection if multiple remain, otherwise clean up
+                if len(filtered) > 1:
+                    self.connections[ip_address] = filtered[1:]
+                else:
+                    # Clean up empty or single-entry lists to prevent memory leaks
+                    del self.connections[ip_address]
 
 
 class SessionValidator:
@@ -293,6 +301,9 @@ class ConversionRateLimiter:
 
     Protects against DOS attacks by limiting the number of conversion requests
     per IP address within a time window.
+
+    THREAD SAFETY: Uses a lock to protect access to shared state
+    in high-concurrency scenarios.
     """
 
     def __init__(self, max_requests_per_ip: int = 60, time_window: int = 60):
@@ -307,10 +318,12 @@ class ConversionRateLimiter:
         self.time_window = time_window
         self.requests: Dict[str, List[float]] = defaultdict(list)
         self._enabled = True  # Can be disabled for testing
+        self._lock = threading.Lock()  # Thread safety for concurrent access
 
     def reset(self) -> None:
         """Reset all rate limiting state. Useful for testing."""
-        self.requests.clear()
+        with self._lock:
+            self.requests.clear()
 
     def disable(self) -> None:
         """Disable rate limiting. Useful for testing."""
@@ -336,31 +349,34 @@ class ConversionRateLimiter:
 
         current_time = time.time()
 
-        # Clean up old request timestamps
-        self.requests[ip_address] = [
-            timestamp
-            for timestamp in self.requests[ip_address]
-            if current_time - timestamp < self.time_window
-        ]
+        with self._lock:
+            # Clean up old request timestamps
+            self.requests[ip_address] = [
+                timestamp
+                for timestamp in self.requests[ip_address]
+                if current_time - timestamp < self.time_window
+            ]
 
-        # Check if limit exceeded
-        if len(self.requests[ip_address]) >= self.max_requests_per_ip:
-            logger.warning(f"Conversion rate limit exceeded for IP: {ip_address}")
-            return False, f"Too many conversion requests. Maximum {self.max_requests_per_ip} requests per {self.time_window} seconds. Please try again later."
+            # Check if limit exceeded
+            if len(self.requests[ip_address]) >= self.max_requests_per_ip:
+                logger.warning(f"Conversion rate limit exceeded for IP: {ip_address}")
+                return False, f"Too many conversion requests. Maximum {self.max_requests_per_ip} requests per {self.time_window} seconds. Please try again later."
 
-        # Record new request
-        self.requests[ip_address].append(current_time)
-        return True, ""
+            # Record new request
+            self.requests[ip_address].append(current_time)
+            return True, ""
 
     def get_remaining_requests(self, ip_address: str) -> int:
         """Get remaining requests for an IP within current time window"""
         current_time = time.time()
-        valid_requests = [
-            timestamp
-            for timestamp in self.requests.get(ip_address, [])
-            if current_time - timestamp < self.time_window
-        ]
-        return max(0, self.max_requests_per_ip - len(valid_requests))
+
+        with self._lock:
+            valid_requests = [
+                timestamp
+                for timestamp in self.requests.get(ip_address, [])
+                if current_time - timestamp < self.time_window
+            ]
+            return max(0, self.max_requests_per_ip - len(valid_requests))
 
 
 # Global instances

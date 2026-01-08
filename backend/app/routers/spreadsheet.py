@@ -6,7 +6,7 @@ from typing import Optional, Annotated, Literal
 
 from app.services.spreadsheet_converter import SpreadsheetConverter
 from app.utils.file_handler import save_upload_file, cleanup_file, make_content_disposition
-from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
+from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename, validate_mime_type, SPREADSHEET_MIME_TYPES
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
 from app.utils.websocket_security import session_validator, check_rate_limit
@@ -60,6 +60,9 @@ async def convert_spreadsheet(
 
         # Save uploaded file
         input_path = await save_upload_file(file, settings.TEMP_DIR)
+
+        # Validate MIME type to prevent file type spoofing
+        validate_mime_type(input_path, SPREADSHEET_MIME_TYPES)
 
         # Convert spreadsheet
         options = {

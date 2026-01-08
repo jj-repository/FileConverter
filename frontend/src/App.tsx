@@ -2,6 +2,7 @@ import { useState, lazy, Suspense } from 'react';
 import { TabNavigation } from './components/Layout/TabNavigation';
 import { LanguageSelector } from './components/Common/LanguageSelector';
 import { ToastProvider } from './components/Common/Toast';
+import ErrorBoundary from './components/ErrorBoundary';
 import { FileType } from './types/conversion';
 
 // Lazy load all converter components
@@ -21,44 +22,67 @@ function App() {
   const [activeTab, setActiveTab] = useState<FileType>('image');
 
   const renderConverter = () => {
-    return (
-      <Suspense fallback={
-        <div className="flex items-center justify-center py-16">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-            <p className="text-gray-600 text-lg">Loading converter...</p>
+    // Error fallback specifically for lazy-loaded component failures
+    const lazyLoadErrorFallback = (
+      <div className="flex items-center justify-center py-16">
+        <div className="text-center max-w-md">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
           </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load converter</h3>
+          <p className="text-gray-600 mb-4">There was a problem loading this component. Please try refreshing the page.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+          >
+            Refresh Page
+          </button>
         </div>
-      }>
-        {(() => {
-          switch (activeTab) {
-            case 'image':
-              return <ImageConverter />;
-            case 'video':
-              return <VideoConverter />;
-            case 'audio':
-              return <AudioConverter />;
-            case 'document':
-              return <DocumentConverter />;
-            case 'data':
-              return <DataConverter />;
-            case 'archive':
-              return <ArchiveConverter />;
-            case 'spreadsheet':
-              return <SpreadsheetConverter />;
-            case 'subtitle':
-              return <SubtitleConverter />;
-            case 'ebook':
-              return <EbookConverter />;
-            case 'font':
-              return <FontConverter />;
-            case 'batch':
-              return <BatchConverter />;
-            default:
-              return <ImageConverter />;
-          }
-        })()}
-      </Suspense>
+      </div>
+    );
+
+    return (
+      <ErrorBoundary fallback={lazyLoadErrorFallback}>
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+              <p className="text-gray-600 text-lg">Loading converter...</p>
+            </div>
+          </div>
+        }>
+          {(() => {
+            switch (activeTab) {
+              case 'image':
+                return <ImageConverter />;
+              case 'video':
+                return <VideoConverter />;
+              case 'audio':
+                return <AudioConverter />;
+              case 'document':
+                return <DocumentConverter />;
+              case 'data':
+                return <DataConverter />;
+              case 'archive':
+                return <ArchiveConverter />;
+              case 'spreadsheet':
+                return <SpreadsheetConverter />;
+              case 'subtitle':
+                return <SubtitleConverter />;
+              case 'ebook':
+                return <EbookConverter />;
+              case 'font':
+                return <FontConverter />;
+              case 'batch':
+                return <BatchConverter />;
+              default:
+                return <ImageConverter />;
+            }
+          })()}
+        </Suspense>
+      </ErrorBoundary>
     );
   };
 

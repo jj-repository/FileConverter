@@ -71,7 +71,7 @@ export const useConverter = (options: UseConverterOptions) => {
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
-  const { progress } = useWebSocket(sessionId);
+  const { progress, isConnected: wsConnected, reconnectAttempt, reconnect: wsReconnect } = useWebSocket(sessionId);
 
   // Update status from WebSocket progress
   useEffect(() => {
@@ -326,6 +326,11 @@ export const useConverter = (options: UseConverterOptions) => {
     progress,
     uploadProgress,
     isUploading,
+
+    // WebSocket connection state
+    wsConnected,
+    reconnectAttempt,
+    wsReconnect,
 
     // Setters
     setOutputFormat,

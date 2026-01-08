@@ -12,7 +12,7 @@ import logging
 from app.config import settings
 from app.services.font_converter import FontConverter
 from app.utils.file_handler import save_upload_file, make_content_disposition
-from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
+from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename, validate_mime_type, FONT_MIME_TYPES
 from app.models.conversion import ConversionResponse
 from app.utils.websocket_security import session_validator, check_rate_limit
 from app.middleware.error_handler import sanitize_error_message
@@ -61,6 +61,9 @@ async def convert_font(
 
         # Save uploaded file using standard handler
         input_path = await save_upload_file(file, settings.TEMP_DIR)
+
+        # Validate MIME type to prevent file type spoofing
+        validate_mime_type(input_path, FONT_MIME_TYPES)
 
         # Convert
         converter = FontConverter()

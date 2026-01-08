@@ -103,8 +103,8 @@ async def convert_video(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
-# MIME type mapping for video formats
-VIDEO_MIME_TYPES = {
+# MIME type mapping for video formats (used for download responses)
+VIDEO_MIME_MAP = {
     "mp4": "video/mp4",
     "avi": "video/x-msvideo",
     "mov": "video/quicktime",
@@ -128,7 +128,7 @@ async def download_video(filename: str):
 
     # Determine MIME type from extension
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    media_type = VIDEO_MIME_TYPES.get(ext, "application/octet-stream")
+    media_type = VIDEO_MIME_MAP.get(ext, "application/octet-stream")
 
     return FileResponse(
         path=str(file_path),

@@ -102,8 +102,8 @@ async def convert_data(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
-# MIME type mapping for data formats
-DATA_MIME_TYPES = {
+# MIME type mapping for data formats (used for download responses)
+DATA_MIME_MAP = {
     "csv": "text/csv",
     "json": "application/json",
     "xml": "application/xml",
@@ -123,7 +123,7 @@ async def download_data(filename: str):
 
     # Determine MIME type from extension
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    media_type = DATA_MIME_TYPES.get(ext, "application/octet-stream")
+    media_type = DATA_MIME_MAP.get(ext, "application/octet-stream")
 
     return FileResponse(
         path=str(file_path),

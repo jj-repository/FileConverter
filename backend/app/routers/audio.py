@@ -105,8 +105,8 @@ async def convert_audio(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
-# MIME type mapping for audio formats
-AUDIO_MIME_TYPES = {
+# MIME type mapping for audio formats (used for download responses)
+AUDIO_MIME_MAP = {
     "mp3": "audio/mpeg",
     "wav": "audio/wav",
     "flac": "audio/flac",
@@ -127,7 +127,7 @@ async def download_audio(filename: str):
 
     # Determine MIME type from extension
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    media_type = AUDIO_MIME_TYPES.get(ext, "application/octet-stream")
+    media_type = AUDIO_MIME_MAP.get(ext, "application/octet-stream")
 
     return FileResponse(
         path=str(file_path),

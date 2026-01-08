@@ -158,8 +158,8 @@ async def adjust_subtitle_timing(
         raise HTTPException(status_code=500, detail=f"Timing adjustment failed: {sanitize_error_message(str(e))}")
 
 
-# MIME type mapping for subtitle formats
-SUBTITLE_MIME_TYPES = {
+# MIME type mapping for subtitle formats (used for download responses)
+SUBTITLE_MIME_MAP = {
     "srt": "application/x-subrip",
     "vtt": "text/vtt",
     "ass": "text/x-ass",
@@ -176,7 +176,7 @@ async def download_subtitle(filename: str):
 
     # Determine MIME type from extension
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    media_type = SUBTITLE_MIME_TYPES.get(ext, "text/plain")
+    media_type = SUBTITLE_MIME_MAP.get(ext, "text/plain")
 
     return FileResponse(
         path=str(file_path),

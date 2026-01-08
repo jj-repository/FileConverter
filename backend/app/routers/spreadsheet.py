@@ -105,8 +105,8 @@ async def convert_spreadsheet(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
-# MIME type mapping for spreadsheet formats
-SPREADSHEET_MIME_TYPES = {
+# MIME type mapping for spreadsheet formats (used for download responses)
+SPREADSHEET_MIME_MAP = {
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "xls": "application/vnd.ms-excel",
     "ods": "application/vnd.oasis.opendocument.spreadsheet",
@@ -123,7 +123,7 @@ async def download_spreadsheet(filename: str):
 
     # Determine MIME type from extension
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    media_type = SPREADSHEET_MIME_TYPES.get(ext, "application/octet-stream")
+    media_type = SPREADSHEET_MIME_MAP.get(ext, "application/octet-stream")
 
     return FileResponse(
         path=str(file_path),

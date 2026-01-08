@@ -156,8 +156,8 @@ async def optimize_font(
         raise HTTPException(status_code=500, detail=f"Optimization failed: {sanitize_error_message(str(e))}")
 
 
-# MIME type mapping for font formats
-FONT_MIME_TYPES = {
+# MIME type mapping for font formats (used for download responses)
+FONT_MIME_MAP = {
     "ttf": "font/ttf",
     "otf": "font/otf",
     "woff": "font/woff",
@@ -183,7 +183,7 @@ async def download_font(filename: str):
 
     # Determine MIME type from extension
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    media_type = FONT_MIME_TYPES.get(ext, "application/octet-stream")
+    media_type = FONT_MIME_MAP.get(ext, "application/octet-stream")
 
     return FileResponse(
         path=file_path,

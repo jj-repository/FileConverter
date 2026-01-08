@@ -94,8 +94,8 @@ async def convert_ebook(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
-# MIME type mapping for ebook formats
-EBOOK_MIME_TYPES = {
+# MIME type mapping for ebook formats (used for download responses)
+EBOOK_MIME_MAP = {
     "epub": "application/epub+zip",
     "txt": "text/plain",
     "html": "text/html",
@@ -121,7 +121,7 @@ async def download_ebook(filename: str):
 
     # Determine MIME type from extension
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    media_type = EBOOK_MIME_TYPES.get(ext, "application/octet-stream")
+    media_type = EBOOK_MIME_MAP.get(ext, "application/octet-stream")
 
     return FileResponse(
         path=file_path,

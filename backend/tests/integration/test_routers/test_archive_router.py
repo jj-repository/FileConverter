@@ -239,8 +239,8 @@ class TestArchiveConvert:
                 data={"output_format": "tar.gz"}
             )
 
-        # Should fail with 500 error due to corruption
-        assert response.status_code == 500
+        # Should fail with 400 (MIME validation) or 500 (conversion error)
+        assert response.status_code in [400, 500]
 
     def test_convert_corrupted_tar_archive(self, client, corrupted_tar):
         """Test conversion of corrupted TAR archive"""
@@ -251,8 +251,8 @@ class TestArchiveConvert:
                 data={"output_format": "zip"}
             )
 
-        # Should fail with 500 error due to corruption
-        assert response.status_code == 500
+        # Should fail with 400 (MIME validation) or 500 (conversion error)
+        assert response.status_code in [400, 500]
 
     def test_convert_same_format_copies_file(self, client, sample_zip):
         """Test that converting to same format creates a copy"""

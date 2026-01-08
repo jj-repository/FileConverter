@@ -94,8 +94,8 @@ async def convert_document(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
-# MIME type mapping for document formats
-DOCUMENT_MIME_TYPES = {
+# MIME type mapping for document formats (used for download responses)
+DOCUMENT_MIME_MAP = {
     "txt": "text/plain",
     "pdf": "application/pdf",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -114,7 +114,7 @@ async def download_document(filename: str):
 
     # Determine MIME type from extension
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    media_type = DOCUMENT_MIME_TYPES.get(ext, "application/octet-stream")
+    media_type = DOCUMENT_MIME_MAP.get(ext, "application/octet-stream")
 
     return FileResponse(
         path=str(file_path),

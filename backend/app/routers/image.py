@@ -97,8 +97,8 @@ async def convert_image(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
-# MIME type mapping for image formats
-IMAGE_MIME_TYPES = {
+# MIME type mapping for image formats (used for download responses)
+IMAGE_MIME_MAP = {
     "png": "image/png",
     "jpg": "image/jpeg",
     "jpeg": "image/jpeg",
@@ -122,7 +122,7 @@ async def download_image(filename: str):
 
     # Determine MIME type from extension
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    media_type = IMAGE_MIME_TYPES.get(ext, "application/octet-stream")
+    media_type = IMAGE_MIME_MAP.get(ext, "application/octet-stream")
 
     return FileResponse(
         path=str(file_path),

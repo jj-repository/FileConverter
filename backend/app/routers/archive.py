@@ -91,8 +91,8 @@ async def convert_archive(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
-# MIME type mapping for archive formats
-ARCHIVE_MIME_TYPES = {
+# MIME type mapping for archive formats (used for download responses)
+ARCHIVE_MIME_MAP = {
     "zip": "application/zip",
     "tar": "application/x-tar",
     "tar.gz": "application/gzip",
@@ -117,7 +117,7 @@ async def download_archive(filename: str):
         media_type = "application/x-bzip2"
     else:
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-        media_type = ARCHIVE_MIME_TYPES.get(ext, "application/octet-stream")
+        media_type = ARCHIVE_MIME_MAP.get(ext, "application/octet-stream")
 
     return FileResponse(
         path=str(file_path),

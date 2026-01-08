@@ -54,6 +54,7 @@ SPREADSHEET_MIME_TYPES: Set[str] = {
     "application/vnd.oasis.opendocument.spreadsheet",
     "text/csv",
     "text/tab-separated-values",
+    "text/plain",  # TSV files are often detected as text/plain
 }
 DATA_MIME_TYPES: Set[str] = {
     "application/json",
@@ -82,6 +83,7 @@ FONT_MIME_TYPES: Set[str] = {
     "font/otf",
     "font/woff",
     "font/woff2",
+    "font/sfnt",  # Generic SFNT font format (covers TTF/OTF)
     "application/font-sfnt",
     "application/x-font-ttf",
     "application/x-font-otf",

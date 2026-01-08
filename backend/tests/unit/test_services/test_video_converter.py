@@ -642,14 +642,12 @@ class TestEdgeCases:
                     if False:
                         yield  # Makes this a generator but never executes
 
-                async def stderr_iterator():
-                    # Properly empty async generator - no items to yield
-                    if False:
-                        yield  # Makes this a generator but never executes
-
                 mock_process.stdout = stdout_iterator()
                 mock_process.stderr = AsyncMock()
                 mock_process.stderr.read = AsyncMock(return_value=b'')
+
+                # Mock communicate() to return (stdout, stderr) tuple
+                mock_process.communicate = AsyncMock(return_value=(b'', b''))
 
                 return mock_process
 

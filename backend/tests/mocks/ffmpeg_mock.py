@@ -26,6 +26,7 @@ class FFmpegMock:
         async def async_proc_mock(*args, **kwargs):
             # Create output file if path provided
             if output_file_path:
+                output_file_path.parent.mkdir(parents=True, exist_ok=True)
                 output_file_path.write_bytes(b"MOCK_CONVERTED_VIDEO_DATA")
 
             mock_proc = AsyncMock()
@@ -46,13 +47,12 @@ class FFmpegMock:
 
             mock_proc.stdout = stdout_iterator()
 
-            # Create async iterator for stderr (empty)
-            async def stderr_iterator():
-                return
-                yield  # Make it a generator
-
+            # Mock stderr
             mock_proc.stderr = AsyncMock()
             mock_proc.stderr.read = AsyncMock(return_value=b'')
+
+            # Mock communicate() to return (stdout, stderr) tuple
+            mock_proc.communicate = AsyncMock(return_value=(b'', b''))
 
             return mock_proc
 
@@ -82,6 +82,9 @@ class FFmpegMock:
             mock_proc.stderr = AsyncMock()
             mock_proc.stderr.read = AsyncMock(return_value=error_message.encode())
 
+            # Mock communicate() to return (stdout, stderr) tuple with error
+            mock_proc.communicate = AsyncMock(return_value=(b'', error_message.encode()))
+
             return mock_proc
 
         return patch('asyncio.create_subprocess_exec', side_effect=async_proc_mock)
@@ -91,7 +94,8 @@ class FFmpegMock:
         """Mock FFmpeg conversion that times out"""
         async def async_proc_mock(*args, **kwargs):
             mock_proc = AsyncMock()
-            mock_proc.kill = AsyncMock()
+            mock_proc.returncode = None
+            mock_proc.kill = Mock()
             mock_proc.wait = AsyncMock()
 
             # Create async iterator that hangs/times out
@@ -102,6 +106,9 @@ class FFmpegMock:
 
             mock_proc.stdout = stdout_iterator()
             mock_proc.stderr = AsyncMock()
+
+            # Mock communicate() for cleanup after kill
+            mock_proc.communicate = AsyncMock(return_value=(b'', b''))
 
             return mock_proc
 

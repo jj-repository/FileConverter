@@ -309,9 +309,9 @@ class TestSpreadsheetConvert:
         assert "Unsupported output format" in str(error_msg)
 
     def test_convert_malformed_spreadsheet(self, client, temp_dir):
-        """Test conversion with malformed spreadsheet"""
-        # Create a file with CSV extension but unusual content
-        # Note: CSV parsers are very forgiving and can parse almost anything
+        """Test conversion with malformed spreadsheet (binary data with CSV extension)"""
+        # Create a file with CSV extension but binary content
+        # MIME validation should reject this as application/octet-stream
         invalid_file = temp_dir / "malformed.csv"
         invalid_file.write_bytes(b"\x00\x01\x02\x03INVALID_CSV_DATA")
 
@@ -322,9 +322,9 @@ class TestSpreadsheetConvert:
                 data={"output_format": "tsv"}
             )
 
-        # CSV parsers are forgiving - they parse binary data as text
-        # This is expected behavior (lenient parsing is a feature)
-        assert response.status_code == 200
+        # MIME validation correctly rejects binary files with spoofed CSV extension
+        # The file is detected as application/octet-stream, not text/csv
+        assert response.status_code == 400
 
     def test_convert_unsupported_input_format(self, client, temp_dir):
         """Test conversion with unsupported input format"""

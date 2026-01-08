@@ -4,11 +4,12 @@ from typing import List, Optional, Annotated, Literal
 import uuid
 
 from app.services.batch_converter import BatchConverter
-from app.utils.file_handler import save_upload_file, cleanup_file
+from app.utils.file_handler import save_upload_file, cleanup_file, make_content_disposition
 from app.utils.validation import validate_download_filename,  validate_file_size
 from app.config import settings
 from app.models.conversion import BatchConversionResponse, BatchZipResponse
 from app.utils.websocket_security import session_validator, check_rate_limit
+from app.middleware.error_handler import sanitize_error_message
 
 
 router = APIRouter()
@@ -165,7 +166,7 @@ async def convert_batch(
         for output_path in output_paths:
             cleanup_file(output_path)
 
-        raise HTTPException(status_code=500, detail=f"Batch conversion failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Batch conversion failed: {sanitize_error_message(str(e))}")
 
 
 @router.post("/download-zip", response_model=BatchZipResponse)
@@ -202,7 +203,7 @@ async def create_download_zip(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create ZIP: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create ZIP: {sanitize_error_message(str(e))}")
 
 
 @router.get("/download/{filename}")
@@ -221,5 +222,5 @@ async def download_file(filename: str):
         path=str(file_path),
         filename=filename,
         media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": make_content_disposition(filename)}
     )

@@ -11,9 +11,11 @@ import logging
 
 from app.config import settings
 from app.services.font_converter import FontConverter
+from app.utils.file_handler import save_upload_file, make_content_disposition
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse
 from app.utils.websocket_security import session_validator, check_rate_limit
+from app.middleware.error_handler import sanitize_error_message
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -57,12 +59,8 @@ async def convert_font(
         # Validate file size
         validate_file_size(file, "font")
 
-        # Read file content
-        content = await file.read()
-
-        # Save uploaded file
-        input_path = settings.TEMP_DIR / f"{session_id}_input.{input_format}"
-        input_path.write_bytes(content)
+        # Save uploaded file using standard handler
+        input_path = await save_upload_file(file, settings.TEMP_DIR)
 
         # Convert
         converter = FontConverter()
@@ -96,7 +94,7 @@ async def convert_font(
         # Clean up on error
         if 'input_path' in locals():
             input_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
 @router.post("/optimize", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
@@ -122,12 +120,8 @@ async def optimize_font(
         # Validate file size
         validate_file_size(file, "font")
 
-        # Read file content
-        content = await file.read()
-
-        # Save uploaded file
-        input_path = settings.TEMP_DIR / f"{session_id}_input.{input_format}"
-        input_path.write_bytes(content)
+        # Save uploaded file using standard handler
+        input_path = await save_upload_file(file, settings.TEMP_DIR)
 
         # Optimize
         converter = FontConverter()
@@ -156,7 +150,7 @@ async def optimize_font(
         # Clean up on error
         if 'input_path' in locals():
             input_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Optimization failed: {sanitize_error_message(str(e))}")
 
 
 # MIME type mapping for font formats
@@ -192,7 +186,7 @@ async def download_font(filename: str):
         path=file_path,
         filename=filename,
         media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": make_content_disposition(filename)}
     )
 
 
@@ -234,12 +228,8 @@ async def get_font_info(file: UploadFile = File(...)):
         # Validate file size
         validate_file_size(file, "font")
 
-        # Read file content
-        content = await file.read()
-
-        # Save temp file
-        temp_path = settings.TEMP_DIR / f"temp_{uuid.uuid4()}.{input_format}"
-        temp_path.write_bytes(content)
+        # Save uploaded file using standard handler
+        temp_path = await save_upload_file(file, settings.TEMP_DIR)
 
         # Get info
         converter = FontConverter()
@@ -256,4 +246,4 @@ async def get_font_info(file: UploadFile = File(...)):
         logger.error(f"Info extraction error: {e}")
         if 'temp_path' in locals():
             temp_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"Failed to extract info: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to extract info: {sanitize_error_message(str(e))}")

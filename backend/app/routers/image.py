@@ -5,11 +5,12 @@ import uuid
 from typing import Optional, Annotated
 
 from app.services.image_converter import ImageConverter
-from app.utils.file_handler import save_upload_file, cleanup_file
+from app.utils.file_handler import save_upload_file, cleanup_file, make_content_disposition
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
 from app.config import settings
 from app.utils.websocket_security import session_validator, check_rate_limit
+from app.middleware.error_handler import sanitize_error_message
 
 
 router = APIRouter()
@@ -90,7 +91,7 @@ async def convert_image(
         if 'output_path' in locals():
             cleanup_file(output_path)
 
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
 # MIME type mapping for image formats
@@ -124,7 +125,7 @@ async def download_image(filename: str):
         path=str(file_path),
         filename=filename,
         media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": make_content_disposition(filename)}
     )
 
 
@@ -166,4 +167,4 @@ async def get_image_info(file: UploadFile = File(...)):
     except Exception as e:
         if 'temp_path' in locals():
             cleanup_file(temp_path)
-        raise HTTPException(status_code=500, detail=f"Failed to get image info: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get image info: {sanitize_error_message(str(e))}")

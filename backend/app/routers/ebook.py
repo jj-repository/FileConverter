@@ -10,9 +10,11 @@ import logging
 
 from app.config import settings
 from app.services.ebook_converter import EbookConverter
+from app.utils.file_handler import save_upload_file, make_content_disposition
 from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename
 from app.models.conversion import ConversionResponse
 from app.utils.websocket_security import session_validator, check_rate_limit
+from app.middleware.error_handler import sanitize_error_message
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -54,12 +56,8 @@ async def convert_ebook(
         # Validate file size
         validate_file_size(file, "ebook")
 
-        # Read file content after validation
-        content = await file.read()
-
-        # Save uploaded file
-        input_path = settings.TEMP_DIR / f"{session_id}_input.{input_format}"
-        input_path.write_bytes(content)
+        # Save uploaded file using standard handler
+        input_path = await save_upload_file(file, settings.TEMP_DIR)
 
         # Convert
         converter = EbookConverter()
@@ -90,7 +88,7 @@ async def convert_ebook(
         # Clean up on error
         if 'input_path' in locals():
             input_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
 
 
 # MIME type mapping for ebook formats
@@ -126,7 +124,7 @@ async def download_ebook(filename: str):
         path=file_path,
         filename=filename,
         media_type=media_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": make_content_disposition(filename)}
     )
 
 
@@ -168,12 +166,8 @@ async def get_ebook_info(file: UploadFile = File(...)):
         # Validate file size
         validate_file_size(file, "ebook")
 
-        # Read file content after validation
-        content = await file.read()
-
-        # Save temp file
-        temp_path = settings.TEMP_DIR / f"temp_{uuid.uuid4()}.{input_format}"
-        temp_path.write_bytes(content)
+        # Save uploaded file using standard handler
+        temp_path = await save_upload_file(file, settings.TEMP_DIR)
 
         # Get info
         converter = EbookConverter()
@@ -190,4 +184,4 @@ async def get_ebook_info(file: UploadFile = File(...)):
         logger.error(f"Info extraction error: {e}")
         if 'temp_path' in locals():
             temp_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"Failed to extract info: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to extract info: {sanitize_error_message(str(e))}")

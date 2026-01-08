@@ -4,6 +4,7 @@ WebSocket security utilities for rate limiting and session validation
 
 import time
 import ipaddress
+import threading
 from collections import defaultdict
 from typing import Dict, List, Tuple, Optional, Set
 import logging
@@ -97,6 +98,9 @@ class AdminAuthRateLimiter:
 
     Prevents brute force attacks on admin API key by rate limiting
     failed authentication attempts per IP.
+
+    THREAD SAFETY: Uses a lock to protect access to shared state
+    in high-concurrency scenarios.
     """
 
     def __init__(self, max_failures: int = 5, lockout_seconds: int = 300):
@@ -111,27 +115,29 @@ class AdminAuthRateLimiter:
         self.lockout_seconds = lockout_seconds
         self.failures: Dict[str, List[float]] = defaultdict(list)
         self.lockouts: Dict[str, float] = {}
+        self._lock = threading.Lock()  # Thread safety for concurrent access
 
     def record_failure(self, ip: str) -> None:
         """Record a failed authentication attempt."""
         current_time = time.time()
 
-        # Clean up old failures
-        self.failures[ip] = [
-            t for t in self.failures[ip]
-            if current_time - t < self.lockout_seconds
-        ]
+        with self._lock:
+            # Clean up old failures
+            self.failures[ip] = [
+                t for t in self.failures[ip]
+                if current_time - t < self.lockout_seconds
+            ]
 
-        # Record new failure
-        self.failures[ip].append(current_time)
+            # Record new failure
+            self.failures[ip].append(current_time)
 
-        # Check if lockout threshold reached
-        if len(self.failures[ip]) >= self.max_failures:
-            self.lockouts[ip] = current_time
-            logger.warning(
-                f"Admin auth lockout triggered for IP: {ip} "
-                f"(failed {len(self.failures[ip])} times)"
-            )
+            # Check if lockout threshold reached
+            if len(self.failures[ip]) >= self.max_failures:
+                self.lockouts[ip] = current_time
+                logger.warning(
+                    f"Admin auth lockout triggered for IP: {ip} "
+                    f"(failed {len(self.failures[ip])} times)"
+                )
 
     def is_locked_out(self, ip: str) -> Tuple[bool, Optional[int]]:
         """
@@ -140,33 +146,36 @@ class AdminAuthRateLimiter:
         Returns:
             Tuple of (is_locked_out, seconds_remaining)
         """
-        if ip not in self.lockouts:
-            return False, None
+        with self._lock:
+            if ip not in self.lockouts:
+                return False, None
 
-        current_time = time.time()
-        lockout_time = self.lockouts[ip]
-        elapsed = current_time - lockout_time
+            current_time = time.time()
+            lockout_time = self.lockouts[ip]
+            elapsed = current_time - lockout_time
 
-        if elapsed >= self.lockout_seconds:
-            # Lockout expired - clean up
-            del self.lockouts[ip]
-            self.failures[ip] = []
-            return False, None
+            if elapsed >= self.lockout_seconds:
+                # Lockout expired - clean up
+                del self.lockouts[ip]
+                self.failures[ip] = []
+                return False, None
 
-        remaining = int(self.lockout_seconds - elapsed)
-        return True, remaining
+            remaining = int(self.lockout_seconds - elapsed)
+            return True, remaining
 
     def clear_failures(self, ip: str) -> None:
         """Clear failure count for an IP (on successful auth)."""
-        if ip in self.failures:
-            del self.failures[ip]
-        if ip in self.lockouts:
-            del self.lockouts[ip]
+        with self._lock:
+            if ip in self.failures:
+                del self.failures[ip]
+            if ip in self.lockouts:
+                del self.lockouts[ip]
 
     def reset(self) -> None:
         """Reset all state. Useful for testing."""
-        self.failures.clear()
-        self.lockouts.clear()
+        with self._lock:
+            self.failures.clear()
+            self.lockouts.clear()
 
 
 class WebSocketRateLimiter:

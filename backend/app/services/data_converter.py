@@ -141,10 +141,17 @@ class DataConverter(BaseConverter):
                     data.append(row)
                 df = pd.DataFrame(data)
             elif input_format == 'jsonl':
-                # Read JSONL (newline-delimited JSON)
+                # Read JSONL (newline-delimited JSON) with security limits
+                # SECURITY: Limit line length and row count to prevent memory exhaustion
+                MAX_LINE_LENGTH = 10 * 1024 * 1024  # 10MB per line
+                MAX_ROWS = 1_000_000  # 1 million rows max
                 data = []
                 with open(input_path, 'r', encoding=encoding) as f:
-                    for line in f:
+                    for line_num, line in enumerate(f, 1):
+                        if line_num > MAX_ROWS:
+                            raise ValueError(f"JSONL file exceeds maximum row limit ({MAX_ROWS:,} rows)")
+                        if len(line) > MAX_LINE_LENGTH:
+                            raise ValueError(f"Line {line_num} exceeds maximum length ({MAX_LINE_LENGTH // 1024 // 1024}MB)")
                         if line.strip():
                             data.append(json.loads(line))
                 df = pd.DataFrame(data)

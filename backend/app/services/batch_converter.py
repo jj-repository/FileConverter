@@ -198,16 +198,25 @@ class BatchConverter:
 
         Returns:
             Path to created ZIP archive
+
+        Raises:
+            Exception: If ZIP creation fails (partial files are cleaned up)
         """
         zip_path = settings.UPLOAD_DIR / archive_name
 
         def create_zip():
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for file_path in file_paths:
-                    # Convert to Path if string
-                    path_obj = Path(file_path) if isinstance(file_path, str) else file_path
-                    if path_obj.exists():
-                        zipf.write(path_obj, path_obj.name)
+            try:
+                with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    for file_path in file_paths:
+                        # Convert to Path if string
+                        path_obj = Path(file_path) if isinstance(file_path, str) else file_path
+                        if path_obj.exists():
+                            zipf.write(path_obj, path_obj.name)
+            except Exception:
+                # Clean up partial ZIP file on error
+                if zip_path.exists():
+                    zip_path.unlink(missing_ok=True)
+                raise
 
         # Run in thread pool to avoid blocking
         await asyncio.to_thread(create_zip)

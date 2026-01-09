@@ -112,10 +112,15 @@ const result = await window.electron.actionName(args);
 
 ## Update System
 
-**Status:** NOT IMPLEMENTED
+**Status:** Partially implemented (startup check with timeout)
+
+**Implemented:**
+- Update check on startup (main.js)
+- 10-second request timeout
+- Version comparison
+- Dialog with Download/Later options
 
 **Needed:**
-- Update check logic (GitHub API)
 - IPC handlers for check/download
 - React context/hook for update state
 - Settings storage for auto_check_updates
@@ -201,7 +206,7 @@ showConfirm('Are you sure?', { onConfirm: () => {} });
 
 ## Known Issues / Technical Debt
 
-1. **No update system**: Completely missing update functionality
+1. **Partial update system**: Basic startup check implemented, needs full UI integration
 2. **No settings persistence**: No user preferences storage
 
 ## Common Development Tasks

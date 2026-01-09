@@ -231,6 +231,18 @@ def get_file_type_from_format(file_format: str) -> str:
         return "audio"
     elif file_format in settings.DOCUMENT_FORMATS:
         return "document"
+    elif file_format in settings.ARCHIVE_FORMATS:
+        return "archive"
+    elif file_format in settings.SPREADSHEET_FORMATS:
+        return "spreadsheet"
+    elif file_format in settings.SUBTITLE_FORMATS:
+        return "subtitle"
+    elif file_format in settings.EBOOK_FORMATS:
+        return "ebook"
+    elif file_format in settings.FONT_FORMATS:
+        return "font"
+    elif file_format in settings.DATA_FORMATS:
+        return "data"
     else:
         raise HTTPException(status_code=400, detail=f"Unknown file format: {file_format}")
 

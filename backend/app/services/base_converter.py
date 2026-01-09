@@ -154,11 +154,17 @@ class BaseConverter(ABC):
                     # Use file-specific lock to prevent concurrent copies
                     async with file_lock:
                         # Double-check file still exists before copying
-                        if cached_file.exists():
-                            await asyncio.to_thread(shutil.copy2, cached_file, output_path)
-                        else:
-                            # Cached file was deleted, need to reconvert
-                            logger.warning(f"Cached file {cached_file} no longer exists, reconverting")
+                        # Use try-except to handle race condition where file is deleted between check and copy
+                        try:
+                            if cached_file.exists():
+                                await asyncio.to_thread(shutil.copy2, cached_file, output_path)
+                            else:
+                                # Cached file was deleted, need to reconvert
+                                logger.warning(f"Cached file {cached_file} no longer exists, reconverting")
+                                return await self.convert(input_path, output_format, options, session_id)
+                        except FileNotFoundError:
+                            # Race condition: file was deleted between exists() check and copy
+                            logger.warning(f"Cached file {cached_file} was deleted during copy, reconverting")
                             return await self.convert(input_path, output_format, options, session_id)
 
                 return output_path

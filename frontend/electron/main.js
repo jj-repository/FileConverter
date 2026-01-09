@@ -74,6 +74,7 @@ function checkForUpdates(silent = false) {
     let data = '';
     res.on('data', chunk => data += chunk);
     res.on('end', () => {
+      req.setTimeout(0); // Clear timeout on successful response
       try {
         const release = JSON.parse(data);
         const latestVersion = (release.tag_name || '').replace(/^v/, '');
@@ -134,6 +135,20 @@ function checkForUpdates(silent = false) {
         title: 'Update Check Failed',
         message: 'Failed to check for updates.',
         detail: e.message,
+        buttons: ['OK']
+      });
+    }
+  });
+
+  // Add timeout to prevent hanging requests
+  req.setTimeout(10000, () => {
+    req.destroy();
+    if (!silent && mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Update Check Failed',
+        message: 'Failed to check for updates.',
+        detail: 'Request timed out after 10 seconds.',
         buttons: ['OK']
       });
     }

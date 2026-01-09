@@ -1,11 +1,198 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
+const https = require('https');
 const BackendManager = require('./backend-manager');
 
 let mainWindow;
 let backendManager;
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+
+// Version and Update Constants
+const pkg = require('../package.json');
+const APP_VERSION = pkg.version;
+const GITHUB_REPO = 'jj-repository/FileConverter';
+const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases`;
+
+// Settings file for app preferences
+const settingsFile = path.join(app.getPath('userData'), 'settings.json');
+
+const defaultSettings = {
+  autoCheckUpdates: true
+};
+
+function loadSettings() {
+  try {
+    if (fs.existsSync(settingsFile)) {
+      const data = fs.readFileSync(settingsFile, 'utf8');
+      return { ...defaultSettings, ...JSON.parse(data) };
+    }
+  } catch (e) {
+    console.error('Failed to load settings:', e);
+  }
+  return { ...defaultSettings };
+}
+
+function saveSettings(settings) {
+  try {
+    fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to save settings:', e);
+  }
+}
+
+let appSettings = defaultSettings;
+
+// Compare version strings
+function versionNewer(latest, current) {
+  const parseVersion = (v) => v.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+  const latestParts = parseVersion(latest);
+  const currentParts = parseVersion(current);
+
+  for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
+    const l = latestParts[i] || 0;
+    const c = currentParts[i] || 0;
+    if (l > c) return true;
+    if (l < c) return false;
+  }
+  return false;
+}
+
+// Check for updates
+function checkForUpdates(silent = false) {
+  const options = {
+    hostname: 'api.github.com',
+    path: `/repos/${GITHUB_REPO}/releases/latest`,
+    method: 'GET',
+    headers: {
+      'User-Agent': `FileConverter/${APP_VERSION}`
+    }
+  };
+
+  const req = https.request(options, (res) => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => {
+      try {
+        const release = JSON.parse(data);
+        const latestVersion = (release.tag_name || '').replace(/^v/, '');
+
+        if (!latestVersion) {
+          if (!silent && mainWindow) {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'Update Check',
+              message: 'Could not determine latest version.',
+              buttons: ['OK']
+            });
+          }
+          return;
+        }
+
+        if (versionNewer(latestVersion, APP_VERSION)) {
+          if (mainWindow) {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'Update Available',
+              message: `A new version is available!\n\nCurrent: v${APP_VERSION}\nLatest: v${latestVersion}`,
+              detail: release.body || 'No release notes available.',
+              buttons: ['Download Update', 'Later'],
+              defaultId: 0
+            }).then(result => {
+              if (result.response === 0) {
+                shell.openExternal(GITHUB_RELEASES_URL);
+              }
+            });
+          }
+        } else if (!silent && mainWindow) {
+          dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'No Updates',
+            message: `You are running the latest version (v${APP_VERSION}).`,
+            buttons: ['OK']
+          });
+        }
+      } catch (e) {
+        if (!silent && mainWindow) {
+          dialog.showMessageBox(mainWindow, {
+            type: 'error',
+            title: 'Update Check Failed',
+            message: 'Failed to check for updates.',
+            detail: e.message,
+            buttons: ['OK']
+          });
+        }
+      }
+    });
+  });
+
+  req.on('error', (e) => {
+    if (!silent && mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Update Check Failed',
+        message: 'Failed to check for updates.',
+        detail: e.message,
+        buttons: ['OK']
+      });
+    }
+  });
+
+  req.end();
+}
+
+// Create application menu with update options
+function createAppMenu() {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        { role: 'quit' }
+      ]
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Check for Updates...',
+          click: () => checkForUpdates(false)
+        },
+        {
+          label: 'Check for Updates on Startup',
+          type: 'checkbox',
+          checked: appSettings.autoCheckUpdates,
+          click: (menuItem) => {
+            appSettings.autoCheckUpdates = menuItem.checked;
+            saveSettings(appSettings);
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'View on GitHub',
+          click: () => shell.openExternal(`https://github.com/${GITHUB_REPO}`)
+        },
+        {
+          label: 'About FileConverter',
+          click: () => {
+            if (mainWindow) {
+              dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'About FileConverter',
+                message: `FileConverter v${APP_VERSION}`,
+                detail: 'A desktop file conversion application.\n\nBuilt with Electron and Python.',
+                buttons: ['OK']
+              });
+            }
+          }
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -35,8 +222,8 @@ function createWindow() {
     });
   });
 
-  // Remove menu bar
-  mainWindow.setMenuBarVisibility(false);
+  // Set up application menu
+  createAppMenu();
 
   // Load the app
   if (isDev) {
@@ -81,8 +268,18 @@ async function stopBackend() {
 
 // App lifecycle
 app.whenReady().then(async () => {
+  // Load settings before creating window
+  appSettings = loadSettings();
+
   await startBackend();
   createWindow();
+
+  // Check for updates on startup if enabled (with delay)
+  if (appSettings.autoCheckUpdates) {
+    setTimeout(() => {
+      checkForUpdates(true);
+    }, 4000);  // 4 second delay to let UI initialize
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

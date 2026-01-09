@@ -78,6 +78,12 @@ class Settings(BaseSettings):
     # Subprocess timeout (in seconds)
     SUBPROCESS_TIMEOUT: int = 600  # 10 minutes max for conversions
 
+    # Rate limiting settings (requests per minute)
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_DEFAULT: str = "60/minute"  # Default rate limit for most endpoints
+    RATE_LIMIT_CONVERSION: str = "30/minute"  # Lower limit for resource-intensive conversions
+    RATE_LIMIT_UPLOAD: str = "20/minute"  # Lower limit for file uploads
+
     # Security: Trusted proxy configuration
     # Set TRUSTED_PROXIES to a comma-separated list of IP addresses or CIDR ranges
     # that are allowed to set X-Forwarded-For headers. If empty, X-Forwarded-For is ignored.

@@ -3,11 +3,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from contextlib import asynccontextmanager
 import asyncio
 import logging
 
 from app.config import settings, CACHE_DIR
+
+# Initialize rate limiter
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[settings.RATE_LIMIT_DEFAULT] if settings.RATE_LIMIT_ENABLED else [],
+    enabled=settings.RATE_LIMIT_ENABLED,
+)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -84,11 +95,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Add rate limiter to app state and register exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Register exception handlers
 register_exception_handlers(app)
 
 # Security headers middleware (must be added first to wrap all responses)
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Rate limiting middleware
+if settings.RATE_LIMIT_ENABLED:
+    app.add_middleware(SlowAPIMiddleware)
 
 # CORS middleware - restrict methods and headers for security
 app.add_middleware(

@@ -6,6 +6,13 @@
   "main": "electron/main.js",
   "type": "module",
   "homepage": "https://github.com/jj-repository/FileConverter",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jj-repository/FileConverter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jj-repository/FileConverter/issues"
+  },
   "author": {
     "name": "FileConverter",
     "email": "noreply@fileconverter.app"

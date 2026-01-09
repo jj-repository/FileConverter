@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **FileConverter** is a desktop application for converting files between formats. It features an Electron frontend with React/TypeScript and a FastAPI Python backend. The application bundles the backend with the Electron app for distribution.
 
-**Version:** Frontend 1.0.0, Backend 1.1.1
+**Version:** Frontend 1.1.0, Backend 1.1.1
 
 ## Files Structure
 

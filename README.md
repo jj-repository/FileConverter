@@ -16,6 +16,7 @@ A modern, full-stack file conversion platform supporting 50+ file formats with r
 - 🔒 **Secure**: Input validation, rate limiting, path traversal prevention
 - 📦 **Batch Conversion**: Process multiple files simultaneously
 - 🎯 **10+ File Types**: Images, videos, audio, documents, archives, and more
+- 🔄 **Auto-Updates**: Check for updates on startup with configurable toggle
 
 ## 🚀 Quick Start
 
@@ -98,6 +99,18 @@ FileConverter/
 | Concurrent Conversions | 100+ |
 | Memory Usage | 200-500MB |
 | API Response | <100ms (cached) |
+
+## 🔄 Updates (Desktop App)
+
+The Electron desktop application includes a built-in update system:
+
+- **Automatic checking**: Checks GitHub releases on startup (configurable)
+- **Manual check**: Via Help menu → "Check for Updates..."
+- **Settings toggle**: "Check for Updates on Startup" in Help menu
+- **Update dialog**: Shows version comparison and release notes
+- **One-click access**: Opens GitHub releases page for download
+
+Settings are persisted in the user data directory.
 
 ## 🤝 Contributing
 

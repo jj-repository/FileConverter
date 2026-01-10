@@ -92,7 +92,10 @@ class DataConverter(BaseConverter):
                                      on_bad_lines='skip')
             elif input_format == 'json':
                 with open(input_path, 'r', encoding=encoding) as f:
-                    data = json.load(f)
+                    try:
+                        data = json.load(f)
+                    except json.JSONDecodeError as e:
+                        raise ValueError(f"Invalid JSON file: {e.msg} at line {e.lineno}, column {e.colno}")
                     # Try to convert to DataFrame
                     if isinstance(data, list):
                         # Handle empty list - create DataFrame with at least one column
@@ -268,7 +271,10 @@ class DataConverter(BaseConverter):
                 }
             elif input_format == 'json':
                 with open(file_path, 'r') as f:
-                    data = json.load(f)
+                    try:
+                        data = json.load(f)
+                    except json.JSONDecodeError as e:
+                        return {"error": f"Invalid JSON: {e.msg} at line {e.lineno}"}
                     if isinstance(data, list):
                         return {
                             "format": "json",

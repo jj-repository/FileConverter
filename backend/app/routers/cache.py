@@ -1,6 +1,7 @@
 """Cache management router for monitoring and controlling the conversion cache"""
 
 import logging
+import secrets
 from datetime import datetime, UTC
 from fastapi import APIRouter, HTTPException, Header, Depends, Request
 from typing import Dict, Any, Optional
@@ -75,7 +76,7 @@ async def verify_admin_key(
             detail="Admin endpoints are disabled. Set ADMIN_API_KEY environment variable to enable."
         )
 
-    if not x_admin_key or x_admin_key != settings.ADMIN_API_KEY:
+    if not x_admin_key or not secrets.compare_digest(x_admin_key, settings.ADMIN_API_KEY):
         # Record failed attempt
         admin_auth_rate_limiter.record_failure(client_ip)
         _audit_log("AUTH_ATTEMPT", client_ip, False, "invalid_key")
@@ -92,13 +93,15 @@ async def verify_admin_key(
 
 
 @router.get("/info")
-async def get_cache_info() -> Dict[str, Any]:
+async def get_cache_info(client_ip: str = Depends(verify_admin_key)) -> Dict[str, Any]:
     """
     Get cache statistics and information
 
-    Returns cache size, hit rate, entry count, and configuration
+    Returns cache size, hit rate, entry count, and configuration.
+    Requires X-Admin-Key header with valid admin API key.
     """
     if not settings.CACHE_ENABLED:
+        _audit_log("CACHE_INFO", client_ip, True, "cache_disabled")
         return {
             "enabled": False,
             "message": "Cache is disabled"
@@ -106,10 +109,12 @@ async def get_cache_info() -> Dict[str, Any]:
 
     cache_service = get_cache_service()
     if cache_service is None:
+        _audit_log("CACHE_INFO", client_ip, False, "service_not_initialized")
         raise HTTPException(status_code=503, detail="Cache service not initialized")
 
     info = cache_service.get_cache_info()
     info["enabled"] = True
+    _audit_log("CACHE_INFO", client_ip, True, None)
 
     return info
 

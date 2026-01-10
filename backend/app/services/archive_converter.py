@@ -154,7 +154,10 @@ class ArchiveConverter(BaseConverter):
                         raise ValueError(f"Unsafe zip member (absolute path): {member}")
                     # Verify the resolved path stays within extract directory
                     member_path = (extract_to / member).resolve()
-                    if not str(member_path).startswith(str(extract_to.resolve())):
+                    extract_resolved = extract_to.resolve()
+                    try:
+                        member_path.relative_to(extract_resolved)
+                    except ValueError:
                         raise ValueError(f"Path traversal detected: {member}")
                     safe_members.append(member)
                 # Extract only validated members
@@ -175,11 +178,22 @@ class ArchiveConverter(BaseConverter):
                     # Check symlinks point within extract directory
                     if member.issym() or member.islnk():
                         link_target = member.linkname
+                        # Check for obvious path traversal attempts
                         if link_target.startswith('/') or '..' in link_target:
                             raise ValueError(f"Unsafe symlink target: {member.name} -> {link_target}")
+                        # Resolve the symlink target relative to member's parent directory
+                        member_parent = (extract_to / member.name).parent
+                        resolved_link = (member_parent / link_target).resolve()
+                        try:
+                            resolved_link.relative_to(extract_resolved)
+                        except ValueError:
+                            raise ValueError(f"Symlink escapes extraction directory: {member.name} -> {link_target}")
                     # Verify the resolved path stays within extract directory
                     member_path = (extract_to / member.name).resolve()
-                    if not str(member_path).startswith(str(extract_to.resolve())):
+                    extract_resolved = extract_to.resolve()
+                    try:
+                        member_path.relative_to(extract_resolved)
+                    except ValueError:
                         raise ValueError(f"Path traversal detected: {member.name}")
                     safe_members.append(member)
                 # Extract only validated members
@@ -206,7 +220,10 @@ class ArchiveConverter(BaseConverter):
                         raise ValueError(f"Unsafe 7z member (absolute path): {name}")
                     # Verify the resolved path stays within extract directory
                     member_path = (extract_to / name).resolve()
-                    if not str(member_path).startswith(str(extract_to.resolve())):
+                    extract_resolved = extract_to.resolve()
+                    try:
+                        member_path.relative_to(extract_resolved)
+                    except ValueError:
                         raise ValueError(f"Path traversal detected: {name}")
                 archive.extractall(path=extract_to)
 

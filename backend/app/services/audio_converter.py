@@ -192,17 +192,19 @@ class AudioConverter(BaseConverter):
                                 f"Converting audio: {int(progress)}%"
                             )
 
-                    # Wait for process to complete
-                    await process.wait()
+                    # Use communicate to properly consume all output and wait for process
+                    _, stderr = await process.communicate()
             except asyncio.TimeoutError:
-                # Kill process on timeout
+                # Kill process on timeout and consume remaining output to prevent deadlock
                 process.kill()
-                await process.wait()
+                try:
+                    await asyncio.wait_for(process.communicate(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    pass  # Process didn't exit cleanly, continue anyway
                 raise Exception(f"Audio conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds")
 
             if process.returncode != 0:
-                stderr = await process.stderr.read()
-                error_msg = stderr.decode('utf-8', errors='ignore')
+                error_msg = stderr.decode('utf-8', errors='ignore') if stderr else "Unknown error"
                 raise Exception(f"FFmpeg conversion failed: {error_msg[:200]}")
 
             await self.send_progress(session_id, 98, "converting", "Finalizing audio")

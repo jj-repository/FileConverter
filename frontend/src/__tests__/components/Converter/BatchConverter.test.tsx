@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { BatchConverter } from '../../../components/Converter/BatchConverter'
+import { BatchConverter } from '../../../components/Converter/BatchConverterImproved'
 import { batchAPI } from '../../../services/api'
 import { useWebSocket } from '../../../hooks/useWebSocket'
 
@@ -25,6 +25,16 @@ vi.mock('../../../services/api', () => ({
   },
 }))
 
+// Mock useToast hook
+vi.mock('../../../components/Common/Toast', () => ({
+  useToast: () => ({
+    showInfo: vi.fn(),
+    showSuccess: vi.fn(),
+    showError: vi.fn(),
+    showWarning: vi.fn(),
+  }),
+}))
+
 // Mock window.location.href
 delete (window as any).location
 window.location = { href: '' } as any
@@ -39,7 +49,8 @@ describe('BatchConverter', () => {
   describe('Rendering', () => {
     it('should render title "Batch Converter"', () => {
       render(<BatchConverter />)
-      expect(screen.getByText('Batch Converter')).toBeInTheDocument()
+      // With mocked t() returning the key, we expect the key to be rendered
+      expect(screen.getByText('converter.batch.title')).toBeInTheDocument()
     })
 
     it('should render BatchDropZone when no files selected', () => {
@@ -75,12 +86,13 @@ describe('BatchConverter', () => {
       render(<BatchConverter />)
 
       expect(screen.getByText('Batch Conversion Tips')).toBeInTheDocument()
-      expect(screen.getByText(/Upload up to 20 files at once/)).toBeInTheDocument()
+      expect(screen.getByText(/Upload up to/)).toBeInTheDocument()
+      expect(screen.getByText('100 files')).toBeInTheDocument() // In <strong> tag
       expect(screen.getByText(/All files will be converted to the same output format/)).toBeInTheDocument()
       expect(screen.getByText(/Files can be of different types/)).toBeInTheDocument()
       expect(screen.getByText(/Files are processed in parallel/)).toBeInTheDocument()
       expect(screen.getByText(/Download individual files or all files as a ZIP archive/)).toBeInTheDocument()
-      expect(screen.getByText(/Mix and match different file types in a single batch/)).toBeInTheDocument()
+      expect(screen.getByText('Desktop app:')).toBeInTheDocument() // In <strong> tag
     })
 
     it('should show file count in header', () => {
@@ -113,7 +125,7 @@ describe('BatchConverter', () => {
     it('should show file icons (getFileIcon) for different file types', () => {
       render(<BatchConverter />)
       // Icons are tested in the File List Display section
-      expect(screen.getByText('Batch Converter')).toBeInTheDocument()
+      expect(screen.getByText('converter.batch.title')).toBeInTheDocument()
     })
 
     it('should allow removing individual files when idle', () => {
@@ -146,7 +158,7 @@ describe('BatchConverter', () => {
     it('should handle up to 20 files', () => {
       render(<BatchConverter />)
       // BatchDropZone has maxFiles=20 prop
-      expect(screen.getByText('Batch Converter')).toBeInTheDocument()
+      expect(screen.getByText('converter.batch.title')).toBeInTheDocument()
     })
   })
 
@@ -214,7 +226,7 @@ describe('BatchConverter', () => {
     it('should default to pdf format', () => {
       // Default outputFormat state is 'pdf'
       render(<BatchConverter />)
-      expect(screen.getByText('Batch Converter')).toBeInTheDocument()
+      expect(screen.getByText('converter.batch.title')).toBeInTheDocument()
     })
 
     it('should disable format dropdown during conversion', () => {
@@ -539,7 +551,7 @@ describe('BatchConverter', () => {
       render(<BatchConverter />)
 
       // handleReset clears all state
-      expect(screen.getByText('Batch Converter')).toBeInTheDocument()
+      expect(screen.getByText('converter.batch.title')).toBeInTheDocument()
     })
 
     it('should clear files, results, error, sessionId', () => {
@@ -565,7 +577,7 @@ describe('BatchConverter', () => {
       render(<BatchConverter />)
 
       // Component should handle errors without crashing
-      expect(screen.getByText('Batch Converter')).toBeInTheDocument()
+      expect(screen.getByText('converter.batch.title')).toBeInTheDocument()
     })
 
     it('should handle createZip failure', async () => {
@@ -575,7 +587,7 @@ describe('BatchConverter', () => {
       render(<BatchConverter />)
 
       // Component should handle ZIP errors gracefully
-      expect(screen.getByText('Batch Converter')).toBeInTheDocument()
+      expect(screen.getByText('converter.batch.title')).toBeInTheDocument()
     })
   })
 })

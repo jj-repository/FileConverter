@@ -11,8 +11,9 @@ import uvicorn
 def main():
     """Run the FastAPI server."""
     # Get port from command line args or use default
+    # Default to localhost for security - use --host 0.0.0.0 to accept external connections
     port = 8000
-    host = "0.0.0.0"
+    host = "127.0.0.1"
 
     # Parse command line arguments
     for i, arg in enumerate(sys.argv[1:]):

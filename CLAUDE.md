@@ -134,12 +134,16 @@ const result = await window.electron.actionName(args);
 - Rate limiting via slowapi
 - CORS configuration
 - Input validation
+- Admin key authentication for cache endpoints
+- Symlink path traversal protection in archive extraction
+- JSON parsing error handling in data converter
 
 ### Frontend
 - Context isolation
 - Sandbox mode
 - No node integration
 - CSP headers
+- Secure default host binding (127.0.0.1)
 
 ## Testing
 
@@ -208,6 +212,14 @@ showConfirm('Are you sure?', { onConfirm: () => {} });
 
 1. **Partial update system**: Basic startup check implemented, needs full UI integration
 2. **No settings persistence**: No user preferences storage
+
+## Recent Fixes (January 2026)
+
+- Fixed audio converter stderr handling to prevent potential deadlocks on timeout
+- Strengthened symlink path traversal protection in archive extraction
+- Changed run_server.py default host from 0.0.0.0 to 127.0.0.1 for security
+- Added admin authentication to /api/cache/info endpoint
+- Added proper JSON parsing error handling in data converter
 
 ## Common Development Tasks
 

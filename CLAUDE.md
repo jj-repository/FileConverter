@@ -220,6 +220,7 @@ showConfirm('Are you sure?', { onConfirm: () => {} });
 - Changed run_server.py default host from 0.0.0.0 to 127.0.0.1 for security
 - Added admin authentication to /api/cache/info endpoint
 - Added proper JSON parsing error handling in data converter
+- Fixed SVG temp file not being cleaned up after image conversion
 
 ## Common Development Tasks
 

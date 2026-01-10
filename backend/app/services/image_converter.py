@@ -69,6 +69,9 @@ class ImageConverter(BaseConverter):
 
         await self.send_progress(session_id, 20, "converting", "Loading image")
 
+        # Track temp file for cleanup
+        temp_png = None
+
         # Special handling for SVG input (rasterize first)
         if input_format == 'svg':
             if not SVG_AVAILABLE:
@@ -171,6 +174,12 @@ class ImageConverter(BaseConverter):
 
         finally:
             img.close()
+            # Clean up SVG temp file if created
+            if temp_png and temp_png.exists():
+                try:
+                    temp_png.unlink()
+                except OSError:
+                    pass  # Best effort cleanup
 
         await self.send_progress(session_id, 100, "completed", "Image conversion completed")
 

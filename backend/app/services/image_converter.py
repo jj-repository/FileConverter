@@ -103,78 +103,81 @@ class ImageConverter(BaseConverter):
             )
             input_path = temp_png
 
-        # Open image (run in thread pool to avoid blocking)
-        img = await asyncio.to_thread(Image.open, input_path)
+        # Use try/finally to ensure temp file cleanup even if Image.open fails
         try:
-            await self.send_progress(session_id, 40, "converting", "Processing image")
+            # Open image (run in thread pool to avoid blocking)
+            img = await asyncio.to_thread(Image.open, input_path)
+            try:
+                await self.send_progress(session_id, 40, "converting", "Processing image")
 
-            # Handle transparency for formats that don't support it
-            if output_format.lower() in ['jpg', 'jpeg'] and img.mode in ['RGBA', 'LA', 'P']:
-                # Create white background
-                background = Image.new('RGB', img.size, (255, 255, 255))
-                if img.mode == 'P':
-                    img = img.convert('RGBA')
-                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-                img = background
+                # Handle transparency for formats that don't support it
+                if output_format.lower() in ['jpg', 'jpeg'] and img.mode in ['RGBA', 'LA', 'P']:
+                    # Create white background
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'P':
+                        img = img.convert('RGBA')
+                    background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                    img = background
 
-            # Resize if dimensions provided
-            width = options.get('width')
-            height = options.get('height')
+                # Resize if dimensions provided
+                width = options.get('width')
+                height = options.get('height')
 
-            if width or height:
-                # Validate dimensions
-                if width is not None and (width <= 0 or width > 10000):
-                    raise ValueError(f"Invalid width: {width}. Must be between 1 and 10000")
-                if height is not None and (height <= 0 or height > 10000):
-                    raise ValueError(f"Invalid height: {height}. Must be between 1 and 10000")
+                if width or height:
+                    # Validate dimensions
+                    if width is not None and (width <= 0 or width > 10000):
+                        raise ValueError(f"Invalid width: {width}. Must be between 1 and 10000")
+                    if height is not None and (height <= 0 or height > 10000):
+                        raise ValueError(f"Invalid height: {height}. Must be between 1 and 10000")
 
-                await self.send_progress(session_id, 60, "converting", "Resizing image")
+                    await self.send_progress(session_id, 60, "converting", "Resizing image")
 
-                original_width, original_height = img.size
+                    original_width, original_height = img.size
 
-                # Calculate dimensions maintaining aspect ratio
-                if width and height:
-                    new_size = (width, height)
-                elif width:
-                    ratio = width / original_width
-                    new_size = (width, int(original_height * ratio))
-                else:  # height only
-                    ratio = height / original_height
-                    new_size = (int(original_width * ratio), height)
+                    # Calculate dimensions maintaining aspect ratio
+                    if width and height:
+                        new_size = (width, height)
+                    elif width:
+                        ratio = width / original_width
+                        new_size = (width, int(original_height * ratio))
+                    else:  # height only
+                        ratio = height / original_height
+                        new_size = (int(original_width * ratio), height)
 
-                img = img.resize(new_size, Image.Resampling.LANCZOS)
+                    img = img.resize(new_size, Image.Resampling.LANCZOS)
 
-            await self.send_progress(session_id, 80, "converting", "Saving converted image")
+                await self.send_progress(session_id, 80, "converting", "Saving converted image")
 
-            # Prepare save options
-            save_options = {}
+                # Prepare save options
+                save_options = {}
 
-            # Quality setting for JPEG and WEBP
-            if output_format.lower() in ['jpg', 'jpeg', 'webp']:
-                quality = options.get('quality', 95)
-                # Validate quality
-                if quality < 1 or quality > 100:
-                    raise ValueError(f"Invalid quality: {quality}. Must be between 1 and 100")
-                save_options['quality'] = quality
+                # Quality setting for JPEG and WEBP
+                if output_format.lower() in ['jpg', 'jpeg', 'webp']:
+                    quality = options.get('quality', 95)
+                    # Validate quality
+                    if quality < 1 or quality > 100:
+                        raise ValueError(f"Invalid quality: {quality}. Must be between 1 and 100")
+                    save_options['quality'] = quality
 
-            # Optimize for all formats
-            save_options['optimize'] = True
+                # Optimize for all formats
+                save_options['optimize'] = True
 
-            # Convert to RGB for JPEG
-            if output_format.lower() in ['jpg', 'jpeg'] and img.mode != 'RGB':
-                img = img.convert('RGB')
+                # Convert to RGB for JPEG
+                if output_format.lower() in ['jpg', 'jpeg'] and img.mode != 'RGB':
+                    img = img.convert('RGB')
 
-            # Map format names for PIL (PIL uses 'JPEG' not 'JPG')
-            pil_format = output_format.upper()
-            if pil_format == 'JPG':
-                pil_format = 'JPEG'
+                # Map format names for PIL (PIL uses 'JPEG' not 'JPG')
+                pil_format = output_format.upper()
+                if pil_format == 'JPG':
+                    pil_format = 'JPEG'
 
-            # Save image (run in thread pool to avoid blocking)
-            await asyncio.to_thread(img.save, output_path, format=pil_format, **save_options)
+                # Save image (run in thread pool to avoid blocking)
+                await asyncio.to_thread(img.save, output_path, format=pil_format, **save_options)
 
+            finally:
+                img.close()
         finally:
-            img.close()
-            # Clean up SVG temp file if created
+            # Clean up SVG temp file if created (runs even if Image.open fails)
             if temp_png and temp_png.exists():
                 try:
                     temp_png.unlink()

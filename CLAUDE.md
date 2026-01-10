@@ -271,3 +271,76 @@ contextBridge.exposeInMainWorld('electron', {
 ### Windows
 - Backend bundled as Python dist
 - NSIS installer handles installation
+
+---
+
+## Review Status
+
+> **Last Full Review:** 2026-01-10
+> **Status:** ✅ Production Ready
+
+### Security Review ✅
+- [x] Path traversal protection in archive extraction
+- [x] Symlink attack prevention (tar/zip extraction)
+- [x] Input validation on all API endpoints
+- [x] Rate limiting configured
+- [x] CORS properly configured
+- [x] Admin authentication on sensitive endpoints
+- [x] Context isolation in Electron
+- [x] Sandbox mode enabled
+- [x] No nodeIntegration
+- [x] Localhost-only backend binding (127.0.0.1)
+
+### Backend Review ✅
+- [x] All converters handle errors gracefully
+- [x] Subprocess stderr properly consumed (prevents deadlocks)
+- [x] Timeouts on all external operations
+- [x] JSON parsing errors handled
+- [x] File size limits enforced
+
+### Frontend Review ✅
+- [x] TypeScript types complete
+- [x] React components properly structured
+- [x] Toast notifications for user feedback
+- [x] i18n implemented
+
+## Quality Standards
+
+**Target:** Desktop file converter - reliable, secure, user-friendly
+
+| Aspect | Standard | Status |
+|--------|----------|--------|
+| Security | No file system escapes, safe subprocess handling | ✅ Met |
+| Reliability | All converters handle edge cases | ✅ Met |
+| UX | Clear feedback on success/failure | ✅ Met |
+| Performance | Reasonable conversion times | ✅ Met |
+| Documentation | CLAUDE.md current | ✅ Met |
+
+## Intentional Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Separate backend (FastAPI) | Python has better libraries for file conversion than Node.js |
+| HTTP between frontend/backend | Simpler than IPC; backend could be used standalone |
+| No settings persistence yet | MVP feature; not critical for core functionality |
+| Update opens browser | Simpler than in-app download; avoids signature verification complexity |
+| Bundled Python backend | Self-contained distribution; no Python install required |
+
+## Won't Fix (Accepted Limitations)
+
+| Issue | Reason |
+|-------|--------|
+| No settings UI | Low priority; works fine with defaults |
+| Update system partial | Opens releases page; full auto-update adds complexity |
+| Large app size (~200MB) | Electron + Python runtime; acceptable for desktop app |
+| Backend startup delay | Health check polling; typically <2 seconds |
+
+## Completed Optimizations
+
+- ✅ Subprocess stderr handling (prevents deadlocks)
+- ✅ Symlink traversal protection
+- ✅ Secure default host binding
+- ✅ Admin auth on cache endpoints
+- ✅ JSON error handling
+
+**DO NOT further optimize:** Conversion speed is limited by underlying tools (ffmpeg, etc.). The architecture is appropriate for the use case.

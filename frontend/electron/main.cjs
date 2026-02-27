@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, Menu, shell, dialog } = require('electron')
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
-const BackendManager = require('./backend-manager');
+const BackendManager = require('./backend-manager.cjs');
 
 let mainWindow;
 let backendManager;
@@ -218,7 +218,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       devTools: isDev // Only enable DevTools in development
     },
     icon: path.join(__dirname, '../build/icon.png'),

@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.2.2",
   "description": "Desktop file conversion application",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "type": "module",
   "homepage": "https://github.com/jj-repository/FileConverter",
   "repository": {

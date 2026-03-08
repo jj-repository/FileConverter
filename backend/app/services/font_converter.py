@@ -57,6 +57,7 @@ class FontConverter(BaseConverter):
         output_filename = f"{input_path.stem}_converted.{output_format}"
         output_path = settings.UPLOAD_DIR / output_filename
 
+        font = None
         try:
             await self.send_progress(session_id, 30, "converting", "Loading font file")
 
@@ -84,14 +85,15 @@ class FontConverter(BaseConverter):
             optimize = options.get('optimize', True)
             font.save(str(output_path))
 
-            font.close()
-
             await self.send_progress(session_id, 100, "converting", "Conversion complete")
             return output_path
 
         except Exception as e:
             logger.error(f"Font conversion failed: {e}")
             raise
+        finally:
+            if font is not None:
+                font.close()
 
     def _get_output_flavor(self, output_format: str) -> Optional[str]:
         """Get the fonttools flavor for the output format"""
@@ -136,6 +138,7 @@ class FontConverter(BaseConverter):
             'format': file_path.suffix[1:].lower(),
         }
 
+        font = None
         try:
             font = TTFont(str(file_path))
 
@@ -194,10 +197,11 @@ class FontConverter(BaseConverter):
                 if font.flavor:
                     info['web_format'] = font.flavor
 
-            font.close()
-
         except Exception as e:
             logger.warning(f"Could not extract font metadata: {e}")
+        finally:
+            if font is not None:
+                font.close()
 
         return info
 
@@ -217,6 +221,7 @@ class FontConverter(BaseConverter):
         output_filename = f"{input_path.stem}_optimized{input_path.suffix}"
         output_path = settings.UPLOAD_DIR / output_filename
 
+        font = None
         try:
             font = TTFont(str(input_path))
 
@@ -238,7 +243,6 @@ class FontConverter(BaseConverter):
             await self.send_progress(session_id, 80, "converting", "Saving optimized font")
 
             font.save(str(output_path))
-            font.close()
 
             await self.send_progress(session_id, 100, "converting", "Optimization complete")
             return output_path
@@ -246,3 +250,6 @@ class FontConverter(BaseConverter):
         except Exception as e:
             logger.error(f"Font optimization failed: {e}")
             raise
+        finally:
+            if font is not None:
+                font.close()

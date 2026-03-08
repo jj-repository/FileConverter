@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from fastapi.responses import FileResponse
+from pathlib import Path
 from typing import List, Optional, Annotated, Literal
 import uuid
 
@@ -164,7 +165,7 @@ async def convert_batch(
         for input_path in input_paths:
             cleanup_file(input_path)
         for output_path in output_paths:
-            cleanup_file(output_path)
+            cleanup_file(Path(output_path))
 
         raise HTTPException(status_code=500, detail=f"Batch conversion failed: {sanitize_error_message(str(e))}")
 

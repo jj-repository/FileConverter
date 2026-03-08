@@ -168,6 +168,7 @@ class ArchiveConverter(BaseConverter):
             with tarfile.open(archive_path, 'r:*') as tf:
                 # Security: comprehensive path traversal prevention
                 safe_members = []
+                extract_resolved = extract_to.resolve()
                 for member in tf.getmembers():
                     # Check for path traversal attempts
                     if member.name.startswith('/') or '..' in member.name or member.name.startswith('\\'):

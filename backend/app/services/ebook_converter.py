@@ -186,7 +186,7 @@ class EbookConverter(BaseConverter):
         items = list(book.get_items())
         for i, item in enumerate(items):
             if item.get_type() == 9:  # ITEM_DOCUMENT
-                html_content = item.get_content().decode('utf-8')
+                html_content = item.get_content().decode('utf-8', errors='replace')
                 soup = BeautifulSoup(html_content, 'html.parser')
 
                 # Extract body content

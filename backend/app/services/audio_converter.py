@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Dict, Any, Optional
 import subprocess
+import sys
 import re
 import asyncio
 import logging
@@ -9,6 +10,10 @@ from app.services.base_converter import BaseConverter
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+_subprocess_kwargs: dict = {}
+if sys.platform == 'win32':
+    _subprocess_kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
 
 
 class AudioConverter(BaseConverter):
@@ -36,7 +41,7 @@ class AudioConverter(BaseConverter):
                 str(file_path)
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=settings.SUBPROCESS_TIMEOUT)
+            result = subprocess.run(cmd, capture_output=True, encoding='utf-8', errors='replace', timeout=settings.SUBPROCESS_TIMEOUT, **_subprocess_kwargs)
             if result.returncode == 0 and result.stdout.strip():
                 return float(result.stdout.strip())
             return 0.0
@@ -165,10 +170,14 @@ class AudioConverter(BaseConverter):
 
         # Run FFmpeg conversion with progress tracking and timeout
         try:
+            _async_kwargs: dict = {}
+            if sys.platform == 'win32':
+                _async_kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                **_async_kwargs
             )
 
             last_progress = 10
@@ -233,7 +242,7 @@ class AudioConverter(BaseConverter):
                 str(file_path)
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=settings.SUBPROCESS_TIMEOUT)
+            result = subprocess.run(cmd, capture_output=True, encoding='utf-8', errors='replace', timeout=settings.SUBPROCESS_TIMEOUT, **_subprocess_kwargs)
 
             if result.returncode == 0:
                 import json

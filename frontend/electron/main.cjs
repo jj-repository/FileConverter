@@ -330,6 +330,10 @@ ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
 
+ipcMain.handle('check-for-updates', () => {
+  checkForUpdates(false);
+});
+
 ipcMain.handle('get-app-path', () => {
   return app.getAppPath();
 });

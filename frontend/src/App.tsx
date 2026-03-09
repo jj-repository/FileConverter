@@ -96,8 +96,17 @@ function App() {
               <h1 className="text-5xl font-bold text-gray-900 text-center flex-1">
                 FileConverter
               </h1>
-              <div className="flex-1 flex justify-end">
+              <div className="flex-1 flex justify-end items-center gap-3">
                 <LanguageSelector />
+                {(window as any).electron?.checkForUpdates && (
+                  <button
+                    onClick={() => (window as any).electron.checkForUpdates()}
+                    className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-gray-700 transition-colors"
+                    title="Check for Updates"
+                  >
+                    Check for Updates
+                  </button>
+                )}
               </div>
             </div>
           </header>

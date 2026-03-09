@@ -67,9 +67,9 @@ def sample_image(temp_dir):
 class TestCacheInfo:
     """Test GET /api/cache/info endpoint"""
 
-    def test_get_cache_info_success(self, client):
+    def test_get_cache_info_success(self, client, admin_headers):
         """Test successful cache info retrieval"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -81,9 +81,9 @@ class TestCacheInfo:
         assert "stats" in data
         assert "hit_rate" in data
 
-    def test_cache_info_includes_hit_rate(self, client):
+    def test_cache_info_includes_hit_rate(self, client, admin_headers):
         """Test that cache info includes hit rate metric"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -91,9 +91,9 @@ class TestCacheInfo:
         assert isinstance(data["hit_rate"], (int, float))
         assert 0.0 <= data["hit_rate"] <= 1.0
 
-    def test_cache_info_includes_size_metrics(self, client):
+    def test_cache_info_includes_size_metrics(self, client, admin_headers):
         """Test that cache info includes size metrics"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -104,9 +104,9 @@ class TestCacheInfo:
         assert data["total_size_mb"] >= 0
         assert data["max_size_mb"] > 0
 
-    def test_cache_info_includes_entry_count(self, client):
+    def test_cache_info_includes_entry_count(self, client, admin_headers):
         """Test that cache info includes entry count"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -114,9 +114,9 @@ class TestCacheInfo:
         assert isinstance(data["entry_count"], int)
         assert data["entry_count"] >= 0
 
-    def test_cache_info_includes_configuration(self, client):
+    def test_cache_info_includes_configuration(self, client, admin_headers):
         """Test that cache info includes configuration details"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -125,9 +125,9 @@ class TestCacheInfo:
         assert isinstance(data["expiration_hours"], int)
         assert data["expiration_hours"] > 0
 
-    def test_cache_info_includes_stats(self, client):
+    def test_cache_info_includes_stats(self, client, admin_headers):
         """Test that cache info includes detailed statistics"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -161,7 +161,7 @@ class TestCacheClear:
     def test_cache_can_be_cleared(self, client, admin_headers):
         """Test that cache clearing functionality works"""
         # Verify cache info exists before clear attempt
-        info_response = client.get("/api/cache/info")
+        info_response = client.get("/api/cache/info", headers=admin_headers)
         assert info_response.status_code == 200
 
         # Clear cache - may raise validation error due to endpoint bug
@@ -174,7 +174,7 @@ class TestCacheClear:
             pass
 
         # Verify stats reset after clear
-        info_after = client.get("/api/cache/info")
+        info_after = client.get("/api/cache/info", headers=admin_headers)
         assert info_after.status_code == 200
         assert info_after.json()["stats"]["hits"] == 0
         assert info_after.json()["stats"]["misses"] == 0
@@ -220,7 +220,7 @@ class TestCacheCleanup:
     def test_cleanup_removes_expired_entries(self, client, admin_headers):
         """Test that cleanup removes expired entries"""
         # First get initial cache info
-        info_response_1 = client.get("/api/cache/info")
+        info_response_1 = client.get("/api/cache/info", headers=admin_headers)
         initial_count = info_response_1.json()["entry_count"]
 
         # Run cleanup
@@ -248,18 +248,18 @@ class TestCacheCleanup:
 class TestCacheStatus:
     """Test cache status and enabled flag"""
 
-    def test_cache_info_enabled_flag(self, client):
+    def test_cache_info_enabled_flag(self, client, admin_headers):
         """Test that cache info includes enabled flag"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
         assert "enabled" in data
         assert isinstance(data["enabled"], bool)
 
-    def test_cache_enabled_returns_full_info(self, client):
+    def test_cache_enabled_returns_full_info(self, client, admin_headers):
         """Test that enabled cache returns full information"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -269,11 +269,11 @@ class TestCacheStatus:
         assert "entry_count" in data
         assert "hit_rate" in data
 
-    def test_cache_disabled_returns_message(self, client):
+    def test_cache_disabled_returns_message(self, client, admin_headers):
         """Test cache disabled behavior"""
         # This test assumes CACHE_ENABLED=True by default
         # If cache is disabled, it should return appropriate message
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         # Either cache is enabled with full info or disabled with message
         assert response.status_code == 200
@@ -286,9 +286,9 @@ class TestCacheStatus:
 class TestCacheStatisticsAfterOperations:
     """Test cache statistics tracking across operations"""
 
-    def test_cache_stats_initial_state(self, client):
+    def test_cache_stats_initial_state(self, client, admin_headers):
         """Test cache statistics in initial state"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -298,26 +298,26 @@ class TestCacheStatisticsAfterOperations:
         assert stats["misses"] >= 0
         assert stats["total_requests"] >= 0
 
-    def test_cache_total_size_non_negative(self, client):
+    def test_cache_total_size_non_negative(self, client, admin_headers):
         """Test that cache total size is non-negative"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
         assert data["total_size_mb"] >= 0
 
-    def test_cache_hit_rate_valid_range(self, client):
+    def test_cache_hit_rate_valid_range(self, client, admin_headers):
         """Test that hit rate is in valid range"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
         hit_rate = data["hit_rate"]
         assert 0.0 <= hit_rate <= 1.0
 
-    def test_cache_entry_count_non_negative(self, client):
+    def test_cache_entry_count_non_negative(self, client, admin_headers):
         """Test that entry count is non-negative"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -336,7 +336,7 @@ class TestCacheStatisticsAfterOperations:
             pass
 
         # Get cache info after clear
-        info_response = client.get("/api/cache/info")
+        info_response = client.get("/api/cache/info", headers=admin_headers)
 
         assert info_response.status_code == 200
         data = info_response.json()
@@ -349,9 +349,9 @@ class TestCacheStatisticsAfterOperations:
 class TestCacheEndpointValidation:
     """Test cache endpoint validation and error handling"""
 
-    def test_cache_info_returns_json(self, client):
+    def test_cache_info_returns_json(self, client, admin_headers):
         """Test that cache info returns valid JSON"""
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         # Should be valid JSON and parse without error
@@ -381,10 +381,10 @@ class TestCacheEndpointValidation:
         data = response.json()
         assert isinstance(data, dict)
 
-    def test_multiple_info_requests_consistent(self, client):
+    def test_multiple_info_requests_consistent(self, client, admin_headers):
         """Test that multiple info requests return consistent data"""
-        response1 = client.get("/api/cache/info")
-        response2 = client.get("/api/cache/info")
+        response1 = client.get("/api/cache/info", headers=admin_headers)
+        response2 = client.get("/api/cache/info", headers=admin_headers)
 
         assert response1.status_code == 200
         assert response2.status_code == 200
@@ -399,12 +399,12 @@ class TestCacheEndpointValidation:
 class TestCacheErrorHandling:
     """Test cache error handling when cache is disabled or not initialized"""
 
-    def test_get_info_when_cache_disabled(self, client, monkeypatch):
+    def test_get_info_when_cache_disabled(self, client, admin_headers, monkeypatch):
         """Test GET /info when cache is disabled (line 20)"""
         # Temporarily disable cache
         monkeypatch.setattr("app.routers.cache.settings.CACHE_ENABLED", False)
 
-        response = client.get("/api/cache/info")
+        response = client.get("/api/cache/info", headers=admin_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -412,13 +412,13 @@ class TestCacheErrorHandling:
         assert "message" in data
         assert "disabled" in data["message"].lower()
 
-    def test_get_info_when_cache_service_none(self, client, monkeypatch):
+    def test_get_info_when_cache_service_none(self, client, admin_headers, monkeypatch):
         """Test GET /info when cache service is not initialized (line 27)"""
         from unittest.mock import patch
 
         # Mock get_cache_service to return None
         with patch("app.routers.cache.get_cache_service", return_value=None):
-            response = client.get("/api/cache/info")
+            response = client.get("/api/cache/info", headers=admin_headers)
 
             assert response.status_code == 503
             data = response.json()

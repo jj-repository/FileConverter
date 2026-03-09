@@ -319,6 +319,7 @@ class TestParameterValidation:
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -353,6 +354,7 @@ class TestParameterValidation:
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -387,6 +389,7 @@ class TestParameterValidation:
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -432,6 +435,7 @@ class TestAudioConversion:
                     ])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
                     mock_subprocess.return_value = mock_process
 
                     # Create fake output file
@@ -477,6 +481,7 @@ class TestAudioConversion:
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -513,6 +518,7 @@ class TestAudioConversion:
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -551,6 +557,7 @@ class TestAudioConversion:
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -587,6 +594,7 @@ class TestAudioConversion:
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -639,6 +647,7 @@ class TestAudioConversion:
                     mock_process.stderr = AsyncMock()
                     mock_process.stderr.read = AsyncMock(return_value=b"FFmpeg error: invalid codec")
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b'FFmpeg error: invalid codec'))
                     mock_subprocess.return_value = mock_process
 
                     with pytest.raises(Exception, match="FFmpeg conversion failed"):
@@ -670,6 +679,7 @@ class TestAudioConversion:
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
                     mock_subprocess.return_value = mock_process
 
                     # Don't create output file
@@ -707,6 +717,7 @@ class TestAudioConversion:
                     mock_process.stderr = AsyncMock()
                     mock_process.kill = Mock()
                     mock_process.wait = AsyncMock()
+                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
                     mock_subprocess.return_value = mock_process
 
                     # Patch asyncio.timeout to raise TimeoutError immediately

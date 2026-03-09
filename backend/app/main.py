@@ -127,7 +127,7 @@ app.mount("/files", StaticFiles(directory=str(settings.UPLOAD_DIR)), name="files
 async def root():
     return {
         "message": "FileConverter API",
-        "version": "1.1.1",
+        "version": app.version,
         "endpoints": {
             "docs": "/docs",
             "image": "/api/image",

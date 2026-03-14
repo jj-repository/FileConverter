@@ -1,85 +1,62 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import os
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 # Collect all app files
 app_datas = []
 app_dir = os.path.join(os.getcwd(), 'app')
 for root, dirs, files in os.walk(app_dir):
-    # Skip __pycache__ directories
     if '__pycache__' in root:
         continue
     for file in files:
         if file.endswith('.py') or file.endswith('.json'):
             src = os.path.join(root, file)
-            # Get the relative path from the current directory
             dst = os.path.dirname(os.path.relpath(src, os.getcwd()))
             app_datas.append((src, dst))
 
-# Add static directories (will be created at runtime)
+# Add static directories
 static_dirs = [
     ('app/static', 'app/static'),
 ]
-
-# Collect data files from dependencies
-fastapi_datas = collect_data_files('fastapi')
-pydantic_datas = collect_data_files('pydantic')
-pydantic_core_datas = collect_data_files('pydantic_core')
-
-# Collect all uvicorn submodules
-uvicorn_imports = collect_submodules('uvicorn')
 
 a = Analysis(
     ['run_server.py'],
     pathex=[os.getcwd()],
     binaries=[],
-    datas=app_datas + static_dirs + fastapi_datas + pydantic_datas + pydantic_core_datas,
+    datas=app_datas + static_dirs,
     hiddenimports=[
-        'uvicorn.logging',
-        'uvicorn.loops',
-        'uvicorn.loops.auto',
-        'uvicorn.protocols',
-        'uvicorn.protocols.http',
-        'uvicorn.protocols.http.auto',
-        'uvicorn.protocols.websockets',
-        'uvicorn.protocols.websockets.auto',
-        'uvicorn.lifespan',
-        'uvicorn.lifespan.on',
-        'multipart',
-        'python_multipart',
-        'pydantic_settings',
-        'pydantic.deprecated',
-        'pydantic.deprecated.decorator',
-        'app.main',
-        'app.config',
-        'app.routers.image',
-        'app.routers.video',
-        'app.routers.audio',
-        'app.routers.document',
-        'app.routers.batch',
-        'app.routers.websocket',
-        'app.services.image_converter',
-        'app.services.video_converter',
-        'app.services.audio_converter',
-        'app.services.document_converter',
+        'uvicorn', 'uvicorn.logging', 'uvicorn.loops', 'uvicorn.loops.auto',
+        'uvicorn.protocols', 'uvicorn.protocols.http', 'uvicorn.protocols.http.auto',
+        'uvicorn.protocols.http.h11_impl', 'uvicorn.protocols.http.httptools_impl',
+        'uvicorn.protocols.websockets', 'uvicorn.protocols.websockets.auto',
+        'uvicorn.protocols.websockets.websockets_impl',
+        'uvicorn.lifespan', 'uvicorn.lifespan.on', 'uvicorn.lifespan.off',
+        'uvicorn.main', 'uvicorn.config', 'uvicorn.server',
+        'multipart', 'python_multipart',
+        'pydantic', 'pydantic_settings', 'pydantic_core',
+        'pydantic.deprecated', 'pydantic.deprecated.decorator',
+        'fastapi', 'starlette',
+        'app.main', 'app.config',
+        'app.routers.image', 'app.routers.video', 'app.routers.audio',
+        'app.routers.document', 'app.routers.batch', 'app.routers.websocket',
+        'app.routers.data', 'app.routers.archive', 'app.routers.spreadsheet',
+        'app.routers.subtitle', 'app.routers.ebook', 'app.routers.font',
+        'app.routers.cache', 'app.routers.version',
+        'app.services.image_converter', 'app.services.video_converter',
+        'app.services.audio_converter', 'app.services.document_converter',
         'app.services.batch_converter',
-        'app.utils.binary_paths',
-        'app.utils.file_handler',
-        'app.utils.validation',
-    ] + uvicorn_imports,
+        'app.utils.binary_paths', 'app.utils.file_handler', 'app.utils.validation',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['tkinter', 'matplotlib', 'scipy', 'IPython', 'jupyter'],
     noarchive=False,
     optimize=0,
 )
 
 pyz = PYZ(a.pure)
 
-# Use onedir mode — much faster to build than onefile, and the Electron app
-# bundles the entire directory via extraResources anyway.
 exe = EXE(
     pyz,
     a.scripts,

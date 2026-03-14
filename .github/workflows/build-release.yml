@@ -66,12 +66,17 @@ jobs:
           source venv/bin/activate
           pyinstaller backend-server.spec --clean
 
+      - name: Disable Windows Defender real-time monitoring (speeds up PyInstaller)
+        if: runner.os == 'Windows'
+        run: Set-MpPreference -DisableRealtimeMonitoring $true
+
       - name: Build backend with PyInstaller (Windows)
         if: runner.os == 'Windows'
         working-directory: backend
+        timeout-minutes: 20
         run: |
           .\venv\Scripts\Activate.ps1
-          pyinstaller backend-server.spec --clean
+          pyinstaller backend-server.spec --clean --log-level WARN
 
       - name: Download FFmpeg and Pandoc (Linux)
         if: runner.os == 'Linux'

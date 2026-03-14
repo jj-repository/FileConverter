@@ -73,10 +73,10 @@ jobs:
       - name: Build backend with PyInstaller (Windows)
         if: runner.os == 'Windows'
         working-directory: backend
-        timeout-minutes: 45
+        timeout-minutes: 90
         run: |
           .\venv\Scripts\Activate.ps1
-          pyinstaller backend-server.spec --clean --log-level WARN
+          pyinstaller backend-server.spec --log-level INFO
 
       - name: Download FFmpeg and Pandoc (Linux)
         if: runner.os == 'Linux'

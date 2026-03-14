@@ -100,15 +100,18 @@
         ]
       }
     ],
-    "mac": {
-      "category": "public.app-category.utilities",
-      "icon": "build/icon.icns"
-    },
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "portable"
       ],
       "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "artifactName": "FileConverterInstaller${version}Win.${ext}"
+    },
+    "portable": {
+      "artifactName": "FileConverter${version}PortableWin.${ext}"
     },
     "linux": {
       "target": [
@@ -117,7 +120,11 @@
       ],
       "category": "Utility",
       "icon": "build/icon.png",
-      "maintainer": "FileConverter <noreply@fileconverter.app>"
+      "maintainer": "FileConverter <noreply@fileconverter.app>",
+      "artifactName": "FileConverter-${version}-Linux.${ext}"
+    },
+    "deb": {
+      "artifactName": "FileConverter-${version}-Linux.${ext}"
     }
   }
 }

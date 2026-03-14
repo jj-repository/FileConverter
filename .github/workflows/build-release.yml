@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false  # Continue other builds even if one fails
       matrix:
-        os: [ubuntu-latest, windows-2022, macos-latest]
+        os: [ubuntu-latest, windows-2022]
 
     runs-on: ${{ matrix.os }}
 
@@ -29,7 +29,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'  # Use 3.11 for better compatibility
+          python-version: '3.11'
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -39,8 +39,8 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Setup Python virtual environment (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Setup Python virtual environment (Linux)
+        if: runner.os == 'Linux'
         working-directory: backend
         run: |
           python -m venv venv
@@ -59,8 +59,8 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller==6.14.2
 
-      - name: Build backend with PyInstaller (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Build backend with PyInstaller (Linux)
+        if: runner.os == 'Linux'
         working-directory: backend
         run: |
           source venv/bin/activate
@@ -73,7 +73,7 @@ jobs:
       - name: Build backend with PyInstaller (Windows)
         if: runner.os == 'Windows'
         working-directory: backend
-        timeout-minutes: 90
+        timeout-minutes: 30
         run: |
           .\venv\Scripts\Activate.ps1
           pyinstaller backend-server.spec --log-level INFO
@@ -116,31 +116,6 @@ jobs:
           Copy-Item "pandoc-3.6.1\pandoc.exe" resources\bin\windows\
           Remove-Item -Recurse -Force pandoc-3.6.1, pandoc.zip
 
-      - name: Download FFmpeg and Pandoc (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          mkdir -p resources/bin/macos
-
-          # Download FFmpeg (using static build)
-          curl -L -o ffmpeg.zip https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip
-          unzip -q ffmpeg.zip
-          mv ffmpeg resources/bin/macos/
-          chmod +x resources/bin/macos/ffmpeg
-          rm ffmpeg.zip
-
-          curl -L -o ffprobe.zip https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip
-          unzip -q ffprobe.zip
-          mv ffprobe resources/bin/macos/
-          chmod +x resources/bin/macos/ffprobe
-          rm ffprobe.zip
-
-          # Download Pandoc
-          curl -L -o pandoc.pkg https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-arm64-macOS.pkg
-          pkgutil --expand-full pandoc.pkg pandoc-expanded
-          mv pandoc-expanded/pandoc.pkg/Payload/usr/local/bin/pandoc resources/bin/macos/
-          chmod +x resources/bin/macos/pandoc
-          rm -rf pandoc.pkg pandoc-expanded
-
       - name: Build Electron app (Linux)
         if: runner.os == 'Linux'
         working-directory: frontend
@@ -150,11 +125,6 @@ jobs:
         if: runner.os == 'Windows'
         working-directory: frontend
         run: npx electron-builder --win --publish never
-
-      - name: Build Electron app (macOS)
-        if: runner.os == 'macOS'
-        working-directory: frontend
-        run: npx electron-builder --mac --publish never
 
       - name: Upload artifacts (Linux)
         if: runner.os == 'Linux'
@@ -172,15 +142,6 @@ jobs:
           name: windows-release
           path: |
             frontend/dist-electron/*.exe
-
-      - name: Upload artifacts (macOS)
-        if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-release
-          path: |
-            frontend/dist-electron/*.dmg
-            frontend/dist-electron/*.zip
 
   release:
     needs: build
@@ -200,7 +161,6 @@ jobs:
           files: |
             linux-release/*
             windows-release/*
-            macos-release/*
           draft: false
           prerelease: false
           generate_release_notes: true

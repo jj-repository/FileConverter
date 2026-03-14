@@ -20,9 +20,9 @@ class BackendManager {
     if (this.isDev) {
       return null; // Use Python in dev mode
     } else {
-      // In production, use the bundled backend-server executable
+      // In production, use the bundled backend-server executable (onedir mode)
       const exeName = process.platform === 'win32' ? 'backend-server.exe' : 'backend-server';
-      return path.join(process.resourcesPath, 'backend', 'dist', exeName);
+      return path.join(process.resourcesPath, 'backend', 'dist', 'backend-server', exeName);
     }
   }
 

@@ -1,6 +1,6 @@
 # Overview
 
-v1.2.4 — Desktop app for converting files between formats. Electron frontend + FastAPI backend bundled for distribution.
+v1.2.6 — Desktop app for converting files between formats. Electron frontend + FastAPI backend bundled for distribution.
 
 ## Files
 - `frontend/electron/main.js` — Electron main process

@@ -108,10 +108,10 @@
       "icon": "build/icon.ico"
     },
     "nsis": {
-      "artifactName": "FileConverterInstaller${version}Win.${ext}"
+      "artifactName": "FileConverter-Setup.${ext}"
     },
     "portable": {
-      "artifactName": "FileConverter${version}PortableWin.${ext}"
+      "artifactName": "FileConverter.${ext}"
     },
     "linux": {
       "target": [
@@ -121,10 +121,10 @@
       "category": "Utility",
       "icon": "build/icon.png",
       "maintainer": "FileConverter <noreply@fileconverter.app>",
-      "artifactName": "FileConverter-${version}-Linux.${ext}"
+      "artifactName": "FileConverter-Linux.${ext}"
     },
     "deb": {
-      "artifactName": "FileConverter-${version}-Linux.${ext}"
+      "artifactName": "FileConverter-Linux.${ext}"
     }
   }
 }

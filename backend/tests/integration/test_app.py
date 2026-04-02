@@ -38,7 +38,7 @@ class TestAppEndpoints:
         assert "message" in data
         assert data["message"] == "FileConverter API"
         assert "version" in data
-        assert data["version"] == "1.2.4"
+        assert data["version"] == "1.03"
         assert "endpoints" in data
 
         # Verify all major endpoints are listed
@@ -110,7 +110,7 @@ class TestAppStartup:
         assert not cache_dir.exists()
 
         # Initialize cache service
-        cache_service = initialize_cache_service(
+        initialize_cache_service(
             cache_dir=cache_dir,
             expiration_hours=1,
             max_size_mb=100
@@ -482,7 +482,7 @@ class TestAppConfiguration:
 
     def test_app_version_configured(self):
         """Test that app version is configured correctly"""
-        assert app.version == "1.2.4"
+        assert app.version == "1.03"
 
     def test_app_description_configured(self):
         """Test that app description is configured correctly"""

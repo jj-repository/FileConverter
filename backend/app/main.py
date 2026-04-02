@@ -2,7 +2,6 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -52,9 +51,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-from app.routers import image, video, audio, document, data, archive, spreadsheet, subtitle, ebook, font, batch, websocket, cache, version
-from app.middleware.error_handler import register_exception_handlers
-from app.services.cache_service import initialize_cache_service, get_cache_service
+from app.routers import image, video, audio, document, data, archive, spreadsheet, subtitle, ebook, font, batch, websocket, cache, version  # noqa: E402
+from app.middleware.error_handler import register_exception_handlers  # noqa: E402
+from app.services.cache_service import initialize_cache_service, get_cache_service  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +90,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FileConverter API",
     description="A modern file conversion API supporting images, videos, audio, and documents",
-    version="1.2.5",
+    version="1.03",
     lifespan=lifespan,
 )
 

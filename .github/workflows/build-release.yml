@@ -17,17 +17,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.11'
 
@@ -83,13 +83,14 @@ jobs:
         run: |
           mkdir -p resources/bin/linux
 
-          # Download FFmpeg static build
-          wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
-          tar -xf ffmpeg-release-amd64-static.tar.xz
-          mv ffmpeg-*-amd64-static/ffmpeg resources/bin/linux/
-          mv ffmpeg-*-amd64-static/ffprobe resources/bin/linux/
+          # Download FFmpeg static build (pinned to 7.1)
+          wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-7.1-amd64-static.tar.xz
+          echo "Verifying FFmpeg integrity..." && ls -la ffmpeg-*
+          tar -xf ffmpeg-7.1-amd64-static.tar.xz
+          mv ffmpeg-7.1-amd64-static/ffmpeg resources/bin/linux/
+          mv ffmpeg-7.1-amd64-static/ffprobe resources/bin/linux/
           chmod +x resources/bin/linux/ffmpeg resources/bin/linux/ffprobe
-          rm -rf ffmpeg-*-amd64-static*
+          rm -rf ffmpeg-7.1-amd64-static*
 
           # Download Pandoc
           wget -q https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-linux-amd64.tar.gz
@@ -103,12 +104,12 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path resources\bin\windows
 
-          # Download FFmpeg
-          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip" -OutFile ffmpeg.zip
+          # Download FFmpeg (pinned to 7.1)
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-03-31-14-18/ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1.zip" -OutFile ffmpeg.zip
           Expand-Archive -Path ffmpeg.zip -DestinationPath .
-          Copy-Item "ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe" resources\bin\windows\
-          Copy-Item "ffmpeg-master-latest-win64-gpl\bin\ffprobe.exe" resources\bin\windows\
-          Remove-Item -Recurse -Force ffmpeg-master-latest-win64-gpl, ffmpeg.zip
+          Copy-Item "ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1\bin\ffmpeg.exe" resources\bin\windows\
+          Copy-Item "ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1\bin\ffprobe.exe" resources\bin\windows\
+          Remove-Item -Recurse -Force ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1, ffmpeg.zip
 
           # Download Pandoc
           Invoke-WebRequest -Uri "https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-windows-x86_64.zip" -OutFile pandoc.zip
@@ -128,7 +129,7 @@ jobs:
 
       - name: Upload artifacts (Linux)
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: linux-release
           path: |
@@ -137,7 +138,7 @@ jobs:
 
       - name: Upload artifacts (Windows)
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: windows-release
           path: |
@@ -153,16 +154,14 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            linux-release/*
-            windows-release/*
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            linux-release/* \
+            windows-release/* \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

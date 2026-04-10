@@ -15,12 +15,8 @@ Security tests:
 """
 
 import pytest
-from pathlib import Path
-from fastapi.testclient import TestClient
-
 from app.main import app
-from app.config import settings
-
+from fastapi.testclient import TestClient
 
 # ============================================================================
 # SAMPLE SUBTITLE FIXTURES
@@ -598,7 +594,7 @@ class TestSubtitleAdvancedOptions:
             )
 
         assert response1.status_code == 200
-        vtt_file = response1.json()["output_file"]
+        response1.json()["output_file"]
 
         # Second conversion: VTT -> ASS
         # (Would need to re-fetch the converted file to test this properly)

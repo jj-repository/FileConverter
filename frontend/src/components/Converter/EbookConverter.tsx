@@ -5,8 +5,8 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { ebookAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { EBOOK_FORMATS } from '../../config/constants';
 
-const EBOOK_FORMATS = ['epub', 'txt', 'html', 'pdf'];
 
 export const EbookConverter: React.FC = () => {
   const { t } = useTranslation();
@@ -36,15 +36,15 @@ export const EbookConverter: React.FC = () => {
 
     switch (converter.status) {
       case 'uploading':
-        return 'Uploading file...';
+        return t('ebook.uploading', 'Uploading file...');
       case 'converting':
-        return 'Converting eBook...';
+        return t('ebook.converting', 'Converting eBook...');
       case 'completed':
-        return 'Conversion completed!';
+        return t('ebook.complete', 'Conversion complete!');
       case 'failed':
-        return converter.error || 'Conversion failed';
+        return converter.error || t('ebook.failed', 'Conversion failed');
       default:
-        return 'Ready to convert';
+        return t('ebook.ready', 'Ready to convert');
     }
   };
 
@@ -53,20 +53,19 @@ export const EbookConverter: React.FC = () => {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="text-sm font-semibold text-blue-900 mb-2">{t('converter.ebook.title')}</h3>
         <p className="text-sm text-blue-800">
-          Convert between eBook formats. Supports EPUB, TXT, HTML, and PDF.
+          {t('ebook.description', 'Convert between eBook formats. Supports EPUB, TXT, HTML, and PDF.')}
         </p>
         <ul className="mt-2 text-sm text-blue-700 list-disc list-inside space-y-1">
-          <li>EPUB to TXT: Extract plain text content</li>
-          <li>EPUB to HTML: Export as single HTML file with styling</li>
-          <li>EPUB to PDF: Generate PDF with text content</li>
-          <li>TXT/HTML to EPUB: Create basic EPUB eBook</li>
+          <li>{t('ebook.format_epub_txt', 'EPUB to TXT: Extract plain text content')}</li>
+          <li>{t('ebook.format_epub_html', 'EPUB to HTML: Export as single HTML file with styling')}</li>
+          <li>{t('ebook.format_epub_pdf', 'EPUB to PDF: Generate PDF with text content')}</li>
+          <li>{t('ebook.format_txt_epub', 'TXT/HTML to EPUB: Create basic EPUB eBook')}</li>
         </ul>
       </div>
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
         <p className="text-sm text-yellow-800">
-          <strong>Note:</strong> Conversions may lose advanced formatting, images, and metadata.
-          EPUB is recommended for preservation of structure and content.
+          <strong>{t('ebook.note_label', 'Note:')}</strong> {t('ebook.note_text', 'Conversions may lose advanced formatting, images, and metadata. EPUB is recommended for preservation of structure and content.')}
         </p>
       </div>
 
@@ -81,7 +80,7 @@ export const EbookConverter: React.FC = () => {
           {converter.selectedFile && (
             <>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Selected file:</p>
+                <p className="text-sm text-gray-600">{t('ebook.selected_file', 'Selected file:')}</p>
                 <p className="font-medium">{converter.selectedFile.name}</p>
                 <p className="text-sm text-gray-500">
                   {(converter.selectedFile.size / 1024 / 1024).toFixed(2)} MB
@@ -90,13 +89,13 @@ export const EbookConverter: React.FC = () => {
 
               <div>
                 <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
-                  Output Format
+                  {t('ebook.output_format', 'Output Format')}
                 </label>
                 <select
                   id="output-format"
                   value={converter.outputFormat}
                   onChange={(e) => converter.setOutputFormat(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="input"
                   aria-label="Select output format for ebook conversion"
                 >
                   {EBOOK_FORMATS.map((format) => (
@@ -107,10 +106,10 @@ export const EbookConverter: React.FC = () => {
                 </select>
               </div>
 
-              {window.electron && (
+              {window.electron?.isElectron && (
                 <div>
                   <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
-                    Custom Filename (optional)
+                    {t('ebook.custom_filename', 'Custom Filename (optional)')}
                   </label>
                   <input
                     id="custom-filename"
@@ -118,21 +117,21 @@ export const EbookConverter: React.FC = () => {
                     value={converter.customFilename}
                     onChange={(e) => converter.setCustomFilename(e.target.value)}
                     placeholder={`${converter.selectedFile.name.split('.')[0]}.${converter.outputFormat}`}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="input"
                   />
                 </div>
               )}
 
-              {window.electron && (
+              {window.electron?.isElectron && (
                 <div>
                   <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
-                    Output Directory
+                    {t('ebook.output_directory', 'Output Directory')}
                   </label>
                   <div className="flex gap-2">
                     <input
                       id="output-directory"
                       type="text"
-                      value={converter.outputDirectory || 'Default Downloads folder'}
+                      value={converter.outputDirectory || t('ebook.default_downloads', 'Default Downloads folder')}
                       readOnly
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
                       aria-label="Output directory path"
@@ -142,7 +141,7 @@ export const EbookConverter: React.FC = () => {
                       variant="secondary"
                       aria-label="Browse for output directory"
                     >
-                      Browse
+                      {t('ebook.browse', 'Browse')}
                     </Button>
                   </div>
                 </div>
@@ -153,7 +152,7 @@ export const EbookConverter: React.FC = () => {
                 disabled={converter.status === 'uploading' || converter.status === 'converting'}
                 className="w-full"
               >
-                {converter.status === 'uploading' || converter.status === 'converting' ? 'Converting...' : 'Convert eBook'}
+                {converter.status === 'uploading' || converter.status === 'converting' ? t('ebook.converting_short', 'Converting...') : t('ebook.convert_button', 'Convert eBook')}
               </Button>
 
               {converter.showFeedback && (
@@ -191,15 +190,11 @@ export const EbookConverter: React.FC = () => {
                 </div>
               )}
 
-              {converter.downloadUrl && converter.status === 'completed' && !window.electron && (
+              {converter.downloadUrl && converter.status === 'completed' && !window.electron?.isElectron && (
                 <div className="text-center">
-                  <a
-                    href={converter.downloadUrl}
-                    download
-                    className="inline-block px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Download Converted eBook
-                  </a>
+                  <Button onClick={() => converter.handleDownload?.()} variant="primary">
+                    {t('ebook.download_button', 'Download Converted eBook')}
+                  </Button>
                 </div>
               )}
             </>

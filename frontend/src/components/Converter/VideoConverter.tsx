@@ -6,8 +6,8 @@ import { Card } from '../Common/Card';
 import { videoAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
 import { formatFileSize } from '../../utils/fileUtils';
+import { VIDEO_FORMATS } from '../../config/constants';
 
-const VIDEO_FORMATS = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'm4v', '3gp', '3g2', 'mts', 'm2ts', 'vob', 'ts', 'ogv'];
 
 const CODECS = [
   { value: 'libx264', label: 'H.264 (Most Compatible)' },

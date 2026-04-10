@@ -82,3 +82,4 @@ resources/bin/windows/pandoc.exe
 resources/bin/macos/ffmpeg
 resources/bin/macos/ffprobe
 resources/bin/macos/pandoc
+.ruff_cache/

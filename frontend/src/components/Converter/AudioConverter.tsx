@@ -6,8 +6,8 @@ import { Card } from '../Common/Card';
 import { audioAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
 import { formatFileSize } from '../../utils/fileUtils';
+import { AUDIO_FORMATS } from '../../config/constants';
 
-const AUDIO_FORMATS = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'opus', 'alac', 'ape', 'mka'];
 
 const BITRATES = [
   { value: '64k', label: '64 kbps (Low)' },

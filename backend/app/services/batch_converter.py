@@ -1,13 +1,13 @@
-from pathlib import Path
-from typing import Dict, Any, List
 import asyncio
 import zipfile
+from pathlib import Path
+from typing import Any, Dict, List
 
-from app.services.image_converter import ImageConverter
-from app.services.video_converter import VideoConverter
+from app.config import settings
 from app.services.audio_converter import AudioConverter
 from app.services.document_converter import DocumentConverter
-from app.config import settings
+from app.services.image_converter import ImageConverter
+from app.services.video_converter import VideoConverter
 
 
 class BatchConverter:
@@ -31,7 +31,7 @@ class BatchConverter:
         elif file_format in settings.DOCUMENT_FORMATS:
             return self.document_converter, "document"
         else:
-            return None, None
+            return None, "unsupported (batch supports: image, video, audio, document)"
 
     async def convert_single_file(
         self,
@@ -40,12 +40,12 @@ class BatchConverter:
         options: Dict[str, Any],
         session_id: str,
         file_index: int,
-        total_files: int
+        total_files: int,
     ) -> Dict[str, Any]:
         """Convert a single file and return the result"""
         try:
             # Get file format
-            input_format = input_path.suffix.lower().lstrip('.')
+            input_format = input_path.suffix.lower().lstrip(".")
 
             # Get appropriate converter
             converter, file_type = self.get_converter_for_format(input_format)
@@ -54,7 +54,7 @@ class BatchConverter:
                 return {
                     "filename": input_path.name,
                     "success": False,
-                    "error": f"Unsupported file format: {input_format}",
+                    "error": f"Unsupported file format: {input_format}. Batch conversion supports image, video, audio, and document formats.",
                     "session_id": session_id,
                     "index": file_index,
                 }
@@ -65,7 +65,7 @@ class BatchConverter:
                     session_id,
                     (file_index / total_files) * 100,
                     "converting",
-                    f"Converting file {file_index + 1} of {total_files}: {input_path.name}"
+                    f"Converting file {file_index + 1} of {total_files}: {input_path.name}",
                 )
 
             # Convert the file
@@ -73,7 +73,7 @@ class BatchConverter:
                 input_path=input_path,
                 output_format=output_format,
                 options=options,
-                session_id=f"{session_id}_{file_index}"
+                session_id=f"{session_id}_{file_index}",
             )
 
             return {
@@ -101,7 +101,7 @@ class BatchConverter:
         output_format: str,
         options: Dict[str, Any],
         session_id: str,
-        parallel: bool = True
+        parallel: bool = True,
     ) -> List[Dict[str, Any]]:
         """
         Convert multiple files
@@ -124,20 +124,26 @@ class BatchConverter:
                 session_id,
                 0,
                 "converting",
-                f"Starting batch conversion of {total_files} files"
+                f"Starting batch conversion of {total_files} files",
             )
 
         if parallel:
-            # Process files in parallel
+            # Process files in parallel with concurrency limit
+            sem = asyncio.Semaphore(4)
+
+            async def limited_convert(index, input_path):
+                async with sem:
+                    return await self.convert_single_file(
+                        input_path,
+                        output_format,
+                        options,
+                        session_id,
+                        index,
+                        total_files,
+                    )
+
             tasks = [
-                self.convert_single_file(
-                    input_path,
-                    output_format,
-                    options,
-                    session_id,
-                    index,
-                    total_files
-                )
+                limited_convert(index, input_path)
                 for index, input_path in enumerate(input_paths)
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -146,13 +152,15 @@ class BatchConverter:
             final_results = []
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
-                    final_results.append({
-                        "filename": input_paths[i].name,
-                        "success": False,
-                        "error": str(result),
-                        "session_id": session_id,
-                        "index": i,
-                    })
+                    final_results.append(
+                        {
+                            "filename": input_paths[i].name,
+                            "success": False,
+                            "error": str(result),
+                            "session_id": session_id,
+                            "index": i,
+                        }
+                    )
                 else:
                     final_results.append(result)
             results = final_results
@@ -161,12 +169,7 @@ class BatchConverter:
             results = []
             for index, input_path in enumerate(input_paths):
                 result = await self.convert_single_file(
-                    input_path,
-                    output_format,
-                    options,
-                    session_id,
-                    index,
-                    total_files
+                    input_path, output_format, options, session_id, index, total_files
                 )
                 results.append(result)
 
@@ -179,15 +182,13 @@ class BatchConverter:
                 session_id,
                 100,
                 "completed",
-                f"Batch conversion completed: {successful_count} successful, {failed_count} failed"
+                f"Batch conversion completed: {successful_count} successful, {failed_count} failed",
             )
 
         return results
 
     async def create_zip_archive(
-        self,
-        file_paths: List[Path],
-        archive_name: str = "converted_files.zip"
+        self, file_paths: List[Path], archive_name: str = "converted_files.zip"
     ) -> Path:
         """
         Create a ZIP archive of converted files
@@ -206,10 +207,12 @@ class BatchConverter:
 
         def create_zip():
             try:
-                with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
                     for file_path in file_paths:
                         # Convert to Path if string
-                        path_obj = Path(file_path) if isinstance(file_path, str) else file_path
+                        path_obj = (
+                            Path(file_path) if isinstance(file_path, str) else file_path
+                        )
                         if path_obj.exists():
                             zipf.write(path_obj, path_obj.name)
             except Exception:

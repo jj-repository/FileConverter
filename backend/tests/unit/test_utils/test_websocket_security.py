@@ -7,17 +7,15 @@ to prevent abuse and unauthorized connections.
 COVERAGE GOAL: 95%+
 """
 
-import pytest
 import time
-from unittest.mock import patch
 
+import pytest
 from app.utils.websocket_security import (
-    WebSocketRateLimiter,
     SessionValidator,
+    WebSocketRateLimiter,
     rate_limiter,
-    session_validator
+    session_validator,
 )
-
 
 # ============================================================================
 # RATE LIMITING TESTS (CRITICAL SECURITY)

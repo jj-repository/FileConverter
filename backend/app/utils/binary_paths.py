@@ -2,10 +2,9 @@
 Utility to detect and return paths to bundled binaries (FFmpeg, Pandoc).
 Falls back to system binaries if bundled ones are not found.
 """
-import os
-import sys
 import platform
 import shutil
+import sys
 from pathlib import Path
 
 

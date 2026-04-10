@@ -12,6 +12,9 @@ on:
       - 'frontend/**'
       - '.github/workflows/frontend-tests.yml'
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test on Node ${{ matrix.node-version }}
@@ -24,10 +27,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -43,7 +46,7 @@ jobs:
           npm run test:run -- --coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
         with:
           files: ./frontend/coverage/lcov.info
           flags: frontend
@@ -53,7 +56,7 @@ jobs:
 
       - name: Archive coverage report
         if: matrix.node-version == '22'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: frontend-coverage-report
           path: frontend/coverage/
@@ -61,7 +64,7 @@ jobs:
 
       - name: Archive test results
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: test-results-node-${{ matrix.node-version }}
           path: frontend/test-results/
@@ -73,10 +76,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: '22'
           cache: 'npm'
@@ -89,7 +92,6 @@ jobs:
       - name: Run TypeScript type checking
         working-directory: ./frontend
         run: npx tsc --noEmit
-        continue-on-error: true
 
       - name: Run ESLint (if configured)
         working-directory: ./frontend
@@ -99,7 +101,6 @@ jobs:
           else
             echo "ESLint not configured, skipping..."
           fi
-        continue-on-error: true
 
   build:
     name: Build Frontend
@@ -107,10 +108,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: '22'
           cache: 'npm'
@@ -125,7 +126,7 @@ jobs:
         run: npm run build
 
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: frontend-build
           path: frontend/dist/

@@ -1,14 +1,15 @@
-from fastapi import UploadFile, HTTPException
-from pathlib import Path
-from typing import Set
-import os
 import logging
 import sys
+from pathlib import Path
+from typing import Set
+
+from fastapi import HTTPException, UploadFile
 
 logger = logging.getLogger(__name__)
 
 try:
     import magic
+
     MAGIC_AVAILABLE = True
 except ImportError:
     MAGIC_AVAILABLE = False
@@ -19,10 +20,9 @@ except ImportError:
         "renamed extensions. Install python-magic for production use: pip install python-magic"
     )
     logger.error(security_warning)
-    print(f"\n{'='*80}\n{security_warning}\n{'='*80}\n", file=sys.stderr)
+    print(f"\n{'=' * 80}\n{security_warning}\n{'=' * 80}\n", file=sys.stderr)
 
 from app.config import settings
-
 
 # MIME type sets for validation - used to verify uploaded files match their claimed type
 # These are partial matches (e.g., "image" matches "image/png", "image/jpeg", etc.)
@@ -99,56 +99,26 @@ def validate_file_size(file: UploadFile, file_type: str) -> None:
     file_size = file.file.tell()
     file.file.seek(0)  # Seek back to start
 
-    # Check against limits
-    if file_type == "image" and file_size > settings.IMAGE_MAX_SIZE:
+    # Size limits by file type
+    size_limits = {
+        "image": settings.IMAGE_MAX_SIZE,
+        "video": settings.VIDEO_MAX_SIZE,
+        "audio": settings.AUDIO_MAX_SIZE,
+        "document": settings.DOCUMENT_MAX_SIZE,
+        "data": settings.DOCUMENT_MAX_SIZE,
+        "archive": settings.ARCHIVE_MAX_SIZE,
+        "spreadsheet": settings.SPREADSHEET_MAX_SIZE,
+        "subtitle": settings.SUBTITLE_MAX_SIZE,
+        "ebook": settings.EBOOK_MAX_SIZE,
+        "font": settings.FONT_MAX_SIZE,
+    }
+
+    max_size = size_limits.get(file_type, settings.MAX_UPLOAD_SIZE)
+    if file_size > max_size:
+        label = file_type.capitalize() if file_type in size_limits else "File"
         raise HTTPException(
             status_code=413,
-            detail=f"Image file too large. Maximum size: {settings.IMAGE_MAX_SIZE / 1024 / 1024}MB"
-        )
-    elif file_type == "video" and file_size > settings.VIDEO_MAX_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Video file too large. Maximum size: {settings.VIDEO_MAX_SIZE / 1024 / 1024}MB"
-        )
-    elif file_type == "audio" and file_size > settings.AUDIO_MAX_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Audio file too large. Maximum size: {settings.AUDIO_MAX_SIZE / 1024 / 1024}MB"
-        )
-    elif file_type == "document" and file_size > settings.DOCUMENT_MAX_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Document file too large. Maximum size: {settings.DOCUMENT_MAX_SIZE / 1024 / 1024}MB"
-        )
-    elif file_type == "archive" and file_size > settings.ARCHIVE_MAX_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Archive file too large. Maximum size: {settings.ARCHIVE_MAX_SIZE / 1024 / 1024}MB"
-        )
-    elif file_type == "spreadsheet" and file_size > settings.SPREADSHEET_MAX_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Spreadsheet file too large. Maximum size: {settings.SPREADSHEET_MAX_SIZE / 1024 / 1024}MB"
-        )
-    elif file_type == "subtitle" and file_size > settings.SUBTITLE_MAX_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Subtitle file too large. Maximum size: {settings.SUBTITLE_MAX_SIZE / 1024 / 1024}MB"
-        )
-    elif file_type == "ebook" and file_size > settings.EBOOK_MAX_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"eBook file too large. Maximum size: {settings.EBOOK_MAX_SIZE / 1024 / 1024}MB"
-        )
-    elif file_type == "font" and file_size > settings.FONT_MAX_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Font file too large. Maximum size: {settings.FONT_MAX_SIZE / 1024 / 1024}MB"
-        )
-    elif file_size > settings.MAX_UPLOAD_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Maximum size: {settings.MAX_UPLOAD_SIZE / 1024 / 1024}MB"
+            detail=f"{label} file too large. Maximum size: {max_size / 1024 / 1024}MB",
         )
 
 
@@ -157,22 +127,22 @@ def validate_file_extension(filename: str, allowed_formats: Set[str]) -> str:
     filename_lower = filename.lower()
 
     # Check for compound extensions (e.g., .tar.gz, .tar.bz2)
-    if filename_lower.endswith('.tar.gz') and 'tar.gz' in allowed_formats:
-        return 'tar.gz'
-    elif filename_lower.endswith('.tar.bz2') and 'tar.bz2' in allowed_formats:
-        return 'tar.bz2'
-    elif filename_lower.endswith('.tgz') and 'tgz' in allowed_formats:
-        return 'tgz'
-    elif filename_lower.endswith('.tbz2') and 'tbz2' in allowed_formats:
-        return 'tbz2'
+    if filename_lower.endswith(".tar.gz") and "tar.gz" in allowed_formats:
+        return "tar.gz"
+    elif filename_lower.endswith(".tar.bz2") and "tar.bz2" in allowed_formats:
+        return "tar.bz2"
+    elif filename_lower.endswith(".tgz") and "tgz" in allowed_formats:
+        return "tgz"
+    elif filename_lower.endswith(".tbz2") and "tbz2" in allowed_formats:
+        return "tbz2"
 
     # Standard single extension
-    file_extension = Path(filename).suffix.lower().lstrip('.')
+    file_extension = Path(filename).suffix.lower().lstrip(".")
 
     if file_extension not in allowed_formats:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file format: {file_extension}. Allowed formats: {', '.join(allowed_formats)}"
+            detail=f"Unsupported file format: {file_extension}. Allowed formats: {', '.join(allowed_formats)}",
         )
 
     return file_extension
@@ -193,7 +163,7 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
         # Never skip validation, even in DEBUG mode
         raise HTTPException(
             status_code=503,
-            detail="File type validation unavailable. Install python-magic: pip install python-magic"
+            detail="File type validation unavailable. Install python-magic: pip install python-magic",
         )
 
     try:
@@ -204,10 +174,12 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
         is_valid = any(expected in mime_type for expected in expected_types)
 
         if not is_valid:
-            logger.warning(f"MIME type mismatch: expected {expected_types}, got {mime_type}")
+            logger.warning(
+                f"MIME type mismatch: expected {expected_types}, got {mime_type}"
+            )
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid file type. Detected MIME type: {mime_type}"
+                detail=f"Invalid file type. Detected MIME type: {mime_type}",
             )
     except HTTPException:
         raise
@@ -217,7 +189,7 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
         # Fail closed on validation errors
         raise HTTPException(
             status_code=400,
-            detail="File type validation failed. Please try again with a valid file."
+            detail="File type validation failed. Please try again with a valid file.",
         )
 
 
@@ -244,7 +216,9 @@ def get_file_type_from_format(file_format: str) -> str:
     elif file_format in settings.DATA_FORMATS:
         return "data"
     else:
-        raise HTTPException(status_code=400, detail=f"Unknown file format: {file_format}")
+        raise HTTPException(
+            status_code=400, detail=f"Unknown file format: {file_format}"
+        )
 
 
 def validate_download_filename(filename: str, base_dir: Path) -> Path:
@@ -286,7 +260,9 @@ def validate_download_filename(filename: str, base_dir: Path) -> Path:
 
     # Resolve to absolute path
     try:
-        resolved_path = file_path.resolve(strict=True)  # strict=True raises if path doesn't exist
+        resolved_path = file_path.resolve(
+            strict=True
+        )  # strict=True raises if path doesn't exist
         resolved_base = base_dir.resolve()
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")

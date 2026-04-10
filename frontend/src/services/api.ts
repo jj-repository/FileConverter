@@ -3,282 +3,101 @@ import { ConversionResponse, ConversionOptions } from '../types/conversion';
 
 const api = axios.create({
   baseURL: '/api',
-  headers: {
-    'Content-Type': 'multipart/form-data',
-  },
 });
 
-export const imageAPI = {
-  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('output_format', options.outputFormat!);
+// --- Factory for standard converter APIs ---
 
-    if (options.quality !== undefined) {
-      formData.append('quality', options.quality.toString());
-    }
-    if (options.width) {
-      formData.append('width', options.width.toString());
-    }
-    if (options.height) {
-      formData.append('height', options.height.toString());
-    }
+type OptionAppender = (formData: FormData, options: ConversionOptions) => void;
 
-    const response = await api.post<ConversionResponse>('/image/convert', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent) => {
-        if (options.onUploadProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          options.onUploadProgress(percentCompleted);
-        }
-      },
-    });
+interface ConverterAPI {
+  convert: (file: File, options: ConversionOptions) => Promise<ConversionResponse>;
+  getFormats: () => Promise<{ input_formats: string[]; output_formats: string[] }>;
+  downloadFile: (filename: string) => string;
+}
 
-    return response.data;
-  },
+function createConverterAPI(type: string, appendOptions: OptionAppender): ConverterAPI {
+  return {
+    convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('output_format', options.outputFormat!);
+      appendOptions(formData, options);
 
-  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
-    const response = await api.get('/image/formats');
-    return response.data;
-  },
+      const response = await api.post<ConversionResponse>(`/${type}/convert`, formData, {
+        onUploadProgress: (progressEvent) => {
+          if (options.onUploadProgress && progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            options.onUploadProgress(percentCompleted);
+          }
+        },
+      });
+      return response.data;
+    },
 
-  downloadFile: (filename: string): string => {
-    return `/api/image/download/${filename}`;
-  },
-};
+    getFormats: async () => {
+      const response = await api.get(`/${type}/formats`);
+      return response.data;
+    },
 
-export const videoAPI = {
-  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('output_format', options.outputFormat!);
+    downloadFile: (filename: string) => `/api/${type}/download/${filename}`,
+  };
+}
 
-    if (options.codec) {
-      formData.append('codec', options.codec);
-    }
-    if (options.resolution) {
-      formData.append('resolution', options.resolution);
-    }
-    if (options.bitrate) {
-      formData.append('bitrate', options.bitrate);
-    }
+// Helper to append optional form fields
+function appendIf(formData: FormData, key: string, value: unknown) {
+  if (value !== undefined && value !== null) {
+    formData.append(key, String(value));
+  }
+}
 
-    const response = await api.post<ConversionResponse>('/video/convert', formData, {
-      onUploadProgress: (progressEvent) => {
-        if (options.onUploadProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          options.onUploadProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
-  },
+// --- Converter APIs ---
 
-  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
-    const response = await api.get('/video/formats');
-    return response.data;
-  },
-};
+export const imageAPI = createConverterAPI('image', (fd, o) => {
+  appendIf(fd, 'quality', o.quality);
+  appendIf(fd, 'width', o.width);
+  appendIf(fd, 'height', o.height);
+});
 
-export const audioAPI = {
-  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('output_format', options.outputFormat!);
+export const videoAPI = createConverterAPI('video', (fd, o) => {
+  appendIf(fd, 'codec', o.codec);
+  appendIf(fd, 'resolution', o.resolution);
+  appendIf(fd, 'bitrate', o.bitrate);
+});
 
-    if (options.bitrate) {
-      formData.append('bitrate', options.bitrate);
-    }
-    if (options.sampleRate) {
-      formData.append('sample_rate', options.sampleRate.toString());
-    }
-    if (options.channels) {
-      formData.append('channels', options.channels.toString());
-    }
+export const audioAPI = createConverterAPI('audio', (fd, o) => {
+  appendIf(fd, 'bitrate', o.bitrate);
+  appendIf(fd, 'sample_rate', o.sampleRate);
+  appendIf(fd, 'channels', o.channels);
+});
 
-    const response = await api.post<ConversionResponse>('/audio/convert', formData, {
-      onUploadProgress: (progressEvent) => {
-        if (options.onUploadProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          options.onUploadProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
-  },
+export const documentAPI = createConverterAPI('document', (fd, o) => {
+  appendIf(fd, 'preserve_formatting', o.preserveFormatting);
+  appendIf(fd, 'toc', o.toc);
+});
 
-  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
-    const response = await api.get('/audio/formats');
-    return response.data;
-  },
-};
+export const dataAPI = createConverterAPI('data', (fd, o) => {
+  appendIf(fd, 'encoding', o.encoding);
+  appendIf(fd, 'delimiter', o.delimiter);
+  appendIf(fd, 'pretty', o.pretty);
+});
 
-export const documentAPI = {
-  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('output_format', options.outputFormat!);
+export const archiveAPI = createConverterAPI('archive', (fd, o) => {
+  appendIf(fd, 'compression_level', o.compressionLevel);
+});
 
-    if (options.preserveFormatting !== undefined) {
-      formData.append('preserve_formatting', options.preserveFormatting.toString());
-    }
-    if (options.toc !== undefined) {
-      formData.append('toc', options.toc.toString());
-    }
-
-    const response = await api.post<ConversionResponse>('/document/convert', formData, {
-      onUploadProgress: (progressEvent) => {
-        if (options.onUploadProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          options.onUploadProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
-  },
-
-  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
-    const response = await api.get('/document/formats');
-    return response.data;
-  },
-};
-
-export const dataAPI = {
-  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('output_format', options.outputFormat!);
-
-    if (options.encoding) {
-      formData.append('encoding', options.encoding);
-    }
-    if (options.delimiter) {
-      formData.append('delimiter', options.delimiter);
-    }
-    if (options.pretty !== undefined) {
-      formData.append('pretty', options.pretty.toString());
-    }
-
-    const response = await api.post<ConversionResponse>('/data/convert', formData, {
-      onUploadProgress: (progressEvent) => {
-        if (options.onUploadProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          options.onUploadProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
-  },
-
-  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
-    const response = await api.get('/data/formats');
-    return response.data;
-  },
-
-  downloadFile: (filename: string): string => {
-    return `/api/data/download/${filename}`;
-  },
-};
-
-export const archiveAPI = {
-  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('output_format', options.outputFormat!);
-
-    if (options.compressionLevel !== undefined) {
-      formData.append('compression_level', options.compressionLevel.toString());
-    }
-
-    const response = await api.post<ConversionResponse>('/archive/convert', formData, {
-      onUploadProgress: (progressEvent) => {
-        if (options.onUploadProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          options.onUploadProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
-  },
-
-  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
-    const response = await api.get('/archive/formats');
-    return response.data;
-  },
-
-  downloadFile: (filename: string): string => {
-    return `/api/archive/download/${filename}`;
-  },
-};
-
-export const spreadsheetAPI = {
-  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('output_format', options.outputFormat!);
-
-    if (options.sheetName) {
-      formData.append('sheet_name', options.sheetName);
-    }
-    if (options.includeAllSheets !== undefined) {
-      formData.append('include_all_sheets', options.includeAllSheets.toString());
-    }
-    if (options.encoding) {
-      formData.append('encoding', options.encoding);
-    }
-    if (options.delimiter) {
-      formData.append('delimiter', options.delimiter);
-    }
-
-    const response = await api.post<ConversionResponse>('/spreadsheet/convert', formData, {
-      onUploadProgress: (progressEvent) => {
-        if (options.onUploadProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          options.onUploadProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
-  },
-
-  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
-    const response = await api.get('/spreadsheet/formats');
-    return response.data;
-  },
-
-  downloadFile: (filename: string): string => {
-    return `/api/spreadsheet/download/${filename}`;
-  },
-};
+export const spreadsheetAPI = createConverterAPI('spreadsheet', (fd, o) => {
+  appendIf(fd, 'sheet_name', o.sheetName);
+  appendIf(fd, 'include_all_sheets', o.includeAllSheets);
+  appendIf(fd, 'encoding', o.encoding);
+  appendIf(fd, 'delimiter', o.delimiter);
+});
 
 export const subtitleAPI = {
-  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('output_format', options.outputFormat!);
-
-    if (options.encoding) {
-      formData.append('encoding', options.encoding);
-    }
-    if (options.fps !== undefined) {
-      formData.append('fps', options.fps.toString());
-    }
-    if (options.keepHtmlTags !== undefined) {
-      formData.append('keep_html_tags', options.keepHtmlTags.toString());
-    }
-
-    const response = await api.post<ConversionResponse>('/subtitle/convert', formData, {
-      onUploadProgress: (progressEvent) => {
-        if (options.onUploadProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          options.onUploadProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
-  },
+  ...createConverterAPI('subtitle', (fd, o) => {
+    appendIf(fd, 'encoding', o.encoding);
+    appendIf(fd, 'fps', o.fps);
+    appendIf(fd, 'keep_html_tags', o.keepHtmlTags);
+  }),
 
   adjustTiming: async (file: File, offsetMs: number, onUploadProgress?: (progress: number) => void): Promise<ConversionResponse> => {
     const formData = new FormData();
@@ -295,77 +114,16 @@ export const subtitleAPI = {
     });
     return response.data;
   },
-
-  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
-    const response = await api.get('/subtitle/formats');
-    return response.data;
-  },
-
-  downloadFile: (filename: string): string => {
-    return `/api/subtitle/download/${filename}`;
-  },
 };
 
-export const ebookAPI = {
-  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('output_format', options.outputFormat!);
+export const ebookAPI = createConverterAPI('ebook', () => {});
 
-    const response = await api.post<ConversionResponse>('/ebook/convert', formData, {
-      onUploadProgress: (progressEvent) => {
-        if (options.onUploadProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          options.onUploadProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
-  },
+export const fontAPI = createConverterAPI('font', (fd, o) => {
+  appendIf(fd, 'subset_text', o.subsetText);
+  appendIf(fd, 'optimize', o.optimize);
+});
 
-  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
-    const response = await api.get('/ebook/formats');
-    return response.data;
-  },
-
-  downloadFile: (filename: string): string => {
-    return `/api/ebook/download/${filename}`;
-  },
-};
-
-export const fontAPI = {
-  convert: async (file: File, options: ConversionOptions): Promise<ConversionResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('output_format', options.outputFormat!);
-
-    if (options.subsetText) {
-      formData.append('subset_text', options.subsetText);
-    }
-    if (options.optimize !== undefined) {
-      formData.append('optimize', options.optimize.toString());
-    }
-
-    const response = await api.post<ConversionResponse>('/font/convert', formData, {
-      onUploadProgress: (progressEvent) => {
-        if (options.onUploadProgress && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          options.onUploadProgress(percentCompleted);
-        }
-      },
-    });
-    return response.data;
-  },
-
-  getFormats: async (): Promise<{ input_formats: string[]; output_formats: string[] }> => {
-    const response = await api.get('/font/formats');
-    return response.data;
-  },
-
-  downloadFile: (filename: string): string => {
-    return `/api/font/download/${filename}`;
-  },
-};
+// --- Batch API ---
 
 export interface BatchConversionResult {
   filename: string;
@@ -385,11 +143,16 @@ export interface BatchConversionResponse {
   message: string;
 }
 
+interface BatchZipResponse {
+  zip_file: string;
+  download_url: string;
+  file_count: number;
+}
+
 export const batchAPI = {
   convert: async (files: File[], options: ConversionOptions): Promise<BatchConversionResponse> => {
     const formData = new FormData();
 
-    // Append all files
     files.forEach(file => {
       formData.append('files', file);
     });
@@ -398,36 +161,16 @@ export const batchAPI = {
     formData.append('parallel', 'true');
 
     // Add all optional parameters
-    if (options.quality !== undefined) {
-      formData.append('quality', options.quality.toString());
-    }
-    if (options.width) {
-      formData.append('width', options.width.toString());
-    }
-    if (options.height) {
-      formData.append('height', options.height.toString());
-    }
-    if (options.bitrate) {
-      formData.append('bitrate', options.bitrate);
-    }
-    if (options.codec) {
-      formData.append('codec', options.codec);
-    }
-    if (options.resolution) {
-      formData.append('resolution', options.resolution);
-    }
-    if (options.sampleRate) {
-      formData.append('sample_rate', options.sampleRate.toString());
-    }
-    if (options.channels) {
-      formData.append('channels', options.channels.toString());
-    }
-    if (options.preserveFormatting !== undefined) {
-      formData.append('preserve_formatting', options.preserveFormatting.toString());
-    }
-    if (options.toc !== undefined) {
-      formData.append('toc', options.toc.toString());
-    }
+    appendIf(formData, 'quality', options.quality);
+    appendIf(formData, 'width', options.width);
+    appendIf(formData, 'height', options.height);
+    appendIf(formData, 'bitrate', options.bitrate);
+    appendIf(formData, 'codec', options.codec);
+    appendIf(formData, 'resolution', options.resolution);
+    appendIf(formData, 'sample_rate', options.sampleRate);
+    appendIf(formData, 'channels', options.channels);
+    appendIf(formData, 'preserve_formatting', options.preserveFormatting);
+    appendIf(formData, 'toc', options.toc);
 
     const response = await api.post<BatchConversionResponse>('/batch/convert', formData, {
       onUploadProgress: (progressEvent) => {
@@ -440,14 +183,14 @@ export const batchAPI = {
     return response.data;
   },
 
-  createZip: async (sessionId: string, filenames: string[]): Promise<any> => {
+  createZip: async (sessionId: string, filenames: string[]): Promise<BatchZipResponse> => {
     const formData = new FormData();
     formData.append('session_id', sessionId);
     filenames.forEach(filename => {
       formData.append('filenames', filename);
     });
 
-    const response = await api.post('/batch/download-zip', formData);
+    const response = await api.post<BatchZipResponse>('/batch/download-zip', formData);
     return response.data;
   },
 };

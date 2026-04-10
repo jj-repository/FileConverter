@@ -2,9 +2,10 @@
 File I/O mocking utilities (aiofiles, PIL, python-magic)
 """
 
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from PIL import Image
 import io
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+from PIL import Image
 
 
 class PILMock:

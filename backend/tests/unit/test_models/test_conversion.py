@@ -12,30 +12,21 @@ Tests cover:
 """
 
 import pytest
-from pydantic import ValidationError
-
 from app.models.conversion import (
-    ConversionStatus,
-    ImageFormat,
-    VideoFormat,
-    AudioFormat,
-    DocumentFormat,
-    ImageConversionRequest,
-    VideoConversionRequest,
-    AudioConversionRequest,
-    DocumentConversionRequest,
-    ConversionResponse,
-    ProgressUpdate,
-    FileInfo,
-    BatchFileResult,
     BatchConversionResponse,
+    BatchFileResult,
     BatchZipResponse,
+    ConversionResponse,
+    ConversionStatus,
+    FileInfo,
+    ProgressUpdate,
 )
-
+from pydantic import ValidationError
 
 # ============================================================================
 # ConversionStatus Enum Tests
 # ============================================================================
+
 
 class TestConversionStatusEnum:
     """Test ConversionStatus enum values and behavior"""
@@ -81,571 +72,15 @@ class TestConversionStatusEnum:
         assert issubclass(ConversionStatus, str)
 
 
-# ============================================================================
-# ImageFormat Enum Tests
-# ============================================================================
+# Format enum and request model tests removed — enums were unused dead code,
+# routers validate against config.settings sets directly.
 
-class TestImageFormatEnum:
-    """Test ImageFormat enum values"""
-
-    def test_all_image_formats_exist(self):
-        """Test all ImageFormat values exist"""
-        formats = {fmt.value for fmt in ImageFormat}
-        expected = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "ico"}
-        assert formats == expected
-
-    def test_png_format_value(self):
-        """Test PNG format has correct value"""
-        assert ImageFormat.PNG.value == "png"
-
-    def test_jpg_format_value(self):
-        """Test JPG format has correct value"""
-        assert ImageFormat.JPG.value == "jpg"
-
-    def test_jpeg_format_value(self):
-        """Test JPEG format has correct value"""
-        assert ImageFormat.JPEG.value == "jpeg"
-
-    def test_webp_format_value(self):
-        """Test WEBP format has correct value"""
-        assert ImageFormat.WEBP.value == "webp"
-
-    def test_gif_format_value(self):
-        """Test GIF format has correct value"""
-        assert ImageFormat.GIF.value == "gif"
-
-    def test_bmp_format_value(self):
-        """Test BMP format has correct value"""
-        assert ImageFormat.BMP.value == "bmp"
-
-    def test_tiff_format_value(self):
-        """Test TIFF format has correct value"""
-        assert ImageFormat.TIFF.value == "tiff"
-
-    def test_ico_format_value(self):
-        """Test ICO format has correct value"""
-        assert ImageFormat.ICO.value == "ico"
-
-    def test_image_format_string_initialization(self):
-        """Test ImageFormat can be initialized from string"""
-        fmt = ImageFormat("png")
-        assert fmt == ImageFormat.PNG
-
-
-# ============================================================================
-# VideoFormat Enum Tests
-# ============================================================================
-
-class TestVideoFormatEnum:
-    """Test VideoFormat enum values"""
-
-    def test_all_video_formats_exist(self):
-        """Test all VideoFormat values exist"""
-        formats = {fmt.value for fmt in VideoFormat}
-        expected = {"mp4", "avi", "mov", "mkv", "webm", "flv", "wmv"}
-        assert formats == expected
-
-    def test_mp4_format_value(self):
-        """Test MP4 format has correct value"""
-        assert VideoFormat.MP4.value == "mp4"
-
-    def test_avi_format_value(self):
-        """Test AVI format has correct value"""
-        assert VideoFormat.AVI.value == "avi"
-
-    def test_mov_format_value(self):
-        """Test MOV format has correct value"""
-        assert VideoFormat.MOV.value == "mov"
-
-    def test_mkv_format_value(self):
-        """Test MKV format has correct value"""
-        assert VideoFormat.MKV.value == "mkv"
-
-    def test_webm_format_value(self):
-        """Test WEBM format has correct value"""
-        assert VideoFormat.WEBM.value == "webm"
-
-    def test_flv_format_value(self):
-        """Test FLV format has correct value"""
-        assert VideoFormat.FLV.value == "flv"
-
-    def test_wmv_format_value(self):
-        """Test WMV format has correct value"""
-        assert VideoFormat.WMV.value == "wmv"
-
-
-# ============================================================================
-# AudioFormat Enum Tests
-# ============================================================================
-
-class TestAudioFormatEnum:
-    """Test AudioFormat enum values"""
-
-    def test_all_audio_formats_exist(self):
-        """Test all AudioFormat values exist"""
-        formats = {fmt.value for fmt in AudioFormat}
-        expected = {"mp3", "wav", "flac", "aac", "ogg", "m4a", "wma"}
-        assert formats == expected
-
-    def test_mp3_format_value(self):
-        """Test MP3 format has correct value"""
-        assert AudioFormat.MP3.value == "mp3"
-
-    def test_wav_format_value(self):
-        """Test WAV format has correct value"""
-        assert AudioFormat.WAV.value == "wav"
-
-    def test_flac_format_value(self):
-        """Test FLAC format has correct value"""
-        assert AudioFormat.FLAC.value == "flac"
-
-    def test_aac_format_value(self):
-        """Test AAC format has correct value"""
-        assert AudioFormat.AAC.value == "aac"
-
-    def test_ogg_format_value(self):
-        """Test OGG format has correct value"""
-        assert AudioFormat.OGG.value == "ogg"
-
-    def test_m4a_format_value(self):
-        """Test M4A format has correct value"""
-        assert AudioFormat.M4A.value == "m4a"
-
-    def test_wma_format_value(self):
-        """Test WMA format has correct value"""
-        assert AudioFormat.WMA.value == "wma"
-
-
-# ============================================================================
-# DocumentFormat Enum Tests
-# ============================================================================
-
-class TestDocumentFormatEnum:
-    """Test DocumentFormat enum values"""
-
-    def test_all_document_formats_exist(self):
-        """Test all DocumentFormat values exist"""
-        formats = {fmt.value for fmt in DocumentFormat}
-        expected = {"txt", "pdf", "docx", "md", "html", "rtf"}
-        assert formats == expected
-
-    def test_txt_format_value(self):
-        """Test TXT format has correct value"""
-        assert DocumentFormat.TXT.value == "txt"
-
-    def test_pdf_format_value(self):
-        """Test PDF format has correct value"""
-        assert DocumentFormat.PDF.value == "pdf"
-
-    def test_docx_format_value(self):
-        """Test DOCX format has correct value"""
-        assert DocumentFormat.DOCX.value == "docx"
-
-    def test_md_format_value(self):
-        """Test MD format has correct value"""
-        assert DocumentFormat.MD.value == "md"
-
-    def test_html_format_value(self):
-        """Test HTML format has correct value"""
-        assert DocumentFormat.HTML.value == "html"
-
-    def test_rtf_format_value(self):
-        """Test RTF format has correct value"""
-        assert DocumentFormat.RTF.value == "rtf"
-
-
-# ============================================================================
-# ImageConversionRequest Tests
-# ============================================================================
-
-class TestImageConversionRequest:
-    """Test ImageConversionRequest model"""
-
-    def test_valid_request_with_all_parameters(self):
-        """Test creating valid request with all parameters"""
-        req = ImageConversionRequest(
-            output_format=ImageFormat.PNG,
-            quality=80,
-            width=1920,
-            height=1080,
-        )
-        assert req.output_format == ImageFormat.PNG
-        assert req.quality == 80
-        assert req.width == 1920
-        assert req.height == 1080
-
-    def test_valid_request_with_format_only(self):
-        """Test creating valid request with only format"""
-        req = ImageConversionRequest(output_format=ImageFormat.JPG)
-        assert req.output_format == ImageFormat.JPG
-
-    def test_quality_default_value(self):
-        """Test quality default value is 95"""
-        req = ImageConversionRequest(output_format=ImageFormat.PNG)
-        assert req.quality == 95
-
-    def test_quality_minimum_valid(self):
-        """Test quality at minimum valid value (1)"""
-        req = ImageConversionRequest(
-            output_format=ImageFormat.PNG,
-            quality=1,
-        )
-        assert req.quality == 1
-
-    def test_quality_maximum_valid(self):
-        """Test quality at maximum valid value (100)"""
-        req = ImageConversionRequest(
-            output_format=ImageFormat.PNG,
-            quality=100,
-        )
-        assert req.quality == 100
-
-    def test_quality_below_minimum_rejected(self):
-        """Test quality below 1 is rejected"""
-        with pytest.raises(ValidationError) as exc_info:
-            ImageConversionRequest(
-                output_format=ImageFormat.PNG,
-                quality=0,
-            )
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-    def test_quality_above_maximum_rejected(self):
-        """Test quality above 100 is rejected"""
-        with pytest.raises(ValidationError) as exc_info:
-            ImageConversionRequest(
-                output_format=ImageFormat.PNG,
-                quality=101,
-            )
-        assert "less than or equal to 100" in str(exc_info.value)
-
-    def test_width_minimum_valid(self):
-        """Test width at minimum valid value (1)"""
-        req = ImageConversionRequest(
-            output_format=ImageFormat.PNG,
-            width=1,
-        )
-        assert req.width == 1
-
-    def test_width_large_value(self):
-        """Test width with large valid value"""
-        req = ImageConversionRequest(
-            output_format=ImageFormat.PNG,
-            width=8000,
-        )
-        assert req.width == 8000
-
-    def test_width_zero_rejected(self):
-        """Test width of 0 is rejected"""
-        with pytest.raises(ValidationError) as exc_info:
-            ImageConversionRequest(
-                output_format=ImageFormat.PNG,
-                width=0,
-            )
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-    def test_width_negative_rejected(self):
-        """Test negative width is rejected"""
-        with pytest.raises(ValidationError) as exc_info:
-            ImageConversionRequest(
-                output_format=ImageFormat.PNG,
-                width=-100,
-            )
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-    def test_height_minimum_valid(self):
-        """Test height at minimum valid value (1)"""
-        req = ImageConversionRequest(
-            output_format=ImageFormat.PNG,
-            height=1,
-        )
-        assert req.height == 1
-
-    def test_height_zero_rejected(self):
-        """Test height of 0 is rejected"""
-        with pytest.raises(ValidationError) as exc_info:
-            ImageConversionRequest(
-                output_format=ImageFormat.PNG,
-                height=0,
-            )
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-    def test_height_negative_rejected(self):
-        """Test negative height is rejected"""
-        with pytest.raises(ValidationError) as exc_info:
-            ImageConversionRequest(
-                output_format=ImageFormat.PNG,
-                height=-50,
-            )
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-    def test_output_format_required(self):
-        """Test output_format is required"""
-        with pytest.raises(ValidationError) as exc_info:
-            ImageConversionRequest()
-        assert "output_format" in str(exc_info.value).lower()
-
-    def test_width_and_height_optional(self):
-        """Test width and height are optional"""
-        req = ImageConversionRequest(output_format=ImageFormat.WEBP)
-        assert req.width is None
-        assert req.height is None
-
-    def test_quality_optional(self):
-        """Test quality is optional (has default)"""
-        req = ImageConversionRequest(output_format=ImageFormat.PNG)
-        assert req.quality is not None
-
-    def test_all_format_options(self):
-        """Test all image format options work"""
-        for fmt in ImageFormat:
-            req = ImageConversionRequest(output_format=fmt)
-            assert req.output_format == fmt
-
-
-# ============================================================================
-# VideoConversionRequest Tests
-# ============================================================================
-
-class TestVideoConversionRequest:
-    """Test VideoConversionRequest model"""
-
-    def test_valid_request_with_all_parameters(self):
-        """Test creating valid request with all parameters"""
-        req = VideoConversionRequest(
-            output_format=VideoFormat.MP4,
-            codec="libx265",
-            resolution="1080p",
-            bitrate="5M",
-        )
-        assert req.output_format == VideoFormat.MP4
-        assert req.codec == "libx265"
-        assert req.resolution == "1080p"
-        assert req.bitrate == "5M"
-
-    def test_codec_default_value(self):
-        """Test codec default value is libx264"""
-        req = VideoConversionRequest(output_format=VideoFormat.MP4)
-        assert req.codec == "libx264"
-
-    def test_resolution_default_value(self):
-        """Test resolution default value is original"""
-        req = VideoConversionRequest(output_format=VideoFormat.AVI)
-        assert req.resolution == "original"
-
-    def test_bitrate_default_value(self):
-        """Test bitrate default value is 2M"""
-        req = VideoConversionRequest(output_format=VideoFormat.MKV)
-        assert req.bitrate == "2M"
-
-    def test_custom_codec(self):
-        """Test custom codec values"""
-        codecs = ["libx264", "libx265", "h264", "vp8", "vp9"]
-        for codec in codecs:
-            req = VideoConversionRequest(
-                output_format=VideoFormat.MP4,
-                codec=codec,
-            )
-            assert req.codec == codec
-
-    def test_custom_resolution(self):
-        """Test custom resolution values"""
-        resolutions = ["720p", "1080p", "2K", "4K", "480p"]
-        for resolution in resolutions:
-            req = VideoConversionRequest(
-                output_format=VideoFormat.MP4,
-                resolution=resolution,
-            )
-            assert req.resolution == resolution
-
-    def test_custom_bitrate(self):
-        """Test custom bitrate values"""
-        bitrates = ["1M", "2M", "5M", "10M", "500k"]
-        for bitrate in bitrates:
-            req = VideoConversionRequest(
-                output_format=VideoFormat.MP4,
-                bitrate=bitrate,
-            )
-            assert req.bitrate == bitrate
-
-    def test_output_format_required(self):
-        """Test output_format is required"""
-        with pytest.raises(ValidationError) as exc_info:
-            VideoConversionRequest()
-        assert "output_format" in str(exc_info.value).lower()
-
-    def test_all_video_formats(self):
-        """Test all video format options work"""
-        for fmt in VideoFormat:
-            req = VideoConversionRequest(output_format=fmt)
-            assert req.output_format == fmt
-
-    def test_parameters_are_optional(self):
-        """Test codec, resolution, and bitrate are optional"""
-        req = VideoConversionRequest(output_format=VideoFormat.MP4)
-        assert req.codec is not None  # has default
-        assert req.resolution is not None  # has default
-        assert req.bitrate is not None  # has default
-
-
-# ============================================================================
-# AudioConversionRequest Tests
-# ============================================================================
-
-class TestAudioConversionRequest:
-    """Test AudioConversionRequest model"""
-
-    def test_valid_request_with_all_parameters(self):
-        """Test creating valid request with all parameters"""
-        req = AudioConversionRequest(
-            output_format=AudioFormat.MP3,
-            bitrate="320k",
-            sample_rate=48000,
-            channels=2,
-        )
-        assert req.output_format == AudioFormat.MP3
-        assert req.bitrate == "320k"
-        assert req.sample_rate == 48000
-        assert req.channels == 2
-
-    def test_bitrate_default_value(self):
-        """Test bitrate default value is 192k"""
-        req = AudioConversionRequest(output_format=AudioFormat.MP3)
-        assert req.bitrate == "192k"
-
-    def test_sample_rate_default_value(self):
-        """Test sample_rate default value is 44100"""
-        req = AudioConversionRequest(output_format=AudioFormat.WAV)
-        assert req.sample_rate == 44100
-
-    def test_channels_default_value(self):
-        """Test channels default value is 2"""
-        req = AudioConversionRequest(output_format=AudioFormat.FLAC)
-        assert req.channels == 2
-
-    def test_channels_minimum_valid(self):
-        """Test channels at minimum valid value (1 - mono)"""
-        req = AudioConversionRequest(
-            output_format=AudioFormat.MP3,
-            channels=1,
-        )
-        assert req.channels == 1
-
-    def test_channels_maximum_valid(self):
-        """Test channels at maximum valid value (2 - stereo)"""
-        req = AudioConversionRequest(
-            output_format=AudioFormat.MP3,
-            channels=2,
-        )
-        assert req.channels == 2
-
-    def test_channels_zero_rejected(self):
-        """Test channels of 0 is rejected"""
-        with pytest.raises(ValidationError) as exc_info:
-            AudioConversionRequest(
-                output_format=AudioFormat.MP3,
-                channels=0,
-            )
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-    def test_channels_above_two_rejected(self):
-        """Test channels > 2 is rejected"""
-        with pytest.raises(ValidationError) as exc_info:
-            AudioConversionRequest(
-                output_format=AudioFormat.MP3,
-                channels=3,
-            )
-        assert "less than or equal to 2" in str(exc_info.value)
-
-    def test_channels_negative_rejected(self):
-        """Test negative channels is rejected"""
-        with pytest.raises(ValidationError) as exc_info:
-            AudioConversionRequest(
-                output_format=AudioFormat.MP3,
-                channels=-1,
-            )
-        assert "greater than or equal to 1" in str(exc_info.value)
-
-    def test_custom_bitrate(self):
-        """Test custom bitrate values"""
-        bitrates = ["128k", "192k", "256k", "320k"]
-        for bitrate in bitrates:
-            req = AudioConversionRequest(
-                output_format=AudioFormat.MP3,
-                bitrate=bitrate,
-            )
-            assert req.bitrate == bitrate
-
-    def test_custom_sample_rate(self):
-        """Test custom sample rate values"""
-        sample_rates = [22050, 44100, 48000, 96000]
-        for sr in sample_rates:
-            req = AudioConversionRequest(
-                output_format=AudioFormat.WAV,
-                sample_rate=sr,
-            )
-            assert req.sample_rate == sr
-
-    def test_output_format_required(self):
-        """Test output_format is required"""
-        with pytest.raises(ValidationError) as exc_info:
-            AudioConversionRequest()
-        assert "output_format" in str(exc_info.value).lower()
-
-    def test_all_audio_formats(self):
-        """Test all audio format options work"""
-        for fmt in AudioFormat:
-            req = AudioConversionRequest(output_format=fmt)
-            assert req.output_format == fmt
-
-
-# ============================================================================
-# DocumentConversionRequest Tests
-# ============================================================================
-
-class TestDocumentConversionRequest:
-    """Test DocumentConversionRequest model"""
-
-    def test_valid_request(self):
-        """Test creating valid document conversion request"""
-        req = DocumentConversionRequest(output_format=DocumentFormat.PDF)
-        assert req.output_format == DocumentFormat.PDF
-
-    def test_output_format_required(self):
-        """Test output_format is required"""
-        with pytest.raises(ValidationError) as exc_info:
-            DocumentConversionRequest()
-        assert "output_format" in str(exc_info.value).lower()
-
-    def test_all_document_formats(self):
-        """Test all document format options work"""
-        for fmt in DocumentFormat:
-            req = DocumentConversionRequest(output_format=fmt)
-            assert req.output_format == fmt
-
-    def test_document_txt_format(self):
-        """Test TXT format"""
-        req = DocumentConversionRequest(output_format=DocumentFormat.TXT)
-        assert req.output_format == DocumentFormat.TXT
-
-    def test_document_docx_format(self):
-        """Test DOCX format"""
-        req = DocumentConversionRequest(output_format=DocumentFormat.DOCX)
-        assert req.output_format == DocumentFormat.DOCX
-
-    def test_document_md_format(self):
-        """Test MD format"""
-        req = DocumentConversionRequest(output_format=DocumentFormat.MD)
-        assert req.output_format == DocumentFormat.MD
-
-    def test_document_html_format(self):
-        """Test HTML format"""
-        req = DocumentConversionRequest(output_format=DocumentFormat.HTML)
-        assert req.output_format == DocumentFormat.HTML
-
+DEAD_TESTS_REMOVED = True  # placeholder
 
 # ============================================================================
 # ConversionResponse Tests
 # ============================================================================
+
 
 class TestConversionResponse:
     """Test ConversionResponse model"""
@@ -737,6 +172,7 @@ class TestConversionResponse:
 # ============================================================================
 # ProgressUpdate Tests
 # ============================================================================
+
 
 class TestProgressUpdate:
     """Test ProgressUpdate model"""
@@ -863,6 +299,7 @@ class TestProgressUpdate:
 # FileInfo Tests
 # ============================================================================
 
+
 class TestFileInfo:
     """Test FileInfo model"""
 
@@ -950,6 +387,7 @@ class TestFileInfo:
 # BatchFileResult Tests
 # ============================================================================
 
+
 class TestBatchFileResult:
     """Test BatchFileResult model"""
 
@@ -1014,15 +452,22 @@ class TestBatchFileResult:
 # BatchConversionResponse Tests
 # ============================================================================
 
+
 class TestBatchConversionResponse:
     """Test BatchConversionResponse model"""
 
     def test_valid_batch_response(self):
         """Test creating valid batch conversion response"""
         results = [
-            BatchFileResult(filename="test1.jpg", success=True, output_path="/out/test1.png"),
-            BatchFileResult(filename="test2.jpg", success=True, output_path="/out/test2.png"),
-            BatchFileResult(filename="test3.jpg", success=False, error="Invalid format"),
+            BatchFileResult(
+                filename="test1.jpg", success=True, output_path="/out/test1.png"
+            ),
+            BatchFileResult(
+                filename="test2.jpg", success=True, output_path="/out/test2.png"
+            ),
+            BatchFileResult(
+                filename="test3.jpg", success=False, error="Invalid format"
+            ),
         ]
         resp = BatchConversionResponse(
             session_id="batch-123",
@@ -1162,6 +607,7 @@ class TestBatchConversionResponse:
 # ============================================================================
 # BatchZipResponse Tests
 # ============================================================================
+
 
 class TestBatchZipResponse:
     """Test BatchZipResponse model"""

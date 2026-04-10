@@ -1,16 +1,17 @@
+import uuid
 from pathlib import Path
-from typing import Dict, Any
-import re
+from typing import Any, Dict
 
 # Subtitle support
 try:
     import pysubs2
+
     PYSUBS2_AVAILABLE = True
 except ImportError:
     PYSUBS2_AVAILABLE = False
 
-from app.services.base_converter import BaseConverter
 from app.config import settings
+from app.services.base_converter import BaseConverter
 
 
 class SubtitleConverter(BaseConverter):
@@ -32,7 +33,7 @@ class SubtitleConverter(BaseConverter):
         input_path: Path,
         output_format: str,
         options: Dict[str, Any],
-        session_id: str
+        session_id: str,
     ) -> Path:
         """
         Convert subtitle to target format
@@ -49,24 +50,33 @@ class SubtitleConverter(BaseConverter):
         Returns:
             Path to converted subtitle file
         """
-        await self.send_progress(session_id, 0, "converting", "Starting subtitle conversion")
+        await self.send_progress(
+            session_id, 0, "converting", "Starting subtitle conversion"
+        )
 
         if not PYSUBS2_AVAILABLE:
             raise ValueError("Subtitle support not available. Install pysubs2.")
 
         # Validate format
-        input_format = input_path.suffix.lower().lstrip('.')
-        if not self.validate_format(input_format, output_format, self.supported_formats):
-            raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
+        input_format = input_path.suffix.lower().lstrip(".")
+        if not self.validate_format(
+            input_format, output_format, self.supported_formats
+        ):
+            raise ValueError(
+                f"Unsupported conversion: {input_format} to {output_format}"
+            )
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_converted.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR
+            / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         # Get options
-        encoding = options.get('encoding', 'utf-8')
-        fps = options.get('fps', 23.976)
-        keep_html_tags = options.get('keep_html_tags', False)
-        keep_unknown_html_tags = options.get('keep_unknown_html_tags', False)
+        encoding = options.get("encoding", "utf-8")
+        fps = options.get("fps", 23.976)
+        keep_html_tags = options.get("keep_html_tags", False)
+        keep_unknown_html_tags = options.get("keep_unknown_html_tags", False)
 
         await self.send_progress(session_id, 20, "converting", "Reading subtitle file")
 
@@ -74,7 +84,9 @@ class SubtitleConverter(BaseConverter):
             # Load subtitle file
             subs = pysubs2.load(str(input_path), encoding=encoding, fps=fps)
 
-            await self.send_progress(session_id, 60, "converting", "Converting subtitle format")
+            await self.send_progress(
+                session_id, 60, "converting", "Converting subtitle format"
+            )
 
             # Save in target format
             subs.save(
@@ -83,22 +95,23 @@ class SubtitleConverter(BaseConverter):
                 format_=output_format,
                 fps=fps,
                 keep_html_tags=keep_html_tags,
-                keep_unknown_html_tags=keep_unknown_html_tags
+                keep_unknown_html_tags=keep_unknown_html_tags,
             )
 
-            await self.send_progress(session_id, 100, "completed", "Subtitle conversion completed")
+            await self.send_progress(
+                session_id, 100, "completed", "Subtitle conversion completed"
+            )
 
             return output_path
 
         except Exception as e:
-            await self.send_progress(session_id, 0, "failed", f"Conversion failed: {str(e)}")
+            await self.send_progress(
+                session_id, 0, "failed", f"Conversion failed: {str(e)}"
+            )
             raise
 
     async def adjust_timing(
-        self,
-        input_path: Path,
-        offset_ms: int,
-        session_id: str
+        self, input_path: Path, offset_ms: int, session_id: str
     ) -> Path:
         """
         Adjust subtitle timing by offset (in milliseconds)
@@ -114,16 +127,20 @@ class SubtitleConverter(BaseConverter):
         if not PYSUBS2_AVAILABLE:
             raise ValueError("Subtitle support not available. Install pysubs2.")
 
-        await self.send_progress(session_id, 0, "converting", "Adjusting subtitle timing")
+        await self.send_progress(
+            session_id, 0, "converting", "Adjusting subtitle timing"
+        )
 
-        input_format = input_path.suffix.lower().lstrip('.')
+        input_format = input_path.suffix.lower().lstrip(".")
         output_path = settings.UPLOAD_DIR / f"{input_path.stem}_adjusted.{input_format}"
 
         try:
             # Load subtitle file
             subs = pysubs2.load(str(input_path))
 
-            await self.send_progress(session_id, 50, "converting", "Applying time offset")
+            await self.send_progress(
+                session_id, 50, "converting", "Applying time offset"
+            )
 
             # Shift all subtitles by offset
             subs.shift(ms=offset_ms)
@@ -131,12 +148,16 @@ class SubtitleConverter(BaseConverter):
             # Save adjusted subtitles
             subs.save(str(output_path))
 
-            await self.send_progress(session_id, 100, "completed", "Timing adjustment completed")
+            await self.send_progress(
+                session_id, 100, "completed", "Timing adjustment completed"
+            )
 
             return output_path
 
         except Exception as e:
-            await self.send_progress(session_id, 0, "failed", f"Adjustment failed: {str(e)}")
+            await self.send_progress(
+                session_id, 0, "failed", f"Adjustment failed: {str(e)}"
+            )
             raise
 
     async def get_subtitle_info(self, file_path: Path) -> Dict[str, Any]:
@@ -145,7 +166,7 @@ class SubtitleConverter(BaseConverter):
             if not PYSUBS2_AVAILABLE:
                 return {"error": "pysubs2 not available"}
 
-            input_format = file_path.suffix.lower().lstrip('.')
+            input_format = file_path.suffix.lower().lstrip(".")
 
             # Load subtitle file
             subs = pysubs2.load(str(file_path))
@@ -174,7 +195,7 @@ class SubtitleConverter(BaseConverter):
                     {
                         "start": self._format_time(sub.start),
                         "end": self._format_time(sub.end),
-                        "text": sub.text
+                        "text": sub.text,
                     }
                     for sub in subs[:preview_count]
                 ]

@@ -14,15 +14,13 @@ Security tests:
 - Parallel vs sequential processing
 """
 
-import pytest
 import io
 import zipfile
-from pathlib import Path
-from PIL import Image
-from fastapi.testclient import TestClient
 
+import pytest
 from app.main import app
-from app.config import settings
+from fastapi.testclient import TestClient
+from PIL import Image
 
 
 @pytest.fixture
@@ -926,11 +924,11 @@ class TestBatchErrorHandling:
     @pytest.mark.asyncio
     async def test_batch_convert_cleanup_output_files_on_exception(self, temp_dir):
         """Test that output files are cleaned up on exception (line 160)"""
-        from app.routers.batch import convert_batch as batch_endpoint
-        from fastapi import UploadFile, HTTPException
-        from unittest.mock import patch, MagicMock, AsyncMock
-        from pathlib import Path
         import io
+        from unittest.mock import MagicMock, patch
+
+        from app.routers.batch import convert_batch as batch_endpoint
+        from fastapi import HTTPException, UploadFile
 
         # Create fake upload files
         fake_files = []
@@ -959,7 +957,7 @@ class TestBatchErrorHandling:
         with patch("app.routers.batch.batch_converter.convert_batch", side_effect=mock_failing_convert):
             with patch("app.routers.batch.cleanup_file", side_effect=mock_cleanup):
                 # Also mock the file saving to add files to output_paths
-                original_save = MagicMock()
+                MagicMock()
 
                 with pytest.raises(HTTPException) as exc_info:
                     await batch_endpoint(
@@ -976,9 +974,7 @@ class TestBatchErrorHandling:
 
     def test_batch_zip_no_files_found(self, client):
         """Test ZIP creation when no files are found (line 186)"""
-        from unittest.mock import patch, MagicMock
-        from pathlib import Path
-        from fastapi import HTTPException
+        from unittest.mock import patch
 
         # Mock validate_download_filename to return paths that don't exist
         # but are valid (won't throw exception)
@@ -986,7 +982,6 @@ class TestBatchErrorHandling:
             return base_dir / f"nonexistent_{filename}"
 
         # Also need to patch the HTTPException at line 186 to ensure it's raised
-        original_http_exception = HTTPException
 
         with patch("app.routers.batch.validate_download_filename", side_effect=mock_validate):
             response = client.post(

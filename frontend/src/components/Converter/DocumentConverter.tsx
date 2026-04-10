@@ -6,8 +6,8 @@ import { Card } from '../Common/Card';
 import { documentAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
 import { formatFileSize } from '../../utils/fileUtils';
+import { DOCUMENT_FORMATS } from '../../config/constants';
 
-const DOCUMENT_FORMATS = ['txt', 'pdf', 'docx', 'md', 'html', 'rtf', 'odt'];
 
 export const DocumentConverter: React.FC = () => {
   const { t } = useTranslation();

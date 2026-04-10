@@ -1,5 +1,6 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import logging
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.services.base_converter import ws_manager
 from app.utils.websocket_security import rate_limiter, session_validator
@@ -37,6 +38,11 @@ async def websocket_progress(websocket: WebSocket, session_id: str):
         rate_limiter.remove_connection(client_ip)
         return
 
+    # Validate origin to prevent cross-site WebSocket hijacking
+    origin = websocket.headers.get("origin", "")
+    if origin and not origin.startswith(("http://localhost", "http://127.0.0.1", "file://")):
+        await websocket.close(code=1008, reason="Invalid origin")
+        return
     await websocket.accept()
     await ws_manager.connect(session_id, websocket)
 
@@ -45,7 +51,7 @@ async def websocket_progress(websocket: WebSocket, session_id: str):
         await websocket.send_json({
             "session_id": session_id,
             "progress": 0,
-            "status": "connected",
+            "status": "pending",
             "message": "WebSocket connected"
         })
 

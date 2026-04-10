@@ -11,9 +11,9 @@ import logging
 import shutil
 import threading
 import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, Any, Optional, List
-from dataclasses import dataclass, asdict
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CacheMetadata:
     """Metadata for a cached conversion result"""
+
     cache_key: str
     original_filename: str
     output_file: str
@@ -39,7 +40,7 @@ class CacheMetadata:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'CacheMetadata':
+    def from_dict(cls, data: Dict[str, Any]) -> "CacheMetadata":
         """Create instance from dictionary"""
         return cls(**data)
 
@@ -47,7 +48,9 @@ class CacheMetadata:
 class CacheService:
     """Service for managing conversion result caching"""
 
-    def __init__(self, cache_dir: Path, expiration_hours: int = 1, max_size_mb: int = 1000):
+    def __init__(
+        self, cache_dir: Path, expiration_hours: int = 1, max_size_mb: int = 1000
+    ):
         """
         Initialize cache service
 
@@ -63,15 +66,11 @@ class CacheService:
 
         # Statistics with thread-safe access
         self._stats_lock = threading.Lock()
-        self.stats = {
-            "hits": 0,
-            "misses": 0,
-            "total_requests": 0
-        }
+        self.stats = {"hits": 0, "misses": 0, "total_requests": 0}
 
-    def generate_file_hash(self, file_path: Path) -> str:
+    async def generate_file_hash(self, file_path: Path) -> str:
         """
-        Generate SHA-256 hash of file content
+        Generate SHA-256 hash of file content (async, runs in thread pool)
 
         Args:
             file_path: Path to file
@@ -79,10 +78,16 @@ class CacheService:
         Returns:
             SHA-256 hash as hex string
         """
+        import asyncio
+
+        return await asyncio.to_thread(self._sync_generate_file_hash, file_path)
+
+    def _sync_generate_file_hash(self, file_path: Path) -> str:
+        """Synchronous file hashing (called from thread pool)"""
         hash_sha256 = hashlib.sha256()
         try:
             with open(file_path, "rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
+                for chunk in iter(lambda: f.read(65536), b""):
                     hash_sha256.update(chunk)
             return hash_sha256.hexdigest()
         except Exception as e:
@@ -104,7 +109,9 @@ class CacheService:
         options_hash = hashlib.sha256(options_str.encode()).hexdigest()
         return options_hash[:8]
 
-    def generate_cache_key(self, file_path: Path, output_format: str, options: Dict[str, Any]) -> str:
+    def generate_cache_key(
+        self, file_path: Path, output_format: str, options: Dict[str, Any]
+    ) -> str:
         """
         Generate unique cache key from file hash + output format + options
 
@@ -116,7 +123,7 @@ class CacheService:
         Returns:
             Cache key string in format: {file_hash}_{output_format}_{options_hash}
         """
-        file_hash = self.generate_file_hash(file_path)
+        file_hash = self._sync_generate_file_hash(file_path)
         options_hash = self.generate_options_hash(options)
         cache_key = f"{file_hash}_{output_format}_{options_hash}"
         return cache_key
@@ -161,7 +168,7 @@ class CacheService:
             return None
 
         try:
-            with open(metadata_path, 'r') as f:
+            with open(metadata_path, "r") as f:
                 data = json.load(f)
             return CacheMetadata.from_dict(data)
         except Exception as e:
@@ -183,7 +190,7 @@ class CacheService:
         metadata_path = self.get_metadata_path(metadata.cache_key)
 
         try:
-            with open(metadata_path, 'w') as f:
+            with open(metadata_path, "w") as f:
                 json.dump(metadata.to_dict(), f, indent=2)
         except Exception as e:
             logger.error(f"Error writing cache metadata for {metadata.cache_key}: {e}")
@@ -238,7 +245,7 @@ class CacheService:
         original_filename: str,
         output_file_path: Path,
         output_format: str,
-        conversion_options: Dict[str, Any]
+        conversion_options: Dict[str, Any],
     ) -> None:
         """
         Store conversion result in cache
@@ -271,7 +278,7 @@ class CacheService:
                 created_at=created_at,
                 expires_at=expires_at,
                 file_size=file_size,
-                conversion_options=conversion_options
+                conversion_options=conversion_options,
             )
 
             self.write_metadata(metadata)
@@ -283,7 +290,9 @@ class CacheService:
             try:
                 self._remove_cache_entry(cache_key)
             except (OSError, IOError, PermissionError) as cleanup_error:
-                logger.warning(f"Failed to cleanup cache entry {cache_key}: {cleanup_error}")
+                logger.warning(
+                    f"Failed to cleanup cache entry {cache_key}: {cleanup_error}"
+                )
 
     def _remove_cache_entry(self, cache_key: str) -> None:
         """
@@ -307,11 +316,7 @@ class CacheService:
         Returns:
             Dictionary with cleanup statistics
         """
-        stats = {
-            "expired_removed": 0,
-            "corrupted_removed": 0,
-            "space_freed_mb": 0
-        }
+        stats = {"expired_removed": 0, "corrupted_removed": 0, "space_freed_mb": 0}
 
         for cache_path in self.cache_dir.iterdir():
             if not cache_path.is_dir():
@@ -349,33 +354,35 @@ class CacheService:
         Returns:
             Dictionary with cleanup statistics
         """
-        stats = {
-            "entries_removed": 0,
-            "space_freed_mb": 0
-        }
+        stats = {"entries_removed": 0, "space_freed_mb": 0}
 
-        total_size = self.get_total_cache_size()
         max_size_bytes = self.max_size_mb * 1024 * 1024
 
-        if total_size <= max_size_bytes:
-            logger.debug(f"Cache size OK: {total_size / (1024 * 1024):.2f} MB / {self.max_size_mb} MB")
-            return stats
-
-        logger.info(f"Cache size exceeded: {total_size / (1024 * 1024):.2f} MB / {self.max_size_mb} MB")
-
-        # Get all cache entries with their metadata
+        # Single-pass: collect all entries with sizes and compute total
         entries: List[tuple[str, CacheMetadata, int]] = []
+        total_size = 0
 
         for cache_path in self.cache_dir.iterdir():
             if not cache_path.is_dir():
                 continue
 
             cache_key = cache_path.name
+            size = self._get_directory_size(cache_path)
+            total_size += size
             metadata = self.read_metadata(cache_key)
 
             if metadata is not None:
-                size = self._get_directory_size(cache_path)
                 entries.append((cache_key, metadata, size))
+
+        if total_size <= max_size_bytes:
+            logger.debug(
+                f"Cache size OK: {total_size / (1024 * 1024):.2f} MB / {self.max_size_mb} MB"
+            )
+            return stats
+
+        logger.info(
+            f"Cache size exceeded: {total_size / (1024 * 1024):.2f} MB / {self.max_size_mb} MB"
+        )
 
         # Sort by creation time (oldest first)
         entries.sort(key=lambda x: x[1].created_at)
@@ -417,7 +424,8 @@ class CacheService:
             "expired_removed": expired_stats["expired_removed"],
             "corrupted_removed": expired_stats["corrupted_removed"],
             "size_limit_removed": size_stats["entries_removed"],
-            "total_space_freed_mb": expired_stats["space_freed_mb"] + size_stats["space_freed_mb"]
+            "total_space_freed_mb": expired_stats["space_freed_mb"]
+            + size_stats["space_freed_mb"],
         }
 
         logger.info(
@@ -441,7 +449,7 @@ class CacheService:
         """
         total_size = 0
         try:
-            for item in directory.rglob('*'):
+            for item in directory.rglob("*"):
                 if item.is_file():
                     total_size += item.stat().st_size
         except Exception as e:
@@ -478,7 +486,7 @@ class CacheService:
             "entry_count": entry_count,
             "expiration_hours": self.expiration_hours,
             "stats": stats_copy,
-            "hit_rate": hit_rate
+            "hit_rate": hit_rate,
         }
 
     def _calculate_hit_rate_unlocked(self) -> float:
@@ -512,11 +520,7 @@ class CacheService:
 
         # Reset statistics with thread safety
         with self._stats_lock:
-            self.stats = {
-                "hits": 0,
-                "misses": 0,
-                "total_requests": 0
-            }
+            self.stats = {"hits": 0, "misses": 0, "total_requests": 0}
 
         logger.info(f"Cleared {removed} cache entries and reset statistics")
 
@@ -530,7 +534,9 @@ def get_cache_service() -> Optional[CacheService]:
     return cache_service
 
 
-def initialize_cache_service(cache_dir: Path, expiration_hours: int, max_size_mb: int) -> CacheService:
+def initialize_cache_service(
+    cache_dir: Path, expiration_hours: int, max_size_mb: int
+) -> CacheService:
     """
     Initialize the global cache service
 
@@ -544,9 +550,7 @@ def initialize_cache_service(cache_dir: Path, expiration_hours: int, max_size_mb
     """
     global cache_service
     cache_service = CacheService(
-        cache_dir=cache_dir,
-        expiration_hours=expiration_hours,
-        max_size_mb=max_size_mb
+        cache_dir=cache_dir, expiration_hours=expiration_hours, max_size_mb=max_size_mb
     )
     logger.info(
         f"Cache service initialized: dir={cache_dir}, "

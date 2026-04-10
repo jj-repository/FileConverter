@@ -6,16 +6,12 @@ Tests spreadsheet conversion with CSV, XLSX, ODS, format-specific options,
 sheet handling, metadata extraction, and error handling
 """
 
-import pytest
-import asyncio
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pandas as pd
-import io
-
-from app.services.spreadsheet_converter import SpreadsheetConverter
+import pytest
 from app.config import settings
-
+from app.services.spreadsheet_converter import SpreadsheetConverter
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
@@ -83,7 +79,7 @@ class TestCSVConversion:
 
         with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
             with patch('pandas.read_csv') as mock_read_csv:
-                with patch('pandas.DataFrame.to_excel') as mock_to_excel:
+                with patch('pandas.DataFrame.to_excel'):
                     # Mock pandas operations
                     mock_df = MagicMock(spec=pd.DataFrame)
                     mock_read_csv.return_value = mock_df
@@ -145,7 +141,7 @@ class TestCSVConversion:
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
             with patch('pandas.read_csv') as mock_read_csv:
-                with patch('pandas.DataFrame.to_excel') as mock_to_excel:
+                with patch('pandas.DataFrame.to_excel'):
                     mock_df = MagicMock(spec=pd.DataFrame)
                     mock_read_csv.return_value = mock_df
 
@@ -176,7 +172,7 @@ class TestCSVConversion:
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
             with patch('pandas.read_csv') as mock_read_csv:
-                with patch('pandas.DataFrame.to_excel') as mock_to_excel:
+                with patch('pandas.DataFrame.to_excel'):
                     mock_df = MagicMock(spec=pd.DataFrame)
                     mock_read_csv.return_value = mock_df
 
@@ -248,7 +244,7 @@ class TestXLSXConversion:
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
             with patch('app.services.spreadsheet_converter.pd.read_excel') as mock_read_excel:
-                with patch.object(pd.DataFrame, 'to_csv') as mock_to_csv:
+                with patch.object(pd.DataFrame, 'to_csv'):
                     mock_df = MagicMock(spec=pd.DataFrame)
                     mock_read_excel.return_value = mock_df
 
@@ -492,7 +488,7 @@ class TestTSVConversion:
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
             with patch('app.services.spreadsheet_converter.pd.read_excel') as mock_read_excel:
-                with patch.object(pd.DataFrame, 'to_csv') as mock_to_csv:
+                with patch.object(pd.DataFrame, 'to_csv'):
                     mock_df = MagicMock(spec=pd.DataFrame)
                     mock_read_excel.return_value = mock_df
 
@@ -765,7 +761,7 @@ class TestSpreadsheetErrorHandling:
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
             with patch('app.services.spreadsheet_converter.pd.read_excel') as mock_read_excel:
-                with patch('app.services.spreadsheet_converter.pd.DataFrame.to_csv') as mock_to_csv:
+                with patch('app.services.spreadsheet_converter.pd.DataFrame.to_csv'):
                     mock_df = MagicMock(spec=pd.DataFrame)
                     mock_read_excel.return_value = mock_df
 
@@ -978,7 +974,7 @@ class TestConversionOptions:
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
             with patch('app.services.spreadsheet_converter.pd.read_csv') as mock_read_csv:
-                with patch.object(pd.DataFrame, 'to_excel') as mock_to_excel:
+                with patch.object(pd.DataFrame, 'to_excel'):
                     mock_df = MagicMock(spec=pd.DataFrame)
                     mock_df.columns = ["Name", "Age"]
                     mock_read_csv.return_value = mock_df
@@ -1130,7 +1126,7 @@ class TestEdgeCases:
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
             with patch('app.services.spreadsheet_converter.pd.read_csv') as mock_read_csv:
-                with patch.object(pd.DataFrame, 'to_excel') as mock_to_excel:
+                with patch.object(pd.DataFrame, 'to_excel'):
                     mock_df = MagicMock(spec=pd.DataFrame)
                     mock_read_csv.return_value = mock_df
 
@@ -1392,6 +1388,7 @@ class TestSpreadsheetImportFallback:
         with patch.dict(sys.modules, {'openpyxl': None}):
             # Force module reload to trigger import error
             import importlib
+
             import app.services.spreadsheet_converter
             importlib.reload(app.services.spreadsheet_converter)
 
@@ -1409,6 +1406,7 @@ class TestSpreadsheetImportFallback:
         with patch.dict(sys.modules, {'odf': None, 'odf.opendocument': None, 'odf.table': None, 'odf.text': None}):
             # Force module reload to trigger import error
             import importlib
+
             import app.services.spreadsheet_converter
             importlib.reload(app.services.spreadsheet_converter)
 

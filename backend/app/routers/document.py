@@ -1,16 +1,30 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
-from fastapi.responses import FileResponse
-from pathlib import Path
 import uuid
+from pathlib import Path
 from typing import Optional
 
-from app.services.document_converter import DocumentConverter
-from app.utils.file_handler import save_upload_file, cleanup_file, make_content_disposition
-from app.utils.validation import validate_download_filename, validate_file_size, validate_file_extension, validate_mime_type, DOCUMENT_MIME_TYPES
-from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+
 from app.config import settings
-from app.utils.websocket_security import session_validator, check_rate_limit
 from app.middleware.error_handler import sanitize_error_message
+from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
+from app.services.document_converter import DocumentConverter
+from app.utils.file_handler import cleanup_file, make_content_disposition, save_upload_file
+from app.utils.validation import (
+    DOCUMENT_MIME_TYPES,
+    validate_download_filename,
+    validate_file_extension,
+    validate_file_size,
+    validate_mime_type,
+)
+from app.utils.websocket_security import check_rate_limit, session_validator
+
+
+def _cleanup_after_download(path: str):
+    try:
+        Path(path).unlink(missing_ok=True)
+    except Exception:
+        pass
 
 
 router = APIRouter()
@@ -106,7 +120,7 @@ DOCUMENT_MIME_MAP = {
 }
 
 
-@router.get("/download/{filename}")
+@router.get("/download/{filename}", dependencies=[Depends(check_rate_limit)])
 async def download_document(filename: str):
     """Download converted document file"""
     # Validate filename to prevent path traversal

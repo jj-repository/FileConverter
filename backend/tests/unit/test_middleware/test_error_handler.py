@@ -13,33 +13,30 @@ Tests cover:
 Tests async handlers properly with pytest-asyncio and mocking.
 """
 
-import pytest
 import logging
-from unittest.mock import Mock, AsyncMock, patch, MagicMock, call
-from fastapi import Request, status
-from fastapi.exceptions import RequestValidationError
-from fastapi.testclient import TestClient
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from pydantic import ValidationError as PydanticValidationError
+from unittest.mock import Mock, patch
 
+import pytest
+from app.exceptions import (
+    BatchConversionError,
+    ConversionError,
+    ConversionTimeoutError,
+    ExternalToolError,
+    FileConverterException,
+    FileValidationError,
+    MetadataExtractionError,
+    UnsupportedFormatError,
+)
 from app.middleware.error_handler import (
     file_converter_exception_handler,
-    validation_exception_handler,
-    http_exception_handler,
     generic_exception_handler,
+    http_exception_handler,
     register_exception_handlers,
+    validation_exception_handler,
 )
-from app.exceptions import (
-    FileConverterException,
-    ConversionError,
-    UnsupportedFormatError,
-    ConversionTimeoutError,
-    FileValidationError,
-    ExternalToolError,
-    BatchConversionError,
-    MetadataExtractionError,
-)
-
+from fastapi import Request, status
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # ============================================================================
 # FIXTURES
@@ -585,7 +582,7 @@ class TestGenericExceptionHandler:
         response = await generic_exception_handler(mock_request, exc)
 
         # In production, detail may be None
-        content = response.body.decode()
+        response.body.decode()
         # Should not have the actual exception message visible in production
         # (unless it's in the error field)
 

@@ -5,8 +5,8 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { archiveAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { ARCHIVE_FORMATS } from '../../config/constants';
 
-const ARCHIVE_FORMATS = ['zip', 'tar', 'tar.gz', 'tgz', 'tar.bz2', 'tbz2', 'gz', '7z'];
 
 export const ArchiveConverter: React.FC = () => {
   const { t } = useTranslation();

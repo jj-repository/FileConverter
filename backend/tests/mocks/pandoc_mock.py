@@ -2,8 +2,8 @@
 Pandoc mocking utilities
 """
 
-from unittest.mock import Mock, patch
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 
 class PandocMock:

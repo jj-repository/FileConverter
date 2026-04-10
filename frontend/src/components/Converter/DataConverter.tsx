@@ -5,8 +5,8 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { dataAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { DATA_FORMATS } from '../../config/constants';
 
-const DATA_FORMATS = ['csv', 'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'jsonl'];
 
 const ENCODINGS = [
   { value: 'utf-8', label: 'UTF-8 (Default)' },

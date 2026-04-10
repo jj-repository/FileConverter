@@ -1,18 +1,17 @@
-from pathlib import Path
-from typing import Dict, Any, Optional
-import subprocess
-import sys
 import asyncio
 import logging
+import subprocess
+import sys
+import uuid
+from pathlib import Path
+from typing import Any, Dict
 
-from app.services.base_converter import BaseConverter
 from app.config import settings
+from app.services.base_converter import BaseConverter
+from app.utils.subprocess_utils import subprocess_kwargs as _subprocess_kwargs
 
 logger = logging.getLogger(__name__)
 
-_subprocess_kwargs: dict = {}
-if sys.platform == 'win32':
-    _subprocess_kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
 
 
 class DocumentConverter(BaseConverter):
@@ -32,10 +31,10 @@ class DocumentConverter(BaseConverter):
             result = subprocess.run(
                 [settings.PANDOC_PATH, "--version"],
                 capture_output=True,
-                encoding='utf-8',
-                errors='replace',
+                encoding="utf-8",
+                errors="replace",
                 timeout=5,
-                **_subprocess_kwargs
+                **_subprocess_kwargs,
             )
             self.pandoc_available = result.returncode == 0
         except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -50,7 +49,7 @@ class DocumentConverter(BaseConverter):
         input_path: Path,
         output_format: str,
         options: Dict[str, Any],
-        session_id: str
+        session_id: str,
     ) -> Path:
         """
         Convert document to target format
@@ -65,7 +64,9 @@ class DocumentConverter(BaseConverter):
         Returns:
             Path to converted document
         """
-        await self.send_progress(session_id, 0, "converting", "Starting document conversion")
+        await self.send_progress(
+            session_id, 0, "converting", "Starting document conversion"
+        )
 
         # Check if Pandoc is available
         if not self.pandoc_available:
@@ -75,25 +76,36 @@ class DocumentConverter(BaseConverter):
             )
 
         # Validate format
-        input_format = input_path.suffix.lower().lstrip('.')
-        if not self.validate_format(input_format, output_format, self.supported_formats):
-            raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
+        input_format = input_path.suffix.lower().lstrip(".")
+        if not self.validate_format(
+            input_format, output_format, self.supported_formats
+        ):
+            raise ValueError(
+                f"Unsupported conversion: {input_format} to {output_format}"
+            )
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_converted.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR
+            / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         await self.send_progress(session_id, 10, "converting", "Preparing conversion")
 
         # Build Pandoc command
-        preserve_formatting = options.get('preserve_formatting', True)
-        toc = options.get('toc', False)
+        options.get("preserve_formatting", True)
+        toc = options.get("toc", False)
 
         cmd = [
             settings.PANDOC_PATH,
+            "--sandbox",
             str(input_path),
-            "-o", str(output_path),
-            "-f", self._get_pandoc_format(input_format),
-            "-t", self._get_pandoc_format(output_format),
+            "-o",
+            str(output_path),
+            "-f",
+            self._get_pandoc_format(input_format),
+            "-t",
+            self._get_pandoc_format(output_format),
         ]
 
         # Add table of contents if requested
@@ -108,21 +120,25 @@ class DocumentConverter(BaseConverter):
         if output_format == "pdf":
             cmd.extend(["--pdf-engine=pdflatex"])
 
-        await self.send_progress(session_id, 20, "converting", "Converting document with Pandoc")
+        await self.send_progress(
+            session_id, 20, "converting", "Converting document with Pandoc"
+        )
 
         # Run Pandoc conversion with timeout
         try:
             _async_kwargs: dict = {}
-            if sys.platform == 'win32':
-                _async_kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+            if sys.platform == "win32":
+                _async_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                **_async_kwargs
+                **_async_kwargs,
             )
 
-            await self.send_progress(session_id, 50, "converting", "Processing document")
+            await self.send_progress(
+                session_id, 50, "converting", "Processing document"
+            )
 
             # Wait for process to complete with timeout
             try:
@@ -135,24 +151,32 @@ class DocumentConverter(BaseConverter):
                     await process.wait()
                 except Exception:
                     pass
-                raise Exception(f"Document conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds")
+                raise Exception(
+                    f"Document conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds"
+                )
 
             if process.returncode != 0:
-                error_msg = stderr.decode('utf-8', errors='ignore')
+                error_msg = stderr.decode("utf-8", errors="ignore")
                 raise Exception(f"Pandoc conversion failed: {error_msg[:200]}")
 
-            await self.send_progress(session_id, 90, "converting", "Finalizing document")
+            await self.send_progress(
+                session_id, 90, "converting", "Finalizing document"
+            )
 
             # Verify output file exists
             if not output_path.exists():
                 raise Exception("Output file was not created")
 
-            await self.send_progress(session_id, 100, "completed", "Document conversion completed")
+            await self.send_progress(
+                session_id, 100, "completed", "Document conversion completed"
+            )
 
             return output_path
 
         except Exception as e:
-            await self.send_progress(session_id, 0, "failed", f"Conversion failed: {str(e)}")
+            await self.send_progress(
+                session_id, 0, "failed", f"Conversion failed: {str(e)}"
+            )
             raise
 
     def _get_pandoc_format(self, format_ext: str) -> str:
@@ -170,7 +194,7 @@ class DocumentConverter(BaseConverter):
     async def get_document_metadata(self, file_path: Path) -> Dict[str, Any]:
         """Extract document metadata"""
         try:
-            input_format = file_path.suffix.lower().lstrip('.')
+            input_format = file_path.suffix.lower().lstrip(".")
             file_size = file_path.stat().st_size
 
             metadata = {
@@ -184,19 +208,21 @@ class DocumentConverter(BaseConverter):
                     cmd = [
                         settings.PANDOC_PATH,
                         str(file_path),
-                        "-f", self._get_pandoc_format(input_format),
-                        "-t", "plain",
-                        "--strip-comments"
+                        "-f",
+                        self._get_pandoc_format(input_format),
+                        "-t",
+                        "plain",
+                        "--strip-comments",
                     ]
 
                     result = await asyncio.to_thread(
                         subprocess.run,
                         cmd,
                         capture_output=True,
-                        encoding='utf-8',
-                        errors='replace',
+                        encoding="utf-8",
+                        errors="replace",
                         timeout=30,
-                        **_subprocess_kwargs
+                        **_subprocess_kwargs,
                     )
 
                     if result.returncode == 0:
@@ -205,11 +231,13 @@ class DocumentConverter(BaseConverter):
                         char_count = len(text)
                         line_count = len(text.splitlines())
 
-                        metadata.update({
-                            "word_count": word_count,
-                            "character_count": char_count,
-                            "line_count": line_count,
-                        })
+                        metadata.update(
+                            {
+                                "word_count": word_count,
+                                "character_count": char_count,
+                                "line_count": line_count,
+                            }
+                        )
                 except Exception as e:
                     logger.warning(f"Error getting document stats: {e}")
 
@@ -217,6 +245,7 @@ class DocumentConverter(BaseConverter):
             if input_format == "docx":
                 try:
                     from docx import Document
+
                     doc = await asyncio.to_thread(Document, str(file_path))
                     metadata["paragraph_count"] = len(doc.paragraphs)
                     metadata["section_count"] = len(doc.sections)
@@ -227,6 +256,7 @@ class DocumentConverter(BaseConverter):
             if input_format == "pdf":
                 try:
                     from pypdf import PdfReader
+
                     pdf = await asyncio.to_thread(PdfReader, str(file_path))
                     metadata["page_count"] = len(pdf.pages)
 

@@ -4,7 +4,7 @@ Entry point for the FileConverter backend server.
 This script is designed to be bundled with PyInstaller.
 """
 import sys
-import os
+
 import uvicorn
 
 

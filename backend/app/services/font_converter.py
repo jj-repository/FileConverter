@@ -2,12 +2,15 @@
 Font Converter Service
 Handles conversion between font formats using fonttools
 """
-from pathlib import Path
-from typing import Dict, Any, Optional
-import logging
 
+import asyncio
+import logging
+import uuid
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from fontTools.subset import Options, Subsetter
 from fontTools.ttLib import TTFont
-from fontTools.subset import Subsetter, Options
 
 from app.config import settings
 from app.services.base_converter import BaseConverter
@@ -34,7 +37,7 @@ class FontConverter(BaseConverter):
         input_path: Path,
         output_format: str,
         options: Dict[str, Any],
-        session_id: str
+        session_id: str,
     ) -> Path:
         """
         Convert font to target format
@@ -49,65 +52,62 @@ class FontConverter(BaseConverter):
         Returns:
             Path to converted font file
         """
-        await self.send_progress(session_id, 10, "converting", "Starting font conversion")
+        await self.send_progress(
+            session_id, 10, "converting", "Starting font conversion"
+        )
 
-        input_format = input_path.suffix[1:].lower()
+        input_path.suffix[1:].lower()
 
         # Generate output filename
-        output_filename = f"{input_path.stem}_converted.{output_format}"
+        output_filename = f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
         output_path = settings.UPLOAD_DIR / output_filename
 
-        font = None
         try:
             await self.send_progress(session_id, 30, "converting", "Loading font file")
 
-            # Load font
-            font = TTFont(str(input_path))
+            def _sync_font_convert():
+                font = TTFont(str(input_path))
+                subset_text = options.get("subset_text")
+                if subset_text:
+                    subsetter = Subsetter()
+                    subsetter.populate(text=subset_text)
+                    subsetter.subset(font)
+                flavor = self._get_output_flavor(output_format)
+                if flavor:
+                    font.flavor = flavor
+                font.save(str(output_path))
+                return output_path
 
-            await self.send_progress(session_id, 50, "converting", f"Converting to {output_format.upper()}")
+            await self.send_progress(
+                session_id, 50, "converting", f"Converting to {output_format.upper()}"
+            )
 
-            # Apply subsetting if requested
-            subset_text = options.get('subset_text')
-            if subset_text:
-                await self._apply_subset(font, subset_text, session_id)
+            result = await asyncio.to_thread(_sync_font_convert)
 
-            # Determine output flavor
-            flavor = self._get_output_flavor(output_format)
-
-            # Save font
-            await self.send_progress(session_id, 80, "converting", "Saving converted font")
-
-            # Set flavor for WOFF/WOFF2
-            if flavor:
-                font.flavor = flavor
-
-            # Save with options
-            optimize = options.get('optimize', True)
-            font.save(str(output_path))
-
-            await self.send_progress(session_id, 100, "converting", "Conversion complete")
-            return output_path
+            await self.send_progress(
+                session_id, 100, "converting", "Conversion complete"
+            )
+            return result
 
         except Exception as e:
             logger.error(f"Font conversion failed: {e}")
             raise
-        finally:
-            if font is not None:
-                font.close()
 
     def _get_output_flavor(self, output_format: str) -> Optional[str]:
         """Get the fonttools flavor for the output format"""
         flavor_map = {
-            'woff': 'woff',
-            'woff2': 'woff2',
-            'ttf': None,  # No flavor needed
-            'otf': None,  # No flavor needed
+            "woff": "woff",
+            "woff2": "woff2",
+            "ttf": None,  # No flavor needed
+            "otf": None,  # No flavor needed
         }
         return flavor_map.get(output_format)
 
     async def _apply_subset(self, font: TTFont, subset_text: str, session_id: str):
         """Apply subsetting to keep only specified characters"""
-        await self.send_progress(session_id, 60, "converting", "Applying font subsetting")
+        await self.send_progress(
+            session_id, 60, "converting", "Applying font subsetting"
+        )
 
         # Create subsetter
         subsetter = Subsetter()
@@ -133,9 +133,9 @@ class FontConverter(BaseConverter):
             Dictionary with font information
         """
         info = {
-            'filename': file_path.name,
-            'size': file_path.stat().st_size,
-            'format': file_path.suffix[1:].lower(),
+            "filename": file_path.name,
+            "size": file_path.stat().st_size,
+            "format": file_path.suffix[1:].lower(),
         }
 
         font = None
@@ -143,13 +143,13 @@ class FontConverter(BaseConverter):
             font = TTFont(str(file_path))
 
             # Get font name
-            name_table = font.get('name')
+            name_table = font.get("name")
             if name_table:
                 # Get font family name (ID 1)
                 for record in name_table.names:
                     if record.nameID == 1:  # Font Family
                         try:
-                            info['family_name'] = record.toUnicode()
+                            info["family_name"] = record.toUnicode()
                             break
                         except (UnicodeDecodeError, AttributeError) as e:
                             logger.debug(f"Failed to decode font family name: {str(e)}")
@@ -159,7 +159,7 @@ class FontConverter(BaseConverter):
                 for record in name_table.names:
                     if record.nameID == 2:  # Subfamily
                         try:
-                            info['style_name'] = record.toUnicode()
+                            info["style_name"] = record.toUnicode()
                             break
                         except (UnicodeDecodeError, AttributeError) as e:
                             logger.debug(f"Failed to decode font style name: {str(e)}")
@@ -169,7 +169,7 @@ class FontConverter(BaseConverter):
                 for record in name_table.names:
                     if record.nameID == 4:  # Full name
                         try:
-                            info['full_name'] = record.toUnicode()
+                            info["full_name"] = record.toUnicode()
                             break
                         except (UnicodeDecodeError, AttributeError) as e:
                             logger.debug(f"Failed to decode full font name: {str(e)}")
@@ -179,23 +179,25 @@ class FontConverter(BaseConverter):
                 for record in name_table.names:
                     if record.nameID == 5:  # Version
                         try:
-                            info['version'] = record.toUnicode()
+                            info["version"] = record.toUnicode()
                             break
                         except (UnicodeDecodeError, AttributeError) as e:
                             logger.debug(f"Failed to decode font version: {str(e)}")
                             pass
 
             # Get glyph count
-            if 'glyf' in font:  # TrueType
-                info['glyph_count'] = len(font['glyf'].glyphs)
-            elif 'CFF ' in font:  # OpenType/CFF
-                info['glyph_count'] = font['CFF '].cff.topDictIndex[0].CharStrings.charStringsIndex.count
+            if "glyf" in font:  # TrueType
+                info["glyph_count"] = len(font["glyf"].glyphs)
+            elif "CFF " in font:  # OpenType/CFF
+                info["glyph_count"] = (
+                    font["CFF "].cff.topDictIndex[0].CharStrings.charStringsIndex.count
+                )
 
             # Check if it's a web font
-            if hasattr(font, 'flavor'):
-                info['is_web_font'] = font.flavor in ['woff', 'woff2']
+            if hasattr(font, "flavor"):
+                info["is_web_font"] = font.flavor in ["woff", "woff2"]
                 if font.flavor:
-                    info['web_format'] = font.flavor
+                    info["web_format"] = font.flavor
 
         except Exception as e:
             logger.warning(f"Could not extract font metadata: {e}")
@@ -216,7 +218,9 @@ class FontConverter(BaseConverter):
         Returns:
             Path to optimized font file
         """
-        await self.send_progress(session_id, 10, "converting", "Starting font optimization")
+        await self.send_progress(
+            session_id, 10, "converting", "Starting font optimization"
+        )
 
         output_filename = f"{input_path.stem}_optimized{input_path.suffix}"
         output_path = settings.UPLOAD_DIR / output_filename
@@ -225,26 +229,32 @@ class FontConverter(BaseConverter):
         try:
             font = TTFont(str(input_path))
 
-            await self.send_progress(session_id, 50, "converting", "Optimizing font tables")
+            await self.send_progress(
+                session_id, 50, "converting", "Optimizing font tables"
+            )
 
             # Remove unnecessary tables for web use
             tables_to_drop = [
-                'DSIG',  # Digital signature
-                'hdmx',  # Horizontal device metrics
-                'VDMX',  # Vertical device metrics
-                'LTSH',  # Linear threshold
-                'PCLT',  # PCL 5 data
+                "DSIG",  # Digital signature
+                "hdmx",  # Horizontal device metrics
+                "VDMX",  # Vertical device metrics
+                "LTSH",  # Linear threshold
+                "PCLT",  # PCL 5 data
             ]
 
             for table in tables_to_drop:
                 if table in font:
                     del font[table]
 
-            await self.send_progress(session_id, 80, "converting", "Saving optimized font")
+            await self.send_progress(
+                session_id, 80, "converting", "Saving optimized font"
+            )
 
             font.save(str(output_path))
 
-            await self.send_progress(session_id, 100, "converting", "Optimization complete")
+            await self.send_progress(
+                session_id, 100, "converting", "Optimization complete"
+            )
             return output_path
 
         except Exception as e:

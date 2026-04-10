@@ -14,15 +14,12 @@ Security tests:
 - Malicious filename sanitization
 """
 
-import pytest
-from pathlib import Path
-from fastapi.testclient import TestClient
-from fontTools.ttLib import TTFont
-from fontTools.pens.t2CharStringPen import T2CharStringPen
 import struct
 
-from app.main import app
+import pytest
 from app.config import settings
+from app.main import app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -896,8 +893,6 @@ class TestFontSuccessPaths:
     def test_convert_success_path_ttf_to_woff(self, client, sample_ttf_font, temp_dir, monkeypatch):
         """Test the complete success path for font conversion"""
         from app.services.font_converter import FontConverter
-        from pathlib import Path
-        from app.models.conversion import ConversionResponse
 
         # Create a mock output file
         output_file = settings.UPLOAD_DIR / "test_output.woff"
@@ -932,7 +927,6 @@ class TestFontSuccessPaths:
     def test_optimize_success_path(self, client, sample_ttf_font, temp_dir, monkeypatch):
         """Test the complete success path for font optimization"""
         from app.services.font_converter import FontConverter
-        from pathlib import Path
 
         # Create a mock output file
         output_file = settings.UPLOAD_DIR / "test_optimized.ttf"
@@ -1042,7 +1036,6 @@ class TestFontSuccessPaths:
     def test_convert_cleanup_on_success(self, client, sample_ttf_font, monkeypatch):
         """Test that input file is cleaned up after successful conversion"""
         from app.services.font_converter import FontConverter
-        import os
 
         output_file = settings.UPLOAD_DIR / "test_cleanup.woff"
         output_file.parent.mkdir(parents=True, exist_ok=True)

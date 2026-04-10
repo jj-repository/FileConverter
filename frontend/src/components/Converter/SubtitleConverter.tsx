@@ -5,8 +5,8 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { subtitleAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { SUBTITLE_FORMATS } from '../../config/constants';
 
-const SUBTITLE_FORMATS = ['srt', 'vtt', 'ass', 'ssa', 'sub'];
 
 const ENCODINGS = [
   { value: 'utf-8', label: 'UTF-8 (Default)' },

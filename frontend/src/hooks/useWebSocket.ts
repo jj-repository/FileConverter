@@ -9,7 +9,7 @@ const MAX_RECONNECT_DELAY = 30000; // 30 seconds
 export const useWebSocket = (sessionId: string | null) => {
   const [progress, setProgress] = useState<ProgressUpdate | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const reconnectAttemptRef = useRef(0);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shouldReconnectRef = useRef(true);
@@ -52,7 +52,7 @@ export const useWebSocket = (sessionId: string | null) => {
 
       ws.onopen = () => {
         setIsConnected(true);
-        setReconnectAttempt(0); // Reset retry counter on successful connection
+        reconnectAttemptRef.current = 0; // Reset retry counter on successful connection
         if (import.meta.env.DEV) {
           console.log('WebSocket connected');
         }
@@ -94,16 +94,16 @@ export const useWebSocket = (sessionId: string | null) => {
         // - The close wasn't intentional (code 1000 = normal closure)
         if (
           shouldReconnectRef.current &&
-          reconnectAttempt < MAX_RECONNECT_ATTEMPTS &&
+          reconnectAttemptRef.current < MAX_RECONNECT_ATTEMPTS &&
           event.code !== 1000
         ) {
-          const delay = getReconnectDelay(reconnectAttempt);
+          const delay = getReconnectDelay(reconnectAttemptRef.current);
           if (import.meta.env.DEV) {
-            console.log(`Attempting reconnect in ${delay}ms (attempt ${reconnectAttempt + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+            console.log(`Attempting reconnect in ${delay}ms (attempt ${reconnectAttemptRef.current + 1}/${MAX_RECONNECT_ATTEMPTS})`);
           }
 
           reconnectTimeoutRef.current = setTimeout(() => {
-            setReconnectAttempt(prev => prev + 1);
+            reconnectAttemptRef.current += 1;
             connect();
           }, delay);
         }
@@ -115,7 +115,7 @@ export const useWebSocket = (sessionId: string | null) => {
         console.error('Failed to create WebSocket:', error);
       }
     }
-  }, [sessionId, reconnectAttempt, getReconnectDelay, clearReconnectTimeout]);
+  }, [sessionId, getReconnectDelay, clearReconnectTimeout]);
 
   const disconnect = useCallback(() => {
     shouldReconnectRef.current = false;
@@ -131,14 +131,14 @@ export const useWebSocket = (sessionId: string | null) => {
   // Manual reconnect function exposed to consumers
   const reconnect = useCallback(() => {
     shouldReconnectRef.current = true;
-    setReconnectAttempt(0);
+    reconnectAttemptRef.current = 0;
     connect();
   }, [connect]);
 
   useEffect(() => {
     // Reset state when sessionId changes
     setProgress(null);
-    setReconnectAttempt(0);
+    reconnectAttemptRef.current = 0;
     shouldReconnectRef.current = true;
 
     if (sessionId) {
@@ -153,7 +153,7 @@ export const useWebSocket = (sessionId: string | null) => {
   return {
     progress,
     isConnected,
-    reconnectAttempt,
+    reconnectAttempt: reconnectAttemptRef.current,
     maxReconnectAttempts: MAX_RECONNECT_ATTEMPTS,
     reconnect,
   };

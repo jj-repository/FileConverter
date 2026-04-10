@@ -5,16 +5,13 @@ COVERAGE GOAL: 85%+
 Tests FFmpeg integration, command injection prevention, progress tracking
 """
 
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import asyncio
-import json
-
-from app.services.video_converter import VideoConverter
 from app.config import settings
-from tests.mocks.ffmpeg_mock import FFmpegMock, FFprobeMock
+from app.services.video_converter import VideoConverter
 
+from tests.mocks.ffmpeg_mock import FFmpegMock, FFprobeMock
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
@@ -144,7 +141,7 @@ class TestVideoConverterSecurity:
     @pytest.mark.security
     def test_all_allowed_codecs_are_valid(self):
         """Test that all ALLOWED_VIDEO_CODECS are recognized"""
-        converter = VideoConverter()
+        VideoConverter()
 
         # All whitelisted codecs should be safe
         safe_codecs = settings.ALLOWED_VIDEO_CODECS

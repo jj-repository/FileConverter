@@ -1,6 +1,6 @@
 export type FileType = 'image' | 'video' | 'audio' | 'document' | 'data' | 'archive' | 'spreadsheet' | 'subtitle' | 'ebook' | 'font' | 'batch';
 
-export type ConversionStatus = 'idle' | 'uploading' | 'converting' | 'completed' | 'failed';
+export type ConversionStatus = 'idle' | 'pending' | 'uploading' | 'converting' | 'completed' | 'failed';
 
 export interface ConversionOptions {
   outputFormat?: string;

@@ -1,16 +1,17 @@
-from fastapi import FastAPI, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
-from contextlib import asynccontextmanager
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 
-from app.config import settings, CACHE_DIR
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from app import __version__
+from app.config import CACHE_DIR, settings
 
 # Initialize rate limiter
 limiter = Limiter(
@@ -38,22 +39,46 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Control referrer information
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-        # Prevent caching of sensitive data
-        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
-        response.headers["Pragma"] = "no-cache"
+        # Only apply no-cache to API endpoints
+        if (
+            request.url.path.startswith("/api/")
+            or request.url.path.startswith("/ws")
+            or request.url.path.startswith("/health")
+        ):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
 
         # Content Security Policy - restrict resource loading
-        response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; frame-ancestors 'none'"
+        )
 
         # Permissions Policy - disable unnecessary browser features
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), microphone=(), camera=()"
+        )
 
         return response
 
 
-from app.routers import image, video, audio, document, data, archive, spreadsheet, subtitle, ebook, font, batch, websocket, cache, version  # noqa: E402
 from app.middleware.error_handler import register_exception_handlers  # noqa: E402
-from app.services.cache_service import initialize_cache_service, get_cache_service  # noqa: E402
+from app.routers import (
+    archive,
+    audio,
+    batch,
+    cache,
+    data,
+    document,
+    ebook,
+    font,
+    image,
+    spreadsheet,
+    subtitle,
+    version,
+    video,
+    websocket,
+)  # noqa: E402
+from app.services.cache_service import get_cache_service, initialize_cache_service  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +91,7 @@ async def lifespan(app: FastAPI):
         initialize_cache_service(
             cache_dir=CACHE_DIR,
             expiration_hours=settings.CACHE_EXPIRATION_HOURS,
-            max_size_mb=settings.CACHE_MAX_SIZE_MB
+            max_size_mb=settings.CACHE_MAX_SIZE_MB,
         )
 
         # Clean up cache on startup
@@ -90,13 +115,28 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FileConverter API",
     description="A modern file conversion API supporting images, videos, audio, and documents",
-    version="1.03",
+    version=__version__,
     lifespan=lifespan,
 )
 
 # Add rate limiter to app state and register exception handler
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+async def rate_limit_exception_handler(request, exc):
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": "Rate limit exceeded",
+            "detail": str(exc.detail),
+            "type": "RateLimitExceeded",
+        },
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, rate_limit_exception_handler)
 
 # Register exception handlers
 register_exception_handlers(app)
@@ -117,8 +157,8 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "X-Admin-Key", "X-Requested-With"],
 )
 
-# Mount static files directory for uploads/downloads
-app.mount("/files", StaticFiles(directory=str(settings.UPLOAD_DIR)), name="files")
+# Static file mount removed: all downloads go through /api/{type}/download/{filename}
+# endpoints which perform proper validation and rate limiting.
 
 
 # Root endpoint
@@ -140,7 +180,7 @@ async def root():
             "ebook": "/api/ebook",
             "font": "/api/font",
             "cache": "/api/cache",
-        }
+        },
     }
 
 
@@ -175,16 +215,14 @@ async def cleanup_old_files():
         try:
             # Cleanup temp directory (run in thread to avoid blocking event loop)
             await asyncio.to_thread(
-                _sync_cleanup_directory,
-                settings.TEMP_DIR,
-                settings.TEMP_FILE_LIFETIME
+                _sync_cleanup_directory, settings.TEMP_DIR, settings.TEMP_FILE_LIFETIME
             )
 
             # Cleanup upload directory (excluding cache directory)
             await asyncio.to_thread(
                 _sync_cleanup_directory,
                 settings.UPLOAD_DIR,
-                settings.TEMP_FILE_LIFETIME
+                settings.TEMP_FILE_LIFETIME,
             )
 
             # Cleanup cache (also blocking I/O, run in thread)
@@ -193,7 +231,10 @@ async def cleanup_old_files():
                 if cache_service:
                     logger.debug("Running periodic cache cleanup...")
                     cleanup_stats = await asyncio.to_thread(cache_service.cleanup_all)
-                    if cleanup_stats['expired_removed'] > 0 or cleanup_stats['size_limit_removed'] > 0:
+                    if (
+                        cleanup_stats["expired_removed"] > 0
+                        or cleanup_stats["size_limit_removed"] > 0
+                    ):
                         logger.info(f"Periodic cache cleanup: {cleanup_stats}")
 
         except Exception as e:
@@ -207,21 +248,28 @@ async def cleanup_old_files():
 app.include_router(image.router, prefix="/api/image", tags=["Image Conversion"])
 app.include_router(video.router, prefix="/api/video", tags=["Video Conversion"])
 app.include_router(audio.router, prefix="/api/audio", tags=["Audio Conversion"])
-app.include_router(document.router, prefix="/api/document", tags=["Document Conversion"])
+app.include_router(
+    document.router, prefix="/api/document", tags=["Document Conversion"]
+)
 app.include_router(data.router, prefix="/api/data", tags=["Data Conversion"])
 app.include_router(archive.router, prefix="/api/archive", tags=["Archive Conversion"])
-app.include_router(spreadsheet.router, prefix="/api/spreadsheet", tags=["Spreadsheet Conversion"])
-app.include_router(subtitle.router, prefix="/api/subtitle", tags=["Subtitle Conversion"])
+app.include_router(
+    spreadsheet.router, prefix="/api/spreadsheet", tags=["Spreadsheet Conversion"]
+)
+app.include_router(
+    subtitle.router, prefix="/api/subtitle", tags=["Subtitle Conversion"]
+)
 app.include_router(ebook.router, prefix="/api/ebook", tags=["eBook Conversion"])
 app.include_router(font.router, prefix="/api/font", tags=["Font Conversion"])
 app.include_router(batch.router, prefix="/api/batch", tags=["Batch Conversion"])
 app.include_router(websocket.router, prefix="/ws", tags=["WebSocket"])
 app.include_router(cache.router, prefix="/api/cache", tags=["Cache Management"])
-app.include_router(version.router)
+app.include_router(version.router, prefix="/api/version", tags=["Version"])
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,

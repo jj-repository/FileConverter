@@ -2,14 +2,12 @@
 Simple standalone test for cache service (no dependencies)
 """
 
-import sys
-import asyncio
-from pathlib import Path
-import tempfile
 import hashlib
 import json
-import time
 import shutil
+import tempfile
+import time
+from pathlib import Path
 
 # Standalone cache test - no app dependencies
 
@@ -70,7 +68,7 @@ def test_cache_logic():
     different_options = {"quality": 80, "width": 1024}
     different_key = generate_cache_key(test_file, "png", different_options)
     assert different_key != cache_key, "Different options should produce different keys!"
-    print(f"\n3. Different options produce different key:")
+    print("\n3. Different options produce different key:")
     print(f"   - Original: {cache_key}")
     print(f"   - Different: {different_key}")
     print("   ✓ Key differentiation: WORKING")
@@ -78,7 +76,7 @@ def test_cache_logic():
     # Test same options produce same key (consistency)
     same_key = generate_cache_key(test_file, "png", options)
     assert same_key == cache_key, "Same options should produce same key!"
-    print(f"\n4. Same options produce consistent key:")
+    print("\n4. Same options produce consistent key:")
     print(f"   - First:  {cache_key}")
     print(f"   - Second: {same_key}")
     print("   ✓ Key consistency: WORKING")
@@ -88,7 +86,7 @@ def test_cache_logic():
     test_file2.write_text("Different content")
     different_file_key = generate_cache_key(test_file2, "png", options)
     assert different_file_key != cache_key, "Different file should produce different key!"
-    print(f"\n5. Different file produces different key:")
+    print("\n5. Different file produces different key:")
     print(f"   - Original file: {cache_key}")
     print(f"   - Different file: {different_file_key}")
     print("   ✓ File differentiation: WORKING")
@@ -96,7 +94,7 @@ def test_cache_logic():
     # Test different format produces different key
     different_format_key = generate_cache_key(test_file, "jpg", options)
     assert different_format_key != cache_key, "Different format should produce different key!"
-    print(f"\n6. Different format produces different key:")
+    print("\n6. Different format produces different key:")
     print(f"   - PNG format: {cache_key}")
     print(f"   - JPG format: {different_format_key}")
     print("   ✓ Format differentiation: WORKING")
@@ -147,22 +145,22 @@ def test_cache_structure():
     metadata_file = cache_entry_dir / "metadata.json"
     with open(metadata_file, 'w') as f:
         json.dump(metadata, f, indent=2)
-    print(f"3. Created metadata file")
+    print("3. Created metadata file")
 
     # Create mock output file
     output_file = cache_entry_dir / "output.png"
     output_file.write_text("Mock PNG content")
-    print(f"4. Created mock output file")
+    print("4. Created mock output file")
 
     # Verify structure
     assert cache_entry_dir.exists(), "Cache entry directory should exist!"
     assert metadata_file.exists(), "Metadata file should exist!"
     assert output_file.exists(), "Output file should exist!"
     print("\n5. Verified cache structure:")
-    print(f"   cache/")
+    print("   cache/")
     print(f"   └── {cache_key}/")
-    print(f"       ├── metadata.json")
-    print(f"       └── output.png")
+    print("       ├── metadata.json")
+    print("       └── output.png")
     print("   ✓ Structure: CORRECT")
 
     # Read and verify metadata
@@ -171,7 +169,7 @@ def test_cache_structure():
 
     assert loaded_metadata["cache_key"] == cache_key, "Cache key mismatch!"
     assert loaded_metadata["output_format"] == "png", "Output format mismatch!"
-    print(f"\n6. Verified metadata content:")
+    print("\n6. Verified metadata content:")
     print(f"   - Cache key: {loaded_metadata['cache_key'][:20]}...")
     print(f"   - Format: {loaded_metadata['output_format']}")
     print(f"   - File size: {loaded_metadata['file_size']} bytes")

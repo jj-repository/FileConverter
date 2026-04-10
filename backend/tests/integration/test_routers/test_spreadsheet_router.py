@@ -14,14 +14,12 @@ Security tests:
 - Malicious filename sanitization
 """
 
-import pytest
-from pathlib import Path
-from io import BytesIO
-from fastapi.testclient import TestClient
 import csv
+from pathlib import Path
 
+import pytest
 from app.main import app
-from app.config import settings
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -110,7 +108,7 @@ def sample_ods(temp_dir):
     ods_path = temp_dir / "test_spreadsheet.ods"
     try:
         from odf.opendocument import OpenDocumentSpreadsheet
-        from odf.table import Table, TableRow, TableCell
+        from odf.table import Table, TableCell, TableRow
         from odf.text import P
 
         # Create ODS document
@@ -686,8 +684,7 @@ class TestSpreadsheetErrorHandling:
 
     def test_convert_cleanup_output_path_on_error(self, client, sample_csv, monkeypatch):
         """Test cleanup of output_path when error occurs after conversion (line 94)"""
-        from unittest.mock import patch, MagicMock
-        from pathlib import Path
+        from unittest.mock import MagicMock, patch
 
         # Mock to make conversion succeed, then raise exception when building response
         mock_output_path = MagicMock(spec=Path)

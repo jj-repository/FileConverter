@@ -7,15 +7,12 @@ Tests rate limiting, session validation, and real-time progress updates
 COVERAGE GOAL: 85%+
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
-from fastapi.testclient import TestClient
+from unittest.mock import AsyncMock, Mock, patch
 
-from app.main import app
-from app.utils.websocket_security import rate_limiter, session_validator
+import pytest
 from app.services.base_converter import ws_manager
-
+from app.utils.websocket_security import rate_limiter, session_validator
 
 # ============================================================================
 # VALID SESSION CONNECTION TESTS
@@ -100,7 +97,7 @@ class TestWebSocketSessionValidation:
         session_id = "invalid-session-999"
 
         with pytest.raises(Exception):  # WebSocketException
-            with test_client.websocket_connect(f"/ws/progress/{session_id}") as websocket:
+            with test_client.websocket_connect(f"/ws/progress/{session_id}"):
                 pass
 
     def test_websocket_rejects_expired_session(self, test_client):
@@ -114,7 +111,7 @@ class TestWebSocketSessionValidation:
         session_validator.active_sessions[session_id] = old_timestamp
 
         with pytest.raises(Exception):  # WebSocketException
-            with test_client.websocket_connect(f"/ws/progress/{session_id}") as websocket:
+            with test_client.websocket_connect(f"/ws/progress/{session_id}"):
                 pass
 
         # Cleanup
@@ -127,7 +124,7 @@ class TestWebSocketSessionValidation:
 
         # Note: rate limiter should remove connection when session invalid
         with pytest.raises(Exception):
-            with test_client.websocket_connect(f"/ws/progress/{session_id}") as websocket:
+            with test_client.websocket_connect(f"/ws/progress/{session_id}"):
                 pass
 
 
@@ -243,7 +240,6 @@ class TestWebSocketDisconnect:
         session_validator.register_session(session_id)
 
         # Get initial connection count
-        client_ip = "testclient"  # TestClient uses this as default
 
         with test_client.websocket_connect(f"/ws/progress/{session_id}") as websocket:
             websocket.receive_json()
@@ -323,8 +319,6 @@ class TestWebSocketErrorHandling:
 
     def test_websocket_general_exception_cleanup(self, test_client):
         """Test general exception handler cleanup (lines 63-66)"""
-        from unittest.mock import patch, AsyncMock
-        import asyncio
 
         session_id = "general-error-test"
         session_validator.register_session(session_id)
@@ -332,8 +326,8 @@ class TestWebSocketErrorHandling:
 
         async def trigger_exception():
             """Async function to trigger exception in websocket endpoint"""
-            from fastapi import WebSocket
             from app.routers.websocket import websocket_progress
+            from fastapi import WebSocket
 
             # Create a mock websocket
             mock_ws = AsyncMock(spec=WebSocket)

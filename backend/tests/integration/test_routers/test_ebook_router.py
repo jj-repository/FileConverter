@@ -15,13 +15,11 @@ Security tests:
 - Corrupted file handling
 """
 
-import pytest
 import zipfile
-from pathlib import Path
-from fastapi.testclient import TestClient
 
+import pytest
 from app.main import app
-from app.config import settings
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture

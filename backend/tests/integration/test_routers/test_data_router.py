@@ -14,15 +14,12 @@ Security tests:
 - Malicious filename sanitization
 """
 
-import pytest
 import json
-import csv
-from pathlib import Path
-from io import StringIO
-from fastapi.testclient import TestClient
 
-from app.main import app
+import pytest
 from app.config import settings
+from app.main import app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -612,8 +609,6 @@ class TestDataCleanup:
         """Test that output_path is cleaned up when conversion fails after file creation"""
         from app.services.data_converter import DataConverter
         from app.utils.file_handler import cleanup_file
-        from app.config import settings
-        from app.models.conversion import ConversionResponse
 
         cleanup_calls = []
         original_cleanup = cleanup_file

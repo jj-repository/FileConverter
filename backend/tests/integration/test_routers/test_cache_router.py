@@ -20,14 +20,11 @@ Cache management tests:
 """
 
 import pytest
-from pathlib import Path
-from PIL import Image
-from fastapi.testclient import TestClient
-
-from app.main import app
 from app.config import settings
-from app.services.cache_service import CacheService, initialize_cache_service, get_cache_service
-
+from app.main import app
+from app.services.cache_service import initialize_cache_service
+from fastapi.testclient import TestClient
+from PIL import Image
 
 TEST_ADMIN_API_KEY = "test_admin_key_12345"
 
@@ -221,7 +218,7 @@ class TestCacheCleanup:
         """Test that cleanup removes expired entries"""
         # First get initial cache info
         info_response_1 = client.get("/api/cache/info", headers=admin_headers)
-        initial_count = info_response_1.json()["entry_count"]
+        info_response_1.json()["entry_count"]
 
         # Run cleanup
         cleanup_response = client.post("/api/cache/cleanup", headers=admin_headers)

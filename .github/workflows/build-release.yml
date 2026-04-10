@@ -156,11 +156,16 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
 
+      - name: Generate SHA256SUMS
+        run: |
+          sha256sum linux-release/* windows-release/* > SHA256SUMS
+
       - name: Create Release
         run: |
           gh release create "${{ github.ref_name }}" \
             linux-release/* \
             windows-release/* \
+            SHA256SUMS \
             --title "${{ github.ref_name }}" \
             --generate-notes
         env:

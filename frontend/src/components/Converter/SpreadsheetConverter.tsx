@@ -5,8 +5,8 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { spreadsheetAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { SPREADSHEET_FORMATS } from '../../config/constants';
 
-const SPREADSHEET_FORMATS = ['xlsx', 'xls', 'ods', 'csv', 'tsv'];
 
 const ENCODINGS = [
   { value: 'utf-8', label: 'UTF-8 (Default)' },

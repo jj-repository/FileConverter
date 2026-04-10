@@ -14,12 +14,11 @@ Security tests:
 - Malicious filename sanitization
 """
 
-import pytest
 from pathlib import Path
-from fastapi.testclient import TestClient
 
+import pytest
 from app.main import app
-from app.config import settings
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -33,7 +32,6 @@ def sample_docx(temp_dir):
     """Create a sample DOCX document for testing"""
     # Create a minimal DOCX file (ZIP-based format)
     import zipfile
-    from io import BytesIO
 
     docx_path = temp_dir / "test_document.docx"
 
@@ -527,8 +525,7 @@ class TestDocumentErrorHandling:
 
     def test_convert_cleanup_output_path_on_error(self, client, sample_txt, monkeypatch):
         """Test cleanup of output_path when error occurs after conversion (line 88)"""
-        from unittest.mock import patch, MagicMock
-        from pathlib import Path
+        from unittest.mock import MagicMock, patch
 
         # Mock to make conversion succeed, then raise exception when building response
         mock_output_path = MagicMock(spec=Path)

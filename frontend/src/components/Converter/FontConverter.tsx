@@ -5,8 +5,8 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { fontAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { FONT_FORMATS } from '../../config/constants';
 
-const FONT_FORMATS = ['ttf', 'otf', 'woff', 'woff2'];
 
 export const FontConverter: React.FC = () => {
   const { t } = useTranslation();

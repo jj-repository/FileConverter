@@ -15,11 +15,9 @@ Security tests:
 """
 
 import pytest
-from pathlib import Path
-from fastapi.testclient import TestClient
-
-from app.main import app
 from app.config import settings
+from app.main import app
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -461,10 +459,7 @@ class TestAudioCleanup:
     def test_convert_cleanup_output_file_on_error(self, client, sample_audio, monkeypatch):
         """Test that output_path is cleaned up when conversion fails after file creation"""
         from app.services.audio_converter import AudioConverter
-        from pathlib import Path
         from app.utils.file_handler import cleanup_file
-        from app.config import settings
-        from app.models.conversion import ConversionResponse
 
         # Track cleanup calls
         cleanup_calls = []
@@ -488,7 +483,6 @@ class TestAudioCleanup:
         monkeypatch.setattr(AudioConverter, "convert_with_cache", mock_convert_with_cache)
 
         # Mock ConversionResponse to raise exception after output_path is set
-        original_conversion_response = ConversionResponse
         def mock_conversion_response(*args, **kwargs):
             raise Exception("Simulated error after conversion")
 

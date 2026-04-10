@@ -6,17 +6,11 @@ Tests eBook conversion with EPUB creation/extraction, metadata handling,
 format support, progress tracking, and error handling
 """
 
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
-import asyncio
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import zipfile
-import io
-import ebooklib
-
-from app.services.ebook_converter import EbookConverter
 from app.config import settings
-
+from app.services.ebook_converter import EbookConverter
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
@@ -138,7 +132,7 @@ class TestEpubCreation:
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
             with patch('ebooklib.epub.EpubBook') as mock_book_class:
-                with patch('ebooklib.epub.write_epub') as mock_write:
+                with patch('ebooklib.epub.write_epub'):
                     mock_book = MagicMock()
                     mock_book_class.return_value = mock_book
 
@@ -178,7 +172,7 @@ class TestEpubCreation:
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub') as mock_write:
+            with patch('ebooklib.epub.write_epub'):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -205,7 +199,7 @@ class TestEpubCreation:
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
         with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
-            with patch('ebooklib.epub.write_epub') as mock_write:
+            with patch('ebooklib.epub.write_epub'):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -526,7 +520,7 @@ class TestMetadataHandling:
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
             with patch('ebooklib.epub.EpubBook') as mock_book_class:
-                with patch('ebooklib.epub.write_epub') as mock_write:
+                with patch('ebooklib.epub.write_epub'):
                     mock_book = MagicMock()
                     mock_book_class.return_value = mock_book
 
@@ -602,7 +596,7 @@ class TestErrorHandling:
         options = {"cover_image": "/path/to/nonexistent/cover.jpg"}
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub') as mock_write:
+            with patch('ebooklib.epub.write_epub'):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -680,12 +674,12 @@ class TestErrorHandling:
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub') as mock_write:
+            with patch('ebooklib.epub.write_epub'):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
 
                 # Should handle gracefully or raise appropriate error
                 try:
-                    result = await converter.convert(
+                    await converter.convert(
                         input_path=input_file,
                         output_format="epub",
                         options={},
@@ -804,7 +798,7 @@ class TestOutputFileGeneration:
         input_file.write_text("Content")
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub') as mock_write:
+            with patch('ebooklib.epub.write_epub'):
                 output_dir = settings.UPLOAD_DIR
                 output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -828,7 +822,7 @@ class TestOutputFileGeneration:
         input_file.write_text("Content")
 
         with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub') as mock_write:
+            with patch('ebooklib.epub.write_epub'):
                 output_dir = settings.UPLOAD_DIR
                 output_dir.mkdir(parents=True, exist_ok=True)
 

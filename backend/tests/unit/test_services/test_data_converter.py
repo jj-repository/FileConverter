@@ -6,20 +6,16 @@ Tests data conversion with JSON, CSV, XML, YAML formats, encoding/delimiter opti
 progress tracking, and error handling for malformed data
 """
 
-import pytest
-import asyncio
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock, mock_open
-import json
-import csv
-import xml.etree.ElementTree as ET
-import pandas as pd
 import configparser
+import json
+import xml.etree.ElementTree as ET
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pandas as pd
+import pytest
 import toml
-
-from app.services.data_converter import DataConverter
 from app.config import settings
-
+from app.services.data_converter import DataConverter
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
@@ -257,7 +253,7 @@ class TestJSONConversion:
         input_file = temp_dir / "test.json"
         input_file.write_text(json.dumps("just a string"))
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
             with pytest.raises(ValueError, match="Unsupported JSON structure"):
                 await converter.convert(
                     input_path=input_file,
@@ -590,7 +586,7 @@ class TestXMLConversion:
     <item>"""  # Missing closing tag
         input_file.write_text(xml_content)
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
             with pytest.raises(Exception):
                 await converter.convert(
                     input_path=input_file,
@@ -712,7 +708,7 @@ invalid: [unclosed
 """
         input_file.write_text(yaml_content)
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, 'send_progress', new=AsyncMock()):
             with pytest.raises(Exception):
                 await converter.convert(
                     input_path=input_file,
@@ -1823,6 +1819,7 @@ class TestDataImportFallback:
         with patch.dict(sys.modules, {'defusedxml': None, 'defusedxml.ElementTree': None}):
             # Force module reload to trigger import error
             import importlib
+
             import app.services.data_converter
             importlib.reload(app.services.data_converter)
 
@@ -1838,7 +1835,7 @@ class TestDataEdgeCases:
     @pytest.mark.asyncio
     async def test_xml_parser_with_entity_attribute(self, temp_dir):
         """Test XML parsing is blocked without defusedxml regardless of parser capabilities"""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
 
         converter = DataConverter()
 

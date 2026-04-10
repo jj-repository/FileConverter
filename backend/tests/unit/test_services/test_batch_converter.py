@@ -6,16 +6,13 @@ Tests batch conversion with parallel/sequential processing, ZIP creation,
 format routing, progress tracking, and error handling for multiple files
 """
 
-import pytest
 import asyncio
 import zipfile
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock, call
-from typing import List
+from unittest.mock import AsyncMock, Mock, patch
 
-from app.services.batch_converter import BatchConverter
+import pytest
 from app.config import settings
-
+from app.services.batch_converter import BatchConverter
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS

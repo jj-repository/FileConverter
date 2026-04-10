@@ -6,19 +6,14 @@ Tests archive creation/extraction, format conversion, compression levels,
 path traversal prevention, and progress tracking via WebSocket
 """
 
-import pytest
-import asyncio
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock, call
-import zipfile
-import tarfile
 import gzip
-import shutil
-from io import BytesIO
+import tarfile
+import zipfile
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-from app.services.archive_converter import ArchiveConverter
+import pytest
 from app.config import settings
-
+from app.services.archive_converter import ArchiveConverter
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
@@ -714,14 +709,14 @@ class TestArchiveConversion:
         converter = ArchiveConverter()
 
         input_path = temp_dir / "test.zip"
-        output_path = settings.UPLOAD_DIR / "test_converted.zip"
+        settings.UPLOAD_DIR / "test_converted.zip"
 
         with zipfile.ZipFile(input_path, 'w') as zf:
             zf.writestr("file1.txt", "content1")
 
         with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
             with patch('shutil.copy') as mock_copy:
-                result = await converter.convert(
+                await converter.convert(
                     input_path=input_path,
                     output_format="zip",
                     options={},
@@ -761,7 +756,7 @@ class TestArchiveConversion:
         converter = ArchiveConverter()
 
         input_path = temp_dir / "test.zip"
-        output_path = settings.UPLOAD_DIR / "test_converted.tar"
+        settings.UPLOAD_DIR / "test_converted.tar"
 
         with zipfile.ZipFile(input_path, 'w') as zf:
             zf.writestr("file1.txt", "content1")
@@ -1001,7 +996,7 @@ class TestErrorHandling:
         converter = ArchiveConverter()
 
         input_path = temp_dir / "test.zip"
-        output_path = settings.UPLOAD_DIR / "test_converted.tgz"
+        settings.UPLOAD_DIR / "test_converted.tgz"
 
         with zipfile.ZipFile(input_path, 'w') as zf:
             zf.writestr("file1.txt", "content1")
@@ -1126,6 +1121,7 @@ class TestArchiveImportFallback:
         with patch.dict(sys.modules, {'py7zr': None}):
             # Force module reload to trigger import error
             import importlib
+
             import app.services.archive_converter
             importlib.reload(app.services.archive_converter)
 

@@ -2,24 +2,25 @@
 Error handling middleware for FastAPI
 """
 
-import re
-from fastapi import Request, status
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
+import re
 
-from app.exceptions import (
-    FileConverterException,
-    ConversionError,
-    UnsupportedFormatError,
-    ConversionTimeoutError,
-    FileValidationError,
-    ExternalToolError,
-    BatchConversionError,
-    MetadataExtractionError,
-)
+from fastapi import Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.config import settings
+from app.exceptions import (
+    BatchConversionError,
+    ConversionError,
+    ConversionTimeoutError,
+    ExternalToolError,
+    FileConverterException,
+    FileValidationError,
+    MetadataExtractionError,
+    UnsupportedFormatError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,21 +34,30 @@ def sanitize_error_message(message: str) -> str:
         return message
 
     # Remove absolute file paths (Unix and Windows)
-    message = re.sub(r'(/[a-zA-Z0-9_\-./]+)+', '[path]', message)
-    message = re.sub(r'([A-Za-z]:\\[^\s:]+)', '[path]', message)
+    message = re.sub(r"(/[a-zA-Z0-9_\-./]+)+", "[path]", message)
+    message = re.sub(r"([A-Za-z]:\\[^\s:]+)", "[path]", message)
 
     # Remove potential IP addresses
-    message = re.sub(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', '[ip]', message)
+    message = re.sub(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "[ip]", message)
 
     # Remove UUIDs that might identify sessions
-    message = re.sub(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', '[id]', message, flags=re.IGNORECASE)
+    message = re.sub(
+        r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+        "[id]",
+        message,
+        flags=re.IGNORECASE,
+    )
 
     return message
 
 
-async def file_converter_exception_handler(request: Request, exc: FileConverterException) -> JSONResponse:
+async def file_converter_exception_handler(
+    request: Request, exc: FileConverterException
+) -> JSONResponse:
     """Handle custom FileConverter exceptions"""
-    logger.error(f"{exc.__class__.__name__}: {exc.message}", extra={"detail": exc.detail})
+    logger.error(
+        f"{exc.__class__.__name__}: {exc.message}", extra={"detail": exc.detail}
+    )
 
     # Map exception types to HTTP status codes
     status_code_map = {
@@ -63,8 +73,16 @@ async def file_converter_exception_handler(request: Request, exc: FileConverterE
     status_code = status_code_map.get(type(exc), status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # Sanitize error messages in production to prevent information leakage
-    error_message = exc.message if settings.DEBUG else sanitize_error_message(exc.message)
-    error_detail = exc.detail if settings.DEBUG else sanitize_error_message(str(exc.detail)) if exc.detail else None
+    error_message = (
+        exc.message if settings.DEBUG else sanitize_error_message(exc.message)
+    )
+    error_detail = (
+        exc.detail
+        if settings.DEBUG
+        else sanitize_error_message(str(exc.detail))
+        if exc.detail
+        else None
+    )
 
     return JSONResponse(
         status_code=status_code,
@@ -76,7 +94,9 @@ async def file_converter_exception_handler(request: Request, exc: FileConverterE
     )
 
 
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     """Handle request validation errors"""
     logger.warning(f"Validation error: {exc.errors()}")
 
@@ -90,15 +110,24 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+async def http_exception_handler(
+    request: Request, exc: StarletteHTTPException
+) -> JSONResponse:
     """Handle HTTP exceptions"""
     # Sanitize error details in production to prevent information leakage
-    error_detail = exc.detail if settings.DEBUG else sanitize_error_message(str(exc.detail)) if exc.detail else None
+    error_detail = (
+        exc.detail
+        if settings.DEBUG
+        else sanitize_error_message(str(exc.detail))
+        if exc.detail
+        else None
+    )
 
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "error": error_detail,
+            "detail": None,
             "type": "HTTPException",
         },
     )

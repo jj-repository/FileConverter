@@ -2,23 +2,23 @@
 Shared pytest fixtures for FileConverter backend tests
 """
 
-import pytest
 import asyncio
-from pathlib import Path
-from typing import Generator
-from fastapi.testclient import TestClient
-import tempfile
-import shutil
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import io
 import json
-from PIL import Image
+import shutil
+import tempfile
+from pathlib import Path
+from typing import Generator
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
+from app.config import settings
 
 # Test app imports
 from app.main import app
-from app.config import settings
 from app.services.cache_service import CacheService
-
+from fastapi.testclient import TestClient
+from PIL import Image
 
 # ============================================================================
 # ASYNC FIXTURES

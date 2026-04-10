@@ -5,8 +5,8 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { imageAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { IMAGE_FORMATS } from '../../config/constants';
 
-const IMAGE_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'ico', 'heic', 'heif', 'svg', 'tga'];
 
 export const ImageConverter: React.FC = () => {
   const { t } = useTranslation();

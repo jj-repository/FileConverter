@@ -7,22 +7,21 @@ extension validation, and MIME type validation.
 COVERAGE GOAL: 95%+
 """
 
-import pytest
-from fastapi import HTTPException
-from pathlib import Path
-from unittest.mock import Mock, patch
 import io
 import sys
+from pathlib import Path
+from unittest.mock import Mock, patch
 
-from app.utils.validation import (
-    validate_file_size,
-    validate_file_extension,
-    validate_mime_type,
-    get_file_type_from_format,
-    validate_download_filename
-)
+import pytest
 from app.config import settings
-
+from app.utils.validation import (
+    get_file_type_from_format,
+    validate_download_filename,
+    validate_file_extension,
+    validate_file_size,
+    validate_mime_type,
+)
+from fastapi import HTTPException
 
 # ============================================================================
 # PATH TRAVERSAL PREVENTION TESTS (CRITICAL SECURITY)
@@ -519,9 +518,9 @@ class TestValidateMimeType:
         # MAGIC_AVAILABLE should be True if magic is installed, False otherwise
         try:
             import magic
-            assert validation.MAGIC_AVAILABLE == True
+            assert validation.MAGIC_AVAILABLE is True
         except ImportError:
-            assert validation.MAGIC_AVAILABLE == False
+            assert validation.MAGIC_AVAILABLE is False
 
     @pytest.mark.security
     def test_valid_mime_accepted(self, sample_image_jpg):
@@ -741,7 +740,6 @@ class TestMagicImportSuccess:
 
     def test_magic_import_available(self):
         """Test that MAGIC_AVAILABLE is set to True when magic import succeeds (line 8)"""
-        import sys
         from unittest.mock import MagicMock
 
         # Create a mock magic module
@@ -751,6 +749,7 @@ class TestMagicImportSuccess:
         with patch.dict(sys.modules, {'magic': mock_magic}):
             # Force module reload to trigger import
             import importlib
+
             import app.utils.validation
             importlib.reload(app.utils.validation)
 

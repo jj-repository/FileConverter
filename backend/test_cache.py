@@ -2,17 +2,16 @@
 Simple test script to verify cache implementation
 """
 
-import sys
 import asyncio
+import sys
 from pathlib import Path
 
 # Add backend directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from app.services.cache_service import CacheService
-from app.config import CACHE_DIR
 import tempfile
-import hashlib
+
+from app.services.cache_service import CacheService
 
 
 async def test_cache_service():

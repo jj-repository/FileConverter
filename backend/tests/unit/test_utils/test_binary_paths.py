@@ -5,11 +5,8 @@ Tests binary path detection for FFmpeg, FFprobe, and Pandoc across different pla
 and deployment scenarios (development vs bundled).
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-import sys
-import platform
+from unittest.mock import MagicMock, patch
 
 from app.utils.binary_paths import (
     get_bundled_binary_path,

@@ -15,12 +15,10 @@ Security tests:
 """
 
 import pytest
-from pathlib import Path
-from PIL import Image
-from fastapi.testclient import TestClient
-
-from app.main import app
 from app.config import settings
+from app.main import app
+from fastapi.testclient import TestClient
+from PIL import Image
 
 
 @pytest.fixture
@@ -453,10 +451,7 @@ class TestImageCleanup:
     def test_convert_cleanup_output_file_on_error(self, client, sample_image, monkeypatch):
         """Test that output_path is cleaned up when conversion fails after file creation"""
         from app.services.image_converter import ImageConverter
-        from pathlib import Path
         from app.utils.file_handler import cleanup_file
-        from app.config import settings
-        from app.models.conversion import ConversionResponse
 
         # Track cleanup calls
         cleanup_calls = []

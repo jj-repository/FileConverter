@@ -6,14 +6,12 @@ Tests abstract base converter class, WebSocket manager, cache integration,
 and progress tracking
 """
 
-import pytest
-import asyncio
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-from app.services.base_converter import BaseConverter, WebSocketManager, ws_manager
+import pytest
 from app.config import settings
-
+from app.services.base_converter import BaseConverter, WebSocketManager, ws_manager
 
 # ============================================================================
 # WEBSOCKET MANAGER TESTS
@@ -226,7 +224,7 @@ class TestBaseConverterCacheIntegration:
             with patch('app.services.cache_service.get_cache_service', return_value=mock_cache_service):
                 with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
                     with patch.object(converter, 'convert') as mock_convert:
-                        result = await converter.convert_with_cache(
+                        await converter.convert_with_cache(
                             input_path=input_file,
                             output_format="pdf",
                             options={},
@@ -258,7 +256,7 @@ class TestBaseConverterCacheIntegration:
         with patch('app.config.settings.CACHE_ENABLED', True):
             with patch('app.services.cache_service.get_cache_service', return_value=mock_cache_service):
                 with patch.object(converter, 'convert', return_value=output_file) as mock_convert:
-                    result = await converter.convert_with_cache(
+                    await converter.convert_with_cache(
                         input_path=input_file,
                         output_format="pdf",
                         options={"quality": 95},
@@ -375,7 +373,7 @@ class TestBaseConverterCacheIntegration:
         with patch('app.config.settings.CACHE_ENABLED', True):
             with patch('app.services.cache_service.get_cache_service', return_value=None):
                 with patch.object(converter, 'convert', return_value=output_file) as mock_convert:
-                    result = await converter.convert_with_cache(
+                    await converter.convert_with_cache(
                         input_path=input_file,
                         output_format="pdf",
                         options={},

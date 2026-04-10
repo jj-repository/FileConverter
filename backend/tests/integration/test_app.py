@@ -9,15 +9,15 @@ Tests the full application startup, shutdown, and background tasks:
 - Graceful shutdown handling
 """
 
-import pytest
 import asyncio
 import time
 from pathlib import Path
-from fastapi.testclient import TestClient
 
-from app.main import app, cleanup_old_files
+import pytest
 from app.config import settings
+from app.main import app, cleanup_old_files
 from app.services.cache_service import get_cache_service, initialize_cache_service
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -296,8 +296,8 @@ class TestAppShutdown:
     @pytest.mark.asyncio
     async def test_cleanup_task_deletes_old_files(self, temp_dir):
         """Test that cleanup_old_files() actually deletes old files (covers lines 112, 119)"""
-        import time
         import os
+        import time
 
         # Create old files in temp and upload directories
         old_temp_file = settings.TEMP_DIR / "old_temp_cleanup.txt"

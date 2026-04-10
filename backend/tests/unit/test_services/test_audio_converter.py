@@ -6,16 +6,13 @@ Tests audio conversion with FFmpeg, codec selection, bitrate/sample rate options
 progress tracking, and metadata extraction
 """
 
-import pytest
 import asyncio
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import subprocess
 import json
+from unittest.mock import AsyncMock, Mock, patch
 
-from app.services.audio_converter import AudioConverter
+import pytest
 from app.config import settings
-
+from app.services.audio_converter import AudioConverter
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS

@@ -5,16 +5,12 @@ COVERAGE GOAL: 85%+
 Tests PIL integration, image resizing, format conversion, quality settings
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from PIL import Image
-import io
-
-from app.services.image_converter import ImageConverter
 from app.config import settings
-from tests.mocks.file_io_mock import PILMock
-
+from app.services.image_converter import ImageConverter
+from PIL import Image
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
@@ -91,7 +87,7 @@ class TestImageConversion:
         img = Image.new('RGB', (100, 100), color='red')
         img.save(input_file, 'JPEG')
 
-        output_file = settings.UPLOAD_DIR / "test_converted.png"
+        settings.UPLOAD_DIR / "test_converted.png"
         settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
         options = {"quality": 95}
@@ -120,7 +116,7 @@ class TestImageConversion:
         img = Image.new('RGB', (200, 150), color='blue')
         img.save(input_file, 'PNG')
 
-        output_file = settings.UPLOAD_DIR / "test_converted.jpg"
+        settings.UPLOAD_DIR / "test_converted.jpg"
         settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
         options = {"quality": 90}
@@ -174,14 +170,14 @@ class TestImageQuality:
         settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
         # Test with low quality
-        output_low = settings.UPLOAD_DIR / "test_low.jpg"
+        settings.UPLOAD_DIR / "test_low.jpg"
         result_low = await converter.convert(input_file, "jpg", {"quality": 50}, "test-session-1")
 
         assert result_low.exists()
         low_size = result_low.stat().st_size
 
         # Test with high quality
-        output_high = settings.UPLOAD_DIR / "test_high.jpg"
+        settings.UPLOAD_DIR / "test_high.jpg"
         result_high = await converter.convert(input_file, "jpg", {"quality": 95}, "test-session-2")
 
         assert result_high.exists()
@@ -1092,8 +1088,8 @@ class TestImportAvailability:
 
     def test_heif_import_success(self):
         """Test HEIF import when pillow_heif is available (lines 9-10)"""
-        from unittest.mock import patch, MagicMock
         import sys
+        from unittest.mock import patch
 
         # Mock pillow_heif as available
         mock_pillow_heif = MagicMock()
@@ -1102,6 +1098,7 @@ class TestImportAvailability:
         with patch.dict(sys.modules, {'pillow_heif': mock_pillow_heif}):
             # Force module reload
             import importlib
+
             import app.services.image_converter
             importlib.reload(app.services.image_converter)
 
@@ -1115,8 +1112,8 @@ class TestImportAvailability:
 
     def test_svg_import_success(self):
         """Test SVG import when cairosvg is available (line 17)"""
-        from unittest.mock import patch, MagicMock
         import sys
+        from unittest.mock import patch
 
         # Mock cairosvg as available
         mock_cairosvg = MagicMock()
@@ -1124,6 +1121,7 @@ class TestImportAvailability:
         with patch.dict(sys.modules, {'cairosvg': mock_cairosvg}):
             # Force module reload
             import importlib
+
             import app.services.image_converter
             importlib.reload(app.services.image_converter)
 
@@ -1144,10 +1142,9 @@ class TestSVGConversionForced:
     @pytest.mark.asyncio
     async def test_svg_to_png_with_mocked_cairosvg(self, temp_dir, mock_websocket_manager):
         """Test SVG to PNG conversion with mocked cairosvg (lines 77-101)"""
-        from unittest.mock import patch, MagicMock
-        from pathlib import Path
-        import sys
         import importlib
+        import sys
+        from unittest.mock import patch
 
         input_file = temp_dir / "test.svg"
         svg_content = '''<?xml version="1.0"?>
@@ -1238,9 +1235,9 @@ class TestSVGConversionForced:
     @pytest.mark.asyncio
     async def test_svg_to_jpeg_with_mocked_cairosvg(self, temp_dir, mock_websocket_manager):
         """Test SVG to JPEG conversion (covers lines 93-100 with different output format)"""
-        from unittest.mock import patch, MagicMock
-        import sys
         import importlib
+        import sys
+        from unittest.mock import patch
 
         input_file = temp_dir / "test.svg"
         svg_content = '<svg width="100" height="100"><rect width="100" height="100" fill="green"/></svg>'

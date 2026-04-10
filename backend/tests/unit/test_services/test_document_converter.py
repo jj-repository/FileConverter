@@ -6,15 +6,13 @@ Tests document conversion with Pandoc, TOC generation, format-specific options,
 and metadata extraction for PDF/DOCX
 """
 
-import pytest
-import asyncio
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock, PropertyMock
 import subprocess
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
 
-from app.services.document_converter import DocumentConverter
+import pytest
 from app.config import settings
-
+from app.services.document_converter import DocumentConverter
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS

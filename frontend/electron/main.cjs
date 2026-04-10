@@ -218,6 +218,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
       preload: path.join(__dirname, 'preload.cjs'),
       devTools: isDev // Only enable DevTools in development
     },
@@ -226,12 +227,17 @@ function createWindow() {
   });
 
   // Set Content Security Policy
+  // In production, remove unsafe-inline from script-src to prevent XSS.
+  // In dev, Vite HMR requires unsafe-inline for scripts.
+  const scriptSrc = isDev
+    ? "script-src 'self' 'unsafe-inline'"
+    : "script-src 'self'";
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http://localhost:* ws://localhost:*;"
+          `default-src 'self'; ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http://localhost:* ws://localhost:*;`
         ]
       }
     });
@@ -309,10 +315,17 @@ app.on('window-all-closed', () => {
   }
 });
 
+let isQuitting = false;
 app.on('before-quit', async (event) => {
+  if (isQuitting) return;
+  isQuitting = true;
   event.preventDefault();
-  await stopBackend();
-  process.exit(0);
+  try {
+    await stopBackend();
+  } catch (e) {
+    console.error('Error stopping backend:', e);
+  }
+  app.quit();
 });
 
 // IPC handlers
@@ -384,6 +397,15 @@ ipcMain.handle('show-item-in-folder', async (event, filePath) => {
   // Validate path exists and is safe
   try {
     const realPath = fs.realpathSync(filePath);
+
+    // Validate path is within expected directories
+    const homePath = require('os').homedir();
+    const appPath = app.getPath('userData');
+    const downloadsPath = app.getPath('downloads');
+    if (!realPath.startsWith(homePath) && !realPath.startsWith(appPath) && !realPath.startsWith(downloadsPath)) {
+      return { success: false, error: 'Access denied: path outside allowed directories' };
+    }
+
     // Only allow if file actually exists
     if (fs.existsSync(realPath)) {
       shell.showItemInFolder(realPath);
@@ -420,7 +442,14 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
       hostname.startsWith('172.24.') || hostname.startsWith('172.25.') ||
       hostname.startsWith('172.26.') || hostname.startsWith('172.27.') ||
       hostname.startsWith('172.28.') || hostname.startsWith('172.29.') ||
-      hostname.startsWith('172.30.') || hostname.startsWith('172.31.');
+      hostname.startsWith('172.30.') || hostname.startsWith('172.31.') ||
+      hostname.startsWith('169.254.') ||   // link-local
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||                 // IPv6 loopback
+      hostname === '[::1]' ||
+      hostname.startsWith('fc') ||          // IPv6 unique local (fc00::/7)
+      hostname.startsWith('fd') ||
+      hostname.startsWith('fe80');           // IPv6 link-local
 
     // Allow localhost for internal API, but block other private IPs
     if (isPrivateNetwork) {
@@ -446,6 +475,12 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
     const fileStream = fs.createWriteStream(outputPath);
 
     return new Promise((resolve, reject) => {
+      // Enforce HTTPS for external (non-localhost) downloads
+      if (!isLocalhost && parsedUrl.protocol !== 'https:') {
+        reject(new Error('Only HTTPS is allowed for external downloads'));
+        return;
+      }
+
       // Use http or https based on URL
       const protocol = parsedUrl.protocol === 'https:' ? https : http;
 

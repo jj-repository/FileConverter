@@ -2,10 +2,10 @@
 FFmpeg and FFprobe mocking utilities
 """
 
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+import asyncio
 import json
 from pathlib import Path
-import asyncio
+from unittest.mock import AsyncMock, Mock, patch
 
 
 class FFmpegMock:

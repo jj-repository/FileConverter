@@ -1,19 +1,18 @@
-from pathlib import Path
-from typing import Dict, Any, Optional
-import subprocess
-import sys
-import re
 import asyncio
 import logging
+import subprocess
+import sys
+import uuid
+from pathlib import Path
+from typing import Any, Dict, Optional
 
-from app.services.base_converter import BaseConverter
 from app.config import settings
+from app.services.base_converter import BaseConverter
+from app.utils.subprocess_utils import parse_ffmpeg_progress as _parse_ffmpeg_progress
+from app.utils.subprocess_utils import subprocess_kwargs as _subprocess_kwargs
 
 logger = logging.getLogger(__name__)
 
-_subprocess_kwargs: dict = {}
-if sys.platform == 'win32':
-    _subprocess_kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
 
 
 class VideoConverter(BaseConverter):
@@ -35,13 +34,24 @@ class VideoConverter(BaseConverter):
         try:
             cmd = [
                 settings.FFPROBE_PATH,
-                "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
-                str(file_path)
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(file_path),
             ]
 
-            result = subprocess.run(cmd, capture_output=True, encoding='utf-8', errors='replace', timeout=settings.SUBPROCESS_TIMEOUT, **_subprocess_kwargs)
+            result = await asyncio.to_thread(
+                subprocess.run,
+                cmd,
+                capture_output=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=settings.SUBPROCESS_TIMEOUT,
+                **_subprocess_kwargs,
+            )
             if result.returncode == 0 and result.stdout.strip():
                 return float(result.stdout.strip())
             return 0.0
@@ -49,20 +59,10 @@ class VideoConverter(BaseConverter):
             logger.error(f"Error getting video duration: {e}")
             return 0.0
 
-    def parse_ffmpeg_progress(self, line: str, total_duration: float) -> Optional[float]:
-        """Parse FFmpeg progress from output line"""
-        # Look for time=HH:MM:SS.MS pattern
-        time_match = re.search(r'time=(\d+):(\d+):(\d+\.\d+)', line)
-        if time_match and total_duration > 0:
-            hours = int(time_match.group(1))
-            minutes = int(time_match.group(2))
-            seconds = float(time_match.group(3))
-            current_time = hours * 3600 + minutes * 60 + seconds
-            progress = (current_time / total_duration) * 100
-            return min(progress, 99.9)  # Cap at 99.9% until complete
-        return None
 
-    def get_video_codec_for_format(self, output_format: str, user_codec: Optional[str] = None) -> str:
+    def get_video_codec_for_format(
+        self, output_format: str, user_codec: Optional[str] = None
+    ) -> str:
         """Get appropriate video codec for the output video format"""
         # If user specified a codec, return it (will be validated later)
         if user_codec:
@@ -99,7 +99,7 @@ class VideoConverter(BaseConverter):
         input_path: Path,
         output_format: str,
         options: Dict[str, Any],
-        session_id: str
+        session_id: str,
     ) -> Path:
         """
         Convert video to target format
@@ -115,41 +115,61 @@ class VideoConverter(BaseConverter):
         Returns:
             Path to converted video
         """
-        await self.send_progress(session_id, 0, "converting", "Starting video conversion")
+        await self.send_progress(
+            session_id, 0, "converting", "Starting video conversion"
+        )
 
         # Validate format
-        input_format = input_path.suffix.lower().lstrip('.')
-        if not self.validate_format(input_format, output_format, self.supported_formats):
-            raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
+        input_format = input_path.suffix.lower().lstrip(".")
+        if not self.validate_format(
+            input_format, output_format, self.supported_formats
+        ):
+            raise ValueError(
+                f"Unsupported conversion: {input_format} to {output_format}"
+            )
 
         # Get video duration for progress tracking
         total_duration = await self.get_video_duration(input_path)
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_converted.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR
+            / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         await self.send_progress(session_id, 5, "converting", "Preparing conversion")
 
         # Build FFmpeg command - validate all user inputs
         # Get appropriate codec for the output format (or use user-specified codec)
-        codec = self.get_video_codec_for_format(output_format, options.get('codec'))
+        codec = self.get_video_codec_for_format(output_format, options.get("codec"))
         if codec not in settings.ALLOWED_VIDEO_CODECS:
-            raise ValueError(f"Invalid codec: {codec}. Allowed: {settings.ALLOWED_VIDEO_CODECS}")
+            raise ValueError(
+                f"Invalid codec: {codec}. Allowed: {settings.ALLOWED_VIDEO_CODECS}"
+            )
 
-        bitrate = options.get('bitrate', '2M')
+        bitrate = options.get("bitrate", "2M")
         if bitrate not in settings.ALLOWED_BITRATES:
-            raise ValueError(f"Invalid bitrate: {bitrate}. Allowed: {settings.ALLOWED_BITRATES}")
+            raise ValueError(
+                f"Invalid bitrate: {bitrate}. Allowed: {settings.ALLOWED_BITRATES}"
+            )
 
-        resolution = options.get('resolution', 'original')
+        resolution = options.get("resolution", "original")
         if resolution not in settings.ALLOWED_RESOLUTIONS:
-            raise ValueError(f"Invalid resolution: {resolution}. Allowed: {settings.ALLOWED_RESOLUTIONS}")
+            raise ValueError(
+                f"Invalid resolution: {resolution}. Allowed: {settings.ALLOWED_RESOLUTIONS}"
+            )
 
         cmd = [
             settings.FFMPEG_PATH,
-            "-i", str(input_path),
+            "-nostdin",
+                "-protocol_whitelist", "file,pipe",
+                "-i",
+            str(input_path),
             "-y",  # Overwrite output file
-            "-progress", "pipe:1",  # Output progress to stdout
-            "-loglevel", "error",
+            "-progress",
+            "pipe:1",  # Output progress to stdout
+            "-loglevel",
+            "error",
         ]
 
         # Add video codec
@@ -176,18 +196,20 @@ class VideoConverter(BaseConverter):
         # Add output file
         cmd.append(str(output_path))
 
-        await self.send_progress(session_id, 10, "converting", "Starting FFmpeg conversion")
+        await self.send_progress(
+            session_id, 10, "converting", "Starting FFmpeg conversion"
+        )
 
         # Run FFmpeg conversion with progress tracking
         try:
             _async_kwargs: dict = {}
-            if sys.platform == 'win32':
-                _async_kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+            if sys.platform == "win32":
+                _async_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                **_async_kwargs
+                **_async_kwargs,
             )
 
             last_progress = 10
@@ -197,10 +219,10 @@ class VideoConverter(BaseConverter):
                 # Read output line by line with timeout
                 async with asyncio.timeout(settings.SUBPROCESS_TIMEOUT):
                     async for line in process.stdout:
-                        line_str = line.decode('utf-8', errors='ignore')
+                        line_str = line.decode("utf-8", errors="ignore")
 
                         # Parse progress
-                        progress = self.parse_ffmpeg_progress(line_str, total_duration)
+                        progress = _parse_ffmpeg_progress(line_str, total_duration)
                         if progress is not None and progress > last_progress:
                             # Map 0-100% to 10-95% to leave room for finalization
                             mapped_progress = 10 + (progress * 0.85)
@@ -209,7 +231,7 @@ class VideoConverter(BaseConverter):
                                 session_id,
                                 mapped_progress,
                                 "converting",
-                                f"Converting video: {int(progress)}%"
+                                f"Converting video: {int(progress)}%",
                             )
 
                     # Wait for process to complete and consume remaining stderr
@@ -221,7 +243,9 @@ class VideoConverter(BaseConverter):
                     await process.communicate()
                 except Exception:
                     pass
-                raise Exception(f"Conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds")
+                raise Exception(
+                    f"Conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds"
+                )
             except Exception:
                 # Ensure process is terminated and streams consumed on any error
                 if process.returncode is None:
@@ -233,7 +257,11 @@ class VideoConverter(BaseConverter):
                 raise
 
             if process.returncode != 0:
-                error_msg = stderr_output.decode('utf-8', errors='ignore') if stderr_output else "Unknown error"
+                error_msg = (
+                    stderr_output.decode("utf-8", errors="ignore")
+                    if stderr_output
+                    else "Unknown error"
+                )
                 raise Exception(f"FFmpeg conversion failed: {error_msg[:200]}")
 
             await self.send_progress(session_id, 98, "converting", "Finalizing video")
@@ -242,12 +270,16 @@ class VideoConverter(BaseConverter):
             if not output_path.exists():
                 raise Exception("Output file was not created")
 
-            await self.send_progress(session_id, 100, "completed", "Video conversion completed")
+            await self.send_progress(
+                session_id, 100, "completed", "Video conversion completed"
+            )
 
             return output_path
 
         except Exception as e:
-            await self.send_progress(session_id, 0, "failed", f"Conversion failed: {str(e)}")
+            await self.send_progress(
+                session_id, 0, "failed", f"Conversion failed: {str(e)}"
+            )
             raise
 
     async def get_video_metadata(self, file_path: Path) -> Dict[str, Any]:
@@ -255,29 +287,48 @@ class VideoConverter(BaseConverter):
         try:
             cmd = [
                 settings.FFPROBE_PATH,
-                "-v", "quiet",
-                "-print_format", "json",
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
                 "-show_format",
                 "-show_streams",
-                str(file_path)
+                str(file_path),
             ]
 
-            result = subprocess.run(cmd, capture_output=True, encoding='utf-8', errors='replace', timeout=settings.SUBPROCESS_TIMEOUT, **_subprocess_kwargs)
+            result = await asyncio.to_thread(
+                subprocess.run,
+                cmd,
+                capture_output=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=settings.SUBPROCESS_TIMEOUT,
+                **_subprocess_kwargs,
+            )
 
             if result.returncode == 0:
                 import json
+
                 data = json.loads(result.stdout)
 
                 # Extract video stream info
                 video_stream = next(
-                    (s for s in data.get("streams", []) if s.get("codec_type") == "video"),
-                    {}
+                    (
+                        s
+                        for s in data.get("streams", [])
+                        if s.get("codec_type") == "video"
+                    ),
+                    {},
                 )
 
                 # Extract audio stream info
                 audio_stream = next(
-                    (s for s in data.get("streams", []) if s.get("codec_type") == "audio"),
-                    {}
+                    (
+                        s
+                        for s in data.get("streams", [])
+                        if s.get("codec_type") == "audio"
+                    ),
+                    {},
                 )
 
                 return {

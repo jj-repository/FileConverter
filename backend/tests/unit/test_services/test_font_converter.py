@@ -6,15 +6,11 @@ Tests font conversion (TTF/OTF/WOFF/WOFF2), subsetting, optimization,
 metadata extraction, and error handling
 """
 
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
-import asyncio
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import logging
-
-from app.services.font_converter import FontConverter
 from app.config import settings
-
+from app.services.font_converter import FontConverter
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
@@ -716,7 +712,7 @@ class TestFontMetadata:
             mock_font.close = Mock()
             mock_ttfont_class.return_value = mock_font
 
-            info = await converter.get_info(test_file)
+            await converter.get_info(test_file)
 
             # Should have called get to fetch name table
             mock_font.get.assert_called()

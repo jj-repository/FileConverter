@@ -1,9 +1,11 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
-from pathlib import Path
-from typing import Set
 import logging
 import sys
+from pathlib import Path
+from typing import Set
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from app.utils.binary_paths import get_ffmpeg_path, get_ffprobe_path, get_pandoc_path
 
 # Configure logger for config warnings

@@ -5,17 +5,13 @@ COVERAGE GOAL: 90%+
 Tests cache key generation, storage, retrieval, expiration, cleanup, LRU eviction
 """
 
-import pytest
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
-import tempfile
 import shutil
-import json
 import time
+from pathlib import Path
+from unittest.mock import patch
 
-from app.services.cache_service import CacheService, CacheMetadata
-from app.config import settings
-
+import pytest
+from app.services.cache_service import CacheMetadata, CacheService
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
@@ -43,13 +39,12 @@ class TestCacheServiceBasics:
         cache_dir = temp_dir / "new_cache"
         assert not cache_dir.exists()
 
-        cache = CacheService(cache_dir=cache_dir)
+        CacheService(cache_dir=cache_dir)
 
         assert cache_dir.exists()
         assert cache_dir.is_dir()
 
         # Clean up
-        import shutil
         shutil.rmtree(cache_dir, ignore_errors=True)
 
 
@@ -428,7 +423,7 @@ class TestCacheCleanup:
             time.sleep(0.01)
 
         # Run cleanup by size
-        stats = cache.cleanup_by_size()
+        cache.cleanup_by_size()
 
         # Should have removed old entries to stay under limit
         cache_info = cache.get_cache_info()
@@ -615,7 +610,6 @@ class TestCacheErrorHandling:
 
     def test_write_metadata_error(self, temp_cache_dir, monkeypatch):
         """Test error handling when metadata cannot be written (lines 186-188)"""
-        from unittest.mock import mock_open, patch
 
         cache = CacheService(cache_dir=temp_cache_dir)
 
@@ -664,7 +658,6 @@ class TestCacheErrorHandling:
 
     def test_store_result_error_cleanup(self, temp_dir, temp_cache_dir, monkeypatch):
         """Test error handling during store_result with cleanup (lines 273-279)"""
-        from unittest.mock import patch
 
         cache = CacheService(cache_dir=temp_cache_dir)
 
@@ -687,7 +680,6 @@ class TestCacheErrorHandling:
 
     def test_store_result_error_cleanup_also_fails(self, temp_dir, temp_cache_dir):
         """Test nested exception handling when cleanup also fails (lines 278-279)"""
-        from unittest.mock import patch, MagicMock
 
         cache = CacheService(cache_dir=temp_cache_dir)
 
@@ -715,7 +707,6 @@ class TestCacheErrorHandling:
 
     def test_remove_cache_entry_error(self, temp_cache_dir, monkeypatch):
         """Test error handling in _remove_cache_entry (lines 293-294)"""
-        from unittest.mock import patch
 
         cache = CacheService(cache_dir=temp_cache_dir)
 
@@ -745,7 +736,6 @@ class TestCacheErrorHandling:
 
     def test_directory_size_error(self, temp_cache_dir, monkeypatch):
         """Test error handling in _get_directory_size (lines 440-441)"""
-        from unittest.mock import patch
 
         cache = CacheService(cache_dir=temp_cache_dir)
 
@@ -923,7 +913,7 @@ class TestGlobalCacheService:
 
     def test_initialize_cache_service(self, temp_cache_dir):
         """Test initialize_cache_service creates global instance (lines 529-538)"""
-        from app.services.cache_service import initialize_cache_service, get_cache_service
+        from app.services.cache_service import get_cache_service, initialize_cache_service
 
         # Initialize cache service
         service = initialize_cache_service(

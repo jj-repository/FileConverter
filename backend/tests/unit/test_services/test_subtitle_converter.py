@@ -6,15 +6,11 @@ Tests subtitle conversion with pysubs2, format support, encoding handling,
 timing adjustment, metadata extraction, and error handling
 """
 
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
-import asyncio
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import io
-
-from app.services.subtitle_converter import SubtitleConverter
 from app.config import settings
-
+from app.services.subtitle_converter import SubtitleConverter
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
@@ -1194,6 +1190,7 @@ class TestSubtitleImportFallback:
         with patch.dict(sys.modules, {'pysubs2': None}):
             # Force module reload to trigger import error
             import importlib
+
             import app.services.subtitle_converter
             importlib.reload(app.services.subtitle_converter)
 

@@ -15,18 +15,12 @@ Security tests:
 - Archive member path validation
 """
 
-import pytest
-import tempfile
-import zipfile
 import tarfile
-import gzip
-import shutil
-from pathlib import Path
-from fastapi.testclient import TestClient
-import io
+import zipfile
 
+import pytest
 from app.main import app
-from app.config import settings
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -524,7 +518,7 @@ class TestArchiveConversionEdgeCases:
     def test_convert_empty_zip(self, client, temp_dir):
         """Test conversion of empty ZIP archive"""
         empty_zip = temp_dir / "empty.zip"
-        with zipfile.ZipFile(empty_zip, 'w') as zf:
+        with zipfile.ZipFile(empty_zip, 'w'):
             pass  # Create empty zip
 
         with open(empty_zip, 'rb') as f:
@@ -638,7 +632,7 @@ class TestArchiveConversionEdgeCases:
 
     def test_convert_cleanup_output_file_on_error(self, client, sample_zip, monkeypatch):
         """Test that output file is cleaned up on error after conversion (line 85)"""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
 
         # Mock ConversionResponse to raise exception after output_path is set
         def mock_conversion_response(*args, **kwargs):

@@ -9,16 +9,15 @@ These tests verify the end-to-end caching flow:
 5. Cache statistics accuracy
 """
 
-import pytest
 import time
-from pathlib import Path
-from PIL import Image
-from fastapi.testclient import TestClient
 
-from app.main import app
-from app.services.cache_service import initialize_cache_service, get_cache_service
-from app.services.image_converter import ImageConverter
+import pytest
 from app.config import settings
+from app.main import app
+from app.services.cache_service import initialize_cache_service
+from app.services.image_converter import ImageConverter
+from fastapi.testclient import TestClient
+from PIL import Image
 
 
 @pytest.fixture
@@ -260,7 +259,7 @@ class TestCacheIntegrationFlow:
         options = {"quality": 90, "width": 50}
 
         # Perform conversion
-        output_path = await converter.convert_with_cache(
+        await converter.convert_with_cache(
             input_path=sample_image,
             output_format="webp",
             options=options,

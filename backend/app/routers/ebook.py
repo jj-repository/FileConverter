@@ -2,25 +2,51 @@
 eBook Conversion Router
 Handles EPUB and other eBook format conversion endpoints
 """
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
-from fastapi.responses import FileResponse
-from pathlib import Path
-import uuid
+
 import logging
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 
 from app.config import settings
-from app.services.ebook_converter import EbookConverter
-from app.utils.file_handler import save_upload_file, make_content_disposition
-from app.utils.validation import validate_file_size, validate_file_extension, validate_download_filename, validate_mime_type, EBOOK_MIME_TYPES
-from app.models.conversion import ConversionResponse
-from app.utils.websocket_security import session_validator, check_rate_limit
 from app.middleware.error_handler import sanitize_error_message
+from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
+from app.services.ebook_converter import EbookConverter
+from app.utils.file_handler import (
+    cleanup_file,
+    make_content_disposition,
+    save_upload_file,
+)
+from app.utils.validation import (
+    EBOOK_MIME_TYPES,
+    validate_download_filename,
+    validate_file_extension,
+    validate_file_size,
+    validate_mime_type,
+)
+from app.utils.websocket_security import check_rate_limit, session_validator
+
+
+def _cleanup_after_download(path: str):
+    try:
+        Path(path).unlink(missing_ok=True)
+    except Exception:
+        pass
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+ebook_converter = EbookConverter()
 
 
-@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
+@router.post(
+    "/convert",
+    response_model=ConversionResponse,
+    dependencies=[Depends(check_rate_limit)],
+)
 async def convert_ebook(
     file: UploadFile = File(...),
     output_format: str = Form(...),
@@ -50,7 +76,7 @@ async def convert_ebook(
         if output_format not in settings.EBOOK_FORMATS:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid output format: {output_format}. Supported: {', '.join(settings.EBOOK_FORMATS)}"
+                detail=f"Invalid output format: {output_format}. Supported: {', '.join(settings.EBOOK_FORMATS)}",
             )
 
         # Validate file size
@@ -63,24 +89,23 @@ async def convert_ebook(
         validate_mime_type(input_path, EBOOK_MIME_TYPES)
 
         # Convert
-        converter = EbookConverter()
-        output_path = await converter.convert_with_cache(
+        output_path = await ebook_converter.convert_with_cache(
             input_path=input_path,
             output_format=output_format,
             options={},
-            session_id=session_id
+            session_id=session_id,
         )
 
         # Clean up input file
-        input_path.unlink(missing_ok=True)
+        cleanup_file(input_path)
 
         # Return response
         return ConversionResponse(
             session_id=session_id,
-            status="completed",
+            status=ConversionStatus.COMPLETED,
             message="Conversion successful",
             output_file=output_path.name,
-            download_url=f"/api/ebook/download/{output_path.name}"
+            download_url=f"/api/ebook/download/{output_path.name}",
         )
 
     except ValueError as e:
@@ -89,9 +114,12 @@ async def convert_ebook(
     except Exception as e:
         logger.error(f"Conversion error: {e}")
         # Clean up on error
-        if 'input_path' in locals():
-            input_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
+        if "input_path" in locals():
+            cleanup_file(input_path)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Conversion failed: {sanitize_error_message(str(e))}",
+        )
 
 
 # MIME type mapping for ebook formats (used for download responses)
@@ -103,7 +131,7 @@ EBOOK_MIME_MAP = {
 }
 
 
-@router.get("/download/{filename}")
+@router.get("/download/{filename}", dependencies=[Depends(check_rate_limit)])
 async def download_ebook(filename: str):
     """
     Download converted eBook file
@@ -116,9 +144,6 @@ async def download_ebook(filename: str):
     """
     file_path = validate_download_filename(filename, settings.UPLOAD_DIR)
 
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-
     # Determine MIME type from extension
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     media_type = EBOOK_MIME_MAP.get(ext, "application/octet-stream")
@@ -127,7 +152,8 @@ async def download_ebook(filename: str):
         path=file_path,
         filename=filename,
         media_type=media_type,
-        headers={"Content-Disposition": make_content_disposition(filename)}
+        headers={"Content-Disposition": make_content_disposition(filename)},
+        background=BackgroundTask(_cleanup_after_download, str(file_path)),
     )
 
 
@@ -146,12 +172,12 @@ async def get_ebook_formats():
             "epub": "EPUB is the standard eBook format",
             "txt": "Plain text extraction (loses formatting)",
             "html": "Single HTML file with basic styling",
-            "pdf": "PDF with text content (loses advanced formatting)"
-        }
+            "pdf": "PDF with text content (loses advanced formatting)",
+        },
     }
 
 
-@router.post("/info", dependencies=[Depends(check_rate_limit)])
+@router.post("/info", response_model=FileInfo, dependencies=[Depends(check_rate_limit)])
 async def get_ebook_info(file: UploadFile = File(...)):
     """
     Get information about an eBook file
@@ -160,7 +186,7 @@ async def get_ebook_info(file: UploadFile = File(...)):
         file: eBook file to analyze
 
     Returns:
-        Dictionary with eBook metadata
+        FileInfo with eBook metadata
     """
     try:
         # Validate file extension
@@ -177,14 +203,26 @@ async def get_ebook_info(file: UploadFile = File(...)):
         info = await converter.get_info(temp_path)
 
         # Clean up
-        temp_path.unlink(missing_ok=True)
+        cleanup_file(temp_path)
 
-        return info
+        # Wrap extra fields into metadata for FileInfo model
+        metadata = {
+            k: v for k, v in info.items() if k not in ("filename", "size", "format")
+        }
+        return FileInfo(
+            filename=info["filename"],
+            size=info["size"],
+            format=info["format"],
+            metadata=metadata or None,
+        )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Info extraction error: {e}")
-        if 'temp_path' in locals():
-            temp_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"Failed to extract info: {sanitize_error_message(str(e))}")
+        if "temp_path" in locals():
+            cleanup_file(temp_path)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to extract info: {sanitize_error_message(str(e))}",
+        )

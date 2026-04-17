@@ -3,6 +3,11 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const BackendManager = require('./backend-manager.cjs');
+const {
+  DOWNLOAD_MAX_BYTES,
+  isPathInAllowedRoots,
+  isDownloadPathSafe,
+} = require('./helpers.cjs');
 
 let mainWindow;
 let backendManager;
@@ -257,6 +262,28 @@ function createWindow() {
     // Only allow DevTools if explicitly opened by user (F12)
   });
 
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    const { shell } = require('electron');
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        shell.openExternal(url);
+      }
+    } catch (_err) {
+      /* ignore malformed URL */
+    }
+    return { action: 'deny' };
+  });
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const allowed = isDev
+      ? url.startsWith('http://localhost:') || url.startsWith('http://127.0.0.1:')
+      : url.startsWith('file://');
+    if (!allowed) {
+      event.preventDefault();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -389,10 +416,29 @@ ipcMain.handle('select-folder-files', async () => {
 });
 
 ipcMain.handle('read-file-as-buffer', async (event, filePath) => {
-  const fs = require('fs');
-  const realPath = fs.realpathSync(filePath);
-  const buffer = fs.readFileSync(realPath);
-  return buffer;
+  try {
+    const realPath = fs.realpathSync(filePath);
+    const allowedRoots = [
+      require('os').homedir(),
+      app.getPath('userData'),
+      app.getPath('downloads'),
+      app.getPath('temp'),
+    ];
+    if (!isPathInAllowedRoots(realPath, allowedRoots)) {
+      throw new Error('Access denied: path outside allowed directories');
+    }
+    const stats = fs.statSync(realPath);
+    if (!stats.isFile()) {
+      throw new Error('Not a regular file');
+    }
+    if (stats.size > DOWNLOAD_MAX_BYTES) {
+      throw new Error(`File too large: ${stats.size} bytes exceeds ${DOWNLOAD_MAX_BYTES}`);
+    }
+    return fs.readFileSync(realPath);
+  } catch (err) {
+    console.error('read-file-as-buffer rejected:', err.message);
+    throw err;
+  }
 });
 
 ipcMain.handle('show-item-in-folder', async (event, filePath) => {
@@ -471,8 +517,8 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
     const realDirectory = fs.realpathSync(directory);
     const outputPath = path.join(realDirectory, sanitizedFilename);
 
-    // SECURITY: Ensure output path is within the specified directory
-    if (!outputPath.startsWith(realDirectory)) {
+    // SECURITY: Ensure output path is within the specified directory.
+    if (!isDownloadPathSafe(realDirectory, outputPath)) {
       throw new Error('Path traversal detected');
     }
 
@@ -498,11 +544,10 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
           return;
         }
 
-        const MAX_DOWNLOAD_BYTES = 500 * 1024 * 1024; // 500 MB
         let bytesReceived = 0;
         response.on('data', (chunk) => {
           bytesReceived += chunk.length;
-          if (bytesReceived > MAX_DOWNLOAD_BYTES) {
+          if (bytesReceived > DOWNLOAD_MAX_BYTES) {
             fileStream.destroy();
             response.destroy();
             fs.unlink(outputPath, () => {});

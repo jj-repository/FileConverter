@@ -359,7 +359,8 @@ describe('ArchiveConverter', () => {
 
       expect(screen.getByText('common.uploadingFile')).toBeInTheDocument()
       const progressTexts = screen.getAllByText('50%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should show conversion progress', () => {
@@ -374,7 +375,8 @@ describe('ArchiveConverter', () => {
 
       expect(screen.getByText('Compressing archive...')).toBeInTheDocument()
       const progressTexts = screen.getAllByText('75%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should display success message on completion', () => {
@@ -450,7 +452,8 @@ describe('ArchiveConverter', () => {
 
       expect(screen.getByText('common.uploadingFile')).toBeInTheDocument()
       const progressTexts = screen.getAllByText('35%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should show conversion progress bar', () => {
@@ -465,7 +468,8 @@ describe('ArchiveConverter', () => {
 
       expect(screen.getByText('common.processing')).toBeInTheDocument()
       const progressTexts = screen.getAllByText('60%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should display progress message', () => {

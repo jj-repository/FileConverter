@@ -43,6 +43,7 @@ async def websocket_progress(websocket: WebSocket, session_id: str):
     origin = websocket.headers.get("origin", "")
     if origin and not origin.startswith(("http://localhost", "http://127.0.0.1")):
         await websocket.close(code=1008, reason="Invalid origin")
+        rate_limiter.remove_connection(client_ip)
         return
     await websocket.accept()
     await ws_manager.connect(session_id, websocket)

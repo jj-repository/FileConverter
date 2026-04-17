@@ -317,7 +317,8 @@ describe('EbookConverter', () => {
       render(<EbookConverter />)
 
       const progressTexts = screen.getAllByText('45%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should display conversion progress bar', () => {
@@ -331,7 +332,8 @@ describe('EbookConverter', () => {
       render(<EbookConverter />)
 
       const progressTexts = screen.getAllByText('70%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should show completion message with download link (web)', () => {

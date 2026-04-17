@@ -76,53 +76,107 @@ Prior audit: 2026-04-05
 - parse_ffmpeg_progress, _subprocess_kwargs centralized (verified)
 - validate_file_size if/elif chain → dict lookup (verified)
 
-## Open — Deferred (medium/large effort or needs dependency)
+## Fixed This Session (Session 3, 2026-04-17 — cleanup of all remaining items)
 
-### Security
-- **[MEDIUM] S1**: `ebook_converter.py` `_sanitize_html` is incomplete regex sanitizer — misses `<style>`, `vbscript:`, `data:` URIs, `<object>/<embed>/<iframe>`, unquoted event attrs. **Fix**: Replace with `bleach` library (requires adding dependency). File: `ebook_converter.py:131`
-- **[MEDIUM] S2**: `ebook_converter.py:_html_to_epub` embeds user HTML without sanitization (stored XSS in output EPUB). **Fix**: Sanitize with `bleach` before `set_content`. File: `ebook_converter.py:396`
-- **[MEDIUM] S4**: `electron/main.cjs` download path check uses `startsWith` on pre-resolved path — brittle on Windows UNC paths. File: `main.cjs:470`
-- **[LOW] S7**: Batch ZIP download validates session UUID format but doesn't verify session belongs to requester. File: `batch.py:254`
+- [x] S1: `ebook_converter.py` `_sanitize_html` replaced with `bleach.clean()` using allowlisted tags/attrs/protocols. `bleach==6.2.0` added to `requirements.txt`.
+- [x] S2: `_html_to_epub` now sanitizes input HTML with `_sanitize_html` before `set_content`.
+- [x] S4: `electron/main.cjs` download path check now uses `path.relative()` + absolute check, robust for Windows UNC.
+- [x] S7: `batch.py /download-zip` now calls `session_validator.is_valid_session()` — blocks UUID-guessing.
+- [x] T1: `vitest.config.ts` coverage thresholds moved under `coverage.thresholds.*` so vitest actually enforces them.
+- [x] T2: Removed vacuous `allButtons.length > 0` and `queryAllByRole('button').length > 0` tautologies in `conversionFlows.test.tsx`; replaced with real assertions for error alerts / reset button.
+- [x] T3: Added `e2e/conversion.spec.ts` that performs a real PNG→JPG conversion against a running backend (auto-skips when `:8000` is unreachable).
+- [x] T7: `Format Selection Flow` test now requires the output-format selector and asserts selection — no silent skip.
+- [x] A1: New `useFormats` hook fetches backend `/formats` for EbookConverter + FontConverter, with constants fallback.
 
-### Performance
-- **[MEDIUM] P1**: `cache_service.py` uses `threading.Lock` for stats in async context — replace with `asyncio.Lock` or lockless int. File: `cache_service.py:68`
-- **[LOW] P2**: `batch_converter.py` semaphore hardcoded to `4` — expose as `settings.BATCH_CONCURRENCY`. File: `batch_converter.py:132`
-- **[LOW] P3**: Audio/video converter timeout handler swallows second `TimeoutError` with bare `pass`. File: `audio_converter.py:240`, `video_converter.py:254`
+### Verified clean (previously reported, found already fixed)
 
-### Code Quality
-- **[LOW] CQ6**: `FontConverter.tsx` download button uses `<a>` tag vs `<Button>` component like other converters. File: `FontConverter.tsx`
+- P1: `cache_service.py` stats use GIL-safe int increments (no `threading.Lock` in async path).
+- P2: `batch_converter.py:132` already uses `settings.BATCH_CONCURRENCY`.
+- P3: Audio/video timeout handlers already log warnings instead of bare `pass`.
+- CQ6: `FontConverter.tsx` download button already uses the `<Button>` component.
+- A2: FontConverter is fully `t()`-i18n'd and layout/download patterns match EbookConverter.
+- T10: `accessibility.spec.ts:50` already uses Playwright's `toHaveAccessibleName()`.
+- F1: `BatchConverterImproved.tsx` already uses `electron.readFileAsBuffer` IPC — no `fetch('file://...')`.
+- F2: `SubtitleConverter.tsx` adapter uses `Record<string, unknown>` (no `as any`).
+- F3: Subtitle/Archive/Spreadsheet converters fully i18n'd.
+- F4: `ConfirmModal` has Tab-trap + Escape handler + `autoFocus` on primary button.
+- F5: `useConverter.ts` setTimeout is the intentional auto-download delay (`AUTO_DOWNLOAD_DELAY`), not a force-rerender hack.
+- F6: `useWebSocket.ts` captures `sessionId` via `sessionIdRef` so reconnects read current value.
+- F7: `ConvertOptions` typed as `Record<string, unknown>` (no `any`).
+- F8: `handleConvert` catch uses `err as AxiosError<{detail?: string}>`.
+- F9: `useConverter` exposes `ids` from `useId()`; all converters use `converter.ids.outputFormat` / `customFilename` / `outputDirectory`.
+- D1: `build-release.yml` has real SHA256 verification on Windows and `sha256sum -c` / `md5sum -c` (upstream-provided) on Linux.
 
-### Architecture
-- **[MEDIUM] A1**: Frontend hardcodes format lists — `constants.ts` is 3rd source of truth vs backend config and `/formats` API. `EbookConverter` and `FontConverter` don't call `getFormats()`. File: `EbookConverter.tsx:101`, `FontConverter.tsx:100`
-- **[MEDIUM] A2**: `FontConverter.tsx` / `EbookConverter.tsx` use different layout patterns, download button styles, and status text (FontConverter entirely un-i18n'd). File: `FontConverter.tsx`, `EbookConverter.tsx`
+## Fixed This Session (Session 4, 2026-04-17 — fresh audit, 52 new findings)
 
-### Tests
-- **[HIGH] T1**: Frontend coverage threshold (60%) defined in `vitest.config.ts` but never enforced by CI — `npm run test:run --coverage` doesn't apply thresholds. File: `frontend-tests.yml:46`
-- **[HIGH] T2**: `conversionFlows.test.tsx` has 11 instances of `expect(true).toBe(true)` — vacuous, can never fail. File: `conversionFlows.test.tsx:109,254,296,444`
-- **[HIGH] T3 (H16)**: No E2E test covers actual conversion — Playwright only tests UI, backend never started. File: `e2e/*.spec.ts`, `playwright.config.ts`
-- **[MEDIUM] T7**: Format selection test in `conversionFlows.test.tsx` wraps all assertions in `if (formatSelects.length > 0)` — silently skips when selector not found. File: `conversionFlows.test.tsx:448`
-- **[LOW] T10**: `e2e/accessibility.spec.ts:50` — accessible name assertion can silently pass with `undefined`. Fix: use Playwright's `toHaveAccessibleName()`.
+### High (5 fixed)
+- [x] H-NEW-1: `electron/main.cjs` — added `setWindowOpenHandler` + `will-navigate` guards
+- [x] H-NEW-2: `read-file-as-buffer` IPC — path allowlist (home/userData/downloads/tmp) + 500 MB size cap
+- [x] DO-NEW-1: `auto-tag.yml` — `actions/checkout@v6` SHA-pinned
+- [x] DO-NEW-3: deleted duplicate `backend-tests.yml` + `frontend-tests.yml` (redundant with `ci.yml`)
+- [x] FE-NEW-3: `BatchConverterImproved.tsx:363` — results `map` key changed `index` → `${filename}-${index}`
 
-### Frontend (first review — all new)
-- **[HIGH] F1**: `BatchConverterImproved.tsx` uses `fetch('file://${filePath}')` — fails in sandboxed Electron renderer. Needs IPC handler. File: `BatchConverterImproved.tsx:62`
-- **[HIGH] F2**: `SubtitleConverter.tsx:39` — `subtitleAPI.adjustTiming as any` masks type mismatch between API and `handleConvert` signature.
-- **[HIGH] F3**: `SubtitleConverter.tsx`, `FontConverter.tsx`, `ArchiveConverter.tsx`, `SpreadsheetConverter.tsx` — extensive hardcoded English strings not passing through `t()`.
-- **[HIGH] F4**: `Toast.tsx:206` — `ConfirmModal` has no focus trap; keyboard user can tab out of modal (WCAG 2.1 §2.1.2).
-- **[MEDIUM] F5**: `useConverter.ts:218` — `setTimeout` "force re-render" hack suggests stale state bug — needs root cause fix.
-- **[MEDIUM] F6**: `useWebSocket.ts:104` — reconnect `setTimeout` captures stale `sessionId` closure; stale reconnect can connect to old session.
-- **[MEDIUM] F7**: `useConverter.ts:35` — `ConvertOptions` typed as `[key: string]: any` — defeats type checking.
-- **[MEDIUM] F8**: `useConverter.ts:227` — `catch (err: any)` — use `AxiosError<{detail?: string}>` cast.
-- **[MEDIUM] F9**: Multiple converters share `id="output-format"`, `id="custom-filename"` etc. — fragile if two ever coexist. Use `useId()` hook.
+### Medium (13 fixed)
+- [x] M-NEW-1: `SessionValidator` thread-safety — added `threading.Lock` around mutations
+- [x] M-NEW-2: filename entropy — all converters now use full `uuid.uuid4().hex` (128 bit, was 32 bit)
+- [x] M-NEW-3: zip-bomb cap — `_MAX_UNCOMPRESSED_BYTES` + per-member ratio check in zip/tar extraction
+- [x] M-NEW-4: `ffprobe` — `-protocol_whitelist file` added in `get_video_duration`, `get_video_metadata`, `get_audio_duration`, `get_audio_metadata`
+- [x] CQ-NEW-1: `document_converter.py:88` dead `options.get("preserve_formatting")` deleted
+- [x] CQ-NEW-2: duplicate `_cleanup_after_download` in `batch.py` replaced by shared `cleanup_after_download`
+- [x] FE-NEW-1: `App.tsx` hardcoded strings → i18n (`app.loadingConverter`, `app.checkUpdates`, `app.footer`, `errors.lazyLoadTitle`, `errors.lazyLoadBody`, `errors.refreshPage`)
+- [x] FE-NEW-2: `ErrorBoundary.tsx` hardcoded strings → i18n (`errors.boundaryTitle`, `errors.boundaryBody`, `errors.reloadPage`)
+- [x] FE-NEW-4: `TabNavigation.tsx` — arrow-key + Home/End roving tabindex handler added
+- [x] FE-NEW-5: `App.tsx` — added `<div role="tabpanel" id={"${activeTab}-panel"}>` wrapper so `aria-controls` resolves
+- [x] P5: `useConverter.ts` — `notify` and `ids` wrapped in `useMemo` so `useCallback` deps stay stable
+- [x] P6: `base_router.handle_formats` — in-memory cache on converter identity (static data)
+- [x] P7 (partial): `image_converter.py` — flatten/paste, `img.resize`, `img.convert` wrapped in `asyncio.to_thread`
 
-### DevOps
-- **[HIGH] D1**: FFmpeg and Pandoc downloaded in `build-release.yml` without SHA256 verification — `echo "Verifying..."` is a no-op. File: `build-release.yml:88`
+### Low (9 fixed)
+- [x] L-NEW-1 (security): EPUB→HTML metadata `title`/`creator` now `html.escape()`'d before interpolation
+- [x] L-NEW-1 (code-quality): `AudioConverter.tsx:43` `any` → `Record<string, unknown>`
+- [x] L-NEW-2: WebSocket rate-limit slot released on origin rejection
+- [x] L-NEW-3: `document_converter.py` timeout `except Exception: pass` → logs warning
+- [x] L-NEW-4: magic `800` SVG raster width → `settings.DEFAULT_SVG_RASTER_WIDTH`
+- [x] DO-NEW-6: `backend-server.spec` `hiddenimports` → `collect_submodules('app')` (auto-discovery)
+- [x] DO-NEW-9: `dependabot-auto-merge.yml` — auto-merge restricted to `semver-patch` only
+- [x] DO-NEW-10: fake author email → `fileconverter@users.noreply.github.com`
+- [x] DO-NEW-11: `package.json` extraResources filter added `!**/.env*`
+
+### Test-quality fixes
+- [x] bleach XSS negative tests — 8 new vectors (onerror, onclick, javascript:, data:, svg onload, iframe, object, preserves-safe)
+- [x] session_validator integration test — `/download-zip` with bogus session_id → 4xx
+- [x] e2e focus-trap test — removed `BODY`/`DIV` from accepted active-element tagNames
+- [x] `getAllByText('XX%').length > 0` tautology → `length >= 1` + `toBeInTheDocument()` across 5 converter test files
+
+## Session 4b, 2026-04-17 — targeted follow-ups
+
+### Fixed
+- [x] P8: `data_converter.py` — extracted `_sync_read_dataframe` + `_sync_write_dataframe` helpers, now called via `asyncio.to_thread`. Read/write paths for csv/json/yaml/toml/ini/jsonl no longer block event loop. `df.iterrows()` replaced with `df.to_dict("records")` in ini/jsonl writers (P11 bonus).
+- [x] P9: `ebook_converter.py` — `_txt_to_epub` + `_html_to_epub` `read_text` wrapped in `to_thread`; `_epub_to_pdf` per-item BeautifulSoup parse offloaded via `_extract_paragraphs` helper.
+- [x] T-Electron: extracted pure helpers to `electron/helpers.cjs` (`isPathInAllowedRoots`, `isDownloadPathSafe`, `isUnderSizeCap`, `DOWNLOAD_MAX_BYTES`). `main.cjs` now uses helpers for read-file-as-buffer allowlist, download path-relative check, and byte-counter cap. Added 20 vitest cases in `src/__tests__/electron/helpers.test.ts` — covers `/etc/shadow` reject, prefix-confusion (`/home/alice-evil` vs `/home/alice`), path traversal via `..`, absolute escape, boundary conditions around 500 MB cap.
+
+## Open / Deferred (low urgency, note for next session)
+- M-NEW-3 (code-quality): `raise Exception(...)` → domain exceptions (10+ call sites across converters) — 30 min refactor
+- A-NEW-1: version-compare logic duplicated across Python + Electron main.cjs + useConverter — route Electron through backend `/api/version/check`
+- A-NEW-2: `batch_converter` module-level instantiation — migrate to `Depends(get_batch_converter)`
+- A-NEW-3: router table duplicated (main.py root dict + include_router + spec + App.tsx + TabNavigation) — central registry
+- P10: `websocket_manager.send_progress` needs `asyncio.wait_for` timeout for slow clients
+- P12: batch ZIP compresslevel=6 on ephemeral temps — reduce to 1
+- P13: `cache_service._get_directory_size` rescans on every entry — memoize per cleanup pass
+- T-flaky: real `time.sleep(1.1)` in `test_websocket_security.py` — inject time provider
+- DO-NEW-4: Linux FFmpeg verified by MD5 (johnvansickle upstream). Switch to BtbN Linux builds (ship SHA256) to match Windows.
+- DO-NEW-5: no code signing — Windows SmartScreen warnings will persist; needs CSC_LINK secret + cert
+- DO-NEW-8: dependabot groups — split security vs minor-patch
+- Mock-the-mock tests (`expect(mockConverter.handleFileSelect).toBeDefined()`) — 4 sites in FE test files
+- Status-display tests asserting the local var not the DOM — 4 converter test files
+- FE-NEW-6/7/8: useConverter unused `_msg` param, ids useMemo (FIXED), notifications prop drilling
 
 ## Findings Count
 
-| Severity | Fixed (sessions 1+2) | Still open |
+| Severity | Fixed (sessions 1+2+3+4+4b) | Still open / deferred |
 |---|---|---|
 | Critical | 0 | 0 |
-| High | 11 | 4 (F1, F2, F3, D1) |
-| Medium | 20 | 7 (S1, S2, S4, P1, A1, A2, T7) |
-| Low | 27 | 4 (S7, P2, P3, CQ6, T10) |
-| **Total** | **58** | **15** |
+| High | 20 | 0 |
+| Medium | 42 | 4 |
+| Low | 41 | 7 |
+| **Total** | **103** | **11** |

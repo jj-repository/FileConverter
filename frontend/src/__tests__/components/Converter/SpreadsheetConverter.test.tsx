@@ -474,7 +474,8 @@ describe('SpreadsheetConverter', () => {
 
       expect(screen.getByText('Converting spreadsheet...')).toBeInTheDocument()
       const progressTexts = screen.getAllByText('75%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should display success message', () => {
@@ -527,7 +528,8 @@ describe('SpreadsheetConverter', () => {
 
       expect(screen.getByText('common.uploadingFile')).toBeInTheDocument()
       const progressTexts = screen.getAllByText('60%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should show conversion progress', () => {
@@ -542,7 +544,8 @@ describe('SpreadsheetConverter', () => {
 
       expect(screen.getByText('Processing spreadsheet...')).toBeInTheDocument()
       const progressTexts = screen.getAllByText('85%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should display progress message', () => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useId } from 'react';
+import { useState, useEffect, useCallback, useId, useMemo } from 'react';
 import type { AxiosError } from 'axios';
 import { ConversionStatus } from '../types/conversion';
 import { useWebSocket } from './useWebSocket';
@@ -44,24 +44,24 @@ export const useConverter = (options: UseConverterOptions) => {
   const { defaultOutputFormat, onConversionComplete, notifications } = options;
 
   const uid = useId();
-  const ids = {
+  const ids = useMemo(() => ({
     outputFormat: `${uid}-output-format`,
     customFilename: `${uid}-custom-filename`,
     outputDirectory: `${uid}-output-directory`,
-  };
+  }), [uid]);
 
-  // Notification helpers with fallbacks
-  const notify = {
-    info: notifications?.showInfo || ((msg: string) => { /* silent fallback */ }),
-    success: notifications?.showSuccess || ((msg: string) => { /* silent fallback */ }),
-    error: notifications?.showError || ((msg: string) => { /* silent fallback */ }),
+  // Notification helpers with fallbacks. Memoized so downstream useCallback
+  // dependencies stay stable across renders when notifications prop is stable.
+  const notify = useMemo(() => ({
+    info: notifications?.showInfo || ((_msg: string) => { /* silent fallback */ }),
+    success: notifications?.showSuccess || ((_msg: string) => { /* silent fallback */ }),
+    error: notifications?.showError || ((_msg: string) => { /* silent fallback */ }),
     confirm: notifications?.showConfirm || ((msg: string, onConfirm: () => void) => {
-      // Fallback to native confirm if no custom handler provided
       if (window.confirm(msg)) {
         onConfirm();
       }
     }),
-  };
+  }), [notifications]);
 
   // State management
   const [selectedFile, setSelectedFile] = useState<File | null>(null);

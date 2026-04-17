@@ -78,14 +78,11 @@ class DocumentConverter(BaseConverter):
             raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
-        output_path = (
-            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
-        )
+        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
 
         await self.send_progress(session_id, 10, "converting", "Preparing conversion")
 
         # Build Pandoc command
-        options.get("preserve_formatting", True)
         toc = options.get("toc", False)
 
         cmd = [
@@ -137,8 +134,8 @@ class DocumentConverter(BaseConverter):
                 try:
                     process.kill()
                     await process.wait()
-                except Exception:
-                    pass
+                except Exception as kill_err:
+                    logger.warning("Failed to consume streams after Pandoc timeout: %s", kill_err)
                 raise Exception(
                     f"Document conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds"
                 )

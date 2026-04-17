@@ -618,6 +618,23 @@ class TestBatchEdgeCases:
         # Should fail with 404 (no files found) or 422 (validation error)
         assert response.status_code in [404, 422]
 
+    def test_batch_zip_rejects_unregistered_session(self, client):
+        """S7 coverage: /download-zip must reject UUIDs not in session_validator."""
+        import uuid
+
+        from app.utils.websocket_security import session_validator
+
+        bogus = uuid.uuid4().hex
+        # Ensure session is definitely not registered.
+        session_validator.remove_session(bogus)
+
+        response = client.post(
+            "/api/batch/download-zip",
+            data={"session_id": bogus, "filenames": ["a.png"]},
+        )
+        # Expected: 4xx rejection - never 200.
+        assert 400 <= response.status_code < 500
+
     def test_batch_large_file_count(self, client, temp_dir):
         """Test batch conversion with a large number of files (10)"""
         files = []

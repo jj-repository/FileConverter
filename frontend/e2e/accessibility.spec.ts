@@ -97,11 +97,9 @@ test.describe('Accessibility', () => {
     for (let i = 0; i < 20; i++) {
       await page.keyboard.press('Tab')
 
-      // Verify focus is on a valid element (including DIV for custom components)
+      // Focus must land on an interactive element, not BODY/DIV (those indicate lost focus).
       const tagName = await page.evaluate(() => document.activeElement?.tagName)
-      expect(['BUTTON', 'INPUT', 'SELECT', 'A', 'BODY', 'TEXTAREA', 'DIV']).toContain(
-        tagName
-      )
+      expect(['BUTTON', 'INPUT', 'SELECT', 'A', 'TEXTAREA']).toContain(tagName)
     }
   })
 

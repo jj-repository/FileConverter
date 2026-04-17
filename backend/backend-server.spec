@@ -2,6 +2,8 @@
 
 import os
 
+from PyInstaller.utils.hooks import collect_submodules
+
 # Collect all app files
 app_datas = []
 app_dir = os.path.join(os.getcwd(), 'app')
@@ -36,16 +38,7 @@ a = Analysis(
         'pydantic', 'pydantic_settings', 'pydantic_core',
         'pydantic.deprecated', 'pydantic.deprecated.decorator',
         'fastapi', 'starlette',
-        'app.main', 'app.config',
-        'app.routers.image', 'app.routers.video', 'app.routers.audio',
-        'app.routers.document', 'app.routers.batch', 'app.routers.websocket',
-        'app.routers.data', 'app.routers.archive', 'app.routers.spreadsheet',
-        'app.routers.subtitle', 'app.routers.ebook', 'app.routers.font',
-        'app.routers.cache', 'app.routers.version',
-        'app.services.image_converter', 'app.services.video_converter',
-        'app.services.audio_converter', 'app.services.document_converter',
-        'app.services.batch_converter',
-        'app.utils.binary_paths', 'app.utils.file_handler', 'app.utils.validation',
+        *collect_submodules('app'),
     ],
     hookspath=[],
     hooksconfig={},

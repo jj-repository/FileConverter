@@ -125,8 +125,7 @@ class AdminAuthRateLimiter:
         with self._lock:
             # Clean up old failures
             self.failures[ip] = [
-                t for t in self.failures[ip]
-                if current_time - t < self.lockout_seconds
+                t for t in self.failures[ip] if current_time - t < self.lockout_seconds
             ]
 
             # Record new failure
@@ -222,7 +221,10 @@ class WebSocketRateLimiter:
             # Check if limit exceeded
             if len(self.connections[ip_address]) >= self.max_connections_per_ip:
                 logger.warning(f"Rate limit exceeded for IP: {ip_address}")
-                return False, f"Too many connections. Maximum {self.max_connections_per_ip} connections per {self.time_window} seconds."
+                return (
+                    False,
+                    f"Too many connections. Maximum {self.max_connections_per_ip} connections per {self.time_window} seconds.",
+                )
 
             # Record new connection
             self.connections[ip_address].append(current_time)
@@ -255,10 +257,12 @@ class SessionValidator:
         """Initialize session validator"""
         self.active_sessions: Dict[str, float] = {}
         self.session_timeout = 3600  # 1 hour
+        self._lock = threading.Lock()
 
     def register_session(self, session_id: str):
         """Register a new conversion session"""
-        self.active_sessions[session_id] = time.time()
+        with self._lock:
+            self.active_sessions[session_id] = time.time()
         logger.debug(f"Registered session: {session_id}")
 
     def is_valid_session(self, session_id: str) -> Tuple[bool, str]:
@@ -271,28 +275,28 @@ class SessionValidator:
         Returns:
             Tuple of (is_valid, reason_if_not_valid)
         """
-        # Clean up expired sessions
         current_time = time.time()
-        expired_sessions = [
-            sid
-            for sid, timestamp in self.active_sessions.items()
-            if current_time - timestamp > self.session_timeout
-        ]
+        with self._lock:
+            expired_sessions = [
+                sid
+                for sid, timestamp in self.active_sessions.items()
+                if current_time - timestamp > self.session_timeout
+            ]
+            for sid in expired_sessions:
+                del self.active_sessions[sid]
+            exists = session_id in self.active_sessions
         for sid in expired_sessions:
-            del self.active_sessions[sid]
             logger.debug(f"Expired session removed: {sid}")
-
-        # Check if session exists
-        if session_id not in self.active_sessions:
+        if not exists:
             logger.warning(f"Invalid session ID attempted: {session_id}")
             return False, "Invalid or expired session ID"
-
         return True, ""
 
     def remove_session(self, session_id: str):
         """Remove a session"""
-        if session_id in self.active_sessions:
-            del self.active_sessions[session_id]
+        with self._lock:
+            existed = self.active_sessions.pop(session_id, None) is not None
+        if existed:
             logger.debug(f"Session removed: {session_id}")
 
 
@@ -361,7 +365,10 @@ class ConversionRateLimiter:
             # Check if limit exceeded
             if len(self.requests[ip_address]) >= self.max_requests_per_ip:
                 logger.warning(f"Conversion rate limit exceeded for IP: {ip_address}")
-                return False, f"Too many conversion requests. Maximum {self.max_requests_per_ip} requests per {self.time_window} seconds. Please try again later."
+                return (
+                    False,
+                    f"Too many conversion requests. Maximum {self.max_requests_per_ip} requests per {self.time_window} seconds. Please try again later.",
+                )
 
             # Record new request
             self.requests[ip_address].append(current_time)
@@ -407,7 +414,7 @@ async def check_rate_limit(request: Request) -> None:
         raise HTTPException(
             status_code=429,
             detail=reason,
-            headers={"Retry-After": str(conversion_rate_limiter.time_window)}
+            headers={"Retry-After": str(conversion_rate_limiter.time_window)},
         )
 
 

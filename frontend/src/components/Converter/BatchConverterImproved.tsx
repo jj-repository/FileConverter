@@ -362,7 +362,7 @@ export const BatchConverter: React.FC = () => {
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {results.map((result, index) => (
                       <div
-                        key={index}
+                        key={`${result.filename}-${index}`}
                         className={`flex items-center justify-between p-3 rounded border ${
                           result.success
                             ? 'bg-white border-green-200'

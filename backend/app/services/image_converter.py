@@ -61,24 +61,15 @@ class ImageConverter(BaseConverter):
         Returns:
             Path to converted image
         """
-        await self.send_progress(
-            session_id, 0, "converting", "Starting image conversion"
-        )
+        await self.send_progress(session_id, 0, "converting", "Starting image conversion")
 
         # Validate format
         input_format = input_path.suffix.lower().lstrip(".")
-        if not self.validate_format(
-            input_format, output_format, self.supported_formats
-        ):
-            raise ValueError(
-                f"Unsupported conversion: {input_format} to {output_format}"
-            )
+        if not self.validate_format(input_format, output_format, self.supported_formats):
+            raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
-        output_path = (
-            settings.UPLOAD_DIR
-            / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
-        )
+        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
 
         await self.send_progress(session_id, 20, "converting", "Loading image")
 
@@ -96,7 +87,7 @@ class ImageConverter(BaseConverter):
             temp_png = settings.TEMP_DIR / f"{input_path.stem}_temp.png"
 
             # Get dimensions from options or use default
-            width = options.get("width", 800)
+            width = options.get("width", settings.DEFAULT_SVG_RASTER_WIDTH)
             height = options.get("height")
 
             if output_format == "svg":
@@ -104,9 +95,7 @@ class ImageConverter(BaseConverter):
                 import shutil
 
                 await asyncio.to_thread(shutil.copy, input_path, output_path)
-                await self.send_progress(
-                    session_id, 100, "completed", "SVG file copied"
-                )
+                await self.send_progress(session_id, 100, "completed", "SVG file copied")
                 return output_path
 
             # Convert SVG to PNG
@@ -124,9 +113,7 @@ class ImageConverter(BaseConverter):
             # Open image (run in thread pool to avoid blocking)
             img = await asyncio.to_thread(Image.open, input_path)
             try:
-                await self.send_progress(
-                    session_id, 40, "converting", "Processing image"
-                )
+                await self.send_progress(session_id, 40, "converting", "Processing image")
 
                 # Handle transparency for formats that don't support it
                 if output_format.lower() in ["jpg", "jpeg"] and img.mode in [
@@ -134,14 +121,18 @@ class ImageConverter(BaseConverter):
                     "LA",
                     "P",
                 ]:
-                    # Create white background
-                    background = Image.new("RGB", img.size, (255, 255, 255))
-                    if img.mode == "P":
-                        img = img.convert("RGBA")
-                    background.paste(
-                        img, mask=img.split()[-1] if img.mode == "RGBA" else None
-                    )
-                    img = background
+
+                    def _flatten_bg(current):
+                        bg = Image.new("RGB", current.size, (255, 255, 255))
+                        if current.mode == "P":
+                            current = current.convert("RGBA")
+                        bg.paste(
+                            current,
+                            mask=current.split()[-1] if current.mode == "RGBA" else None,
+                        )
+                        return bg
+
+                    img = await asyncio.to_thread(_flatten_bg, img)
 
                 # Resize if dimensions provided
                 width = options.get("width")
@@ -150,17 +141,11 @@ class ImageConverter(BaseConverter):
                 if width or height:
                     # Validate dimensions
                     if width is not None and (width <= 0 or width > 10000):
-                        raise ValueError(
-                            f"Invalid width: {width}. Must be between 1 and 10000"
-                        )
+                        raise ValueError(f"Invalid width: {width}. Must be between 1 and 10000")
                     if height is not None and (height <= 0 or height > 10000):
-                        raise ValueError(
-                            f"Invalid height: {height}. Must be between 1 and 10000"
-                        )
+                        raise ValueError(f"Invalid height: {height}. Must be between 1 and 10000")
 
-                    await self.send_progress(
-                        session_id, 60, "converting", "Resizing image"
-                    )
+                    await self.send_progress(session_id, 60, "converting", "Resizing image")
 
                     original_width, original_height = img.size
 
@@ -174,11 +159,9 @@ class ImageConverter(BaseConverter):
                         ratio = height / original_height
                         new_size = (int(original_width * ratio), height)
 
-                    img = img.resize(new_size, Image.Resampling.LANCZOS)
+                    img = await asyncio.to_thread(img.resize, new_size, Image.Resampling.LANCZOS)
 
-                await self.send_progress(
-                    session_id, 80, "converting", "Saving converted image"
-                )
+                await self.send_progress(session_id, 80, "converting", "Saving converted image")
 
                 # Prepare save options
                 save_options = {}
@@ -188,9 +171,7 @@ class ImageConverter(BaseConverter):
                     quality = options.get("quality", 95)
                     # Validate quality
                     if quality < 1 or quality > 100:
-                        raise ValueError(
-                            f"Invalid quality: {quality}. Must be between 1 and 100"
-                        )
+                        raise ValueError(f"Invalid quality: {quality}. Must be between 1 and 100")
                     save_options["quality"] = quality
 
                 # Optimize for all formats
@@ -198,7 +179,7 @@ class ImageConverter(BaseConverter):
 
                 # Convert to RGB for JPEG
                 if output_format.lower() in ["jpg", "jpeg"] and img.mode != "RGB":
-                    img = img.convert("RGB")
+                    img = await asyncio.to_thread(img.convert, "RGB")
 
                 # Map format names for PIL (PIL uses 'JPEG' not 'JPG')
                 pil_format = output_format.upper()
@@ -206,9 +187,7 @@ class ImageConverter(BaseConverter):
                     pil_format = "JPEG"
 
                 # Save image (run in thread pool to avoid blocking)
-                await asyncio.to_thread(
-                    img.save, output_path, format=pil_format, **save_options
-                )
+                await asyncio.to_thread(img.save, output_path, format=pil_format, **save_options)
 
             finally:
                 img.close()
@@ -220,9 +199,7 @@ class ImageConverter(BaseConverter):
                 except OSError:
                     pass  # Best effort cleanup
 
-        await self.send_progress(
-            session_id, 100, "completed", "Image conversion completed"
-        )
+        await self.send_progress(session_id, 100, "completed", "Image conversion completed")
 
         return output_path
 

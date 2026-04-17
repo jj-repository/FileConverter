@@ -1,4 +1,5 @@
 import { useState, lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TabNavigation } from './components/Layout/TabNavigation';
 import { LanguageSelector } from './components/Common/LanguageSelector';
 import { ToastProvider } from './components/Common/Toast';
@@ -20,6 +21,7 @@ const BatchConverter = lazy(() => import('./components/Converter/BatchConverterI
 
 function App() {
   const [activeTab, setActiveTab] = useState<FileType>('image');
+  const { t } = useTranslation();
 
   const renderConverter = () => {
     // Error fallback specifically for lazy-loaded component failures
@@ -31,13 +33,13 @@ function App() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load converter</h3>
-          <p className="text-gray-600 mb-4">There was a problem loading this component. Please try refreshing the page.</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('errors.lazyLoadTitle')}</h3>
+          <p className="text-gray-600 mb-4">{t('errors.lazyLoadBody')}</p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
           >
-            Refresh Page
+            {t('errors.refreshPage')}
           </button>
         </div>
       </div>
@@ -45,11 +47,16 @@ function App() {
 
     return (
       <ErrorBoundary fallback={lazyLoadErrorFallback}>
+        <div
+          role="tabpanel"
+          id={`${activeTab}-panel`}
+          aria-labelledby={`${activeTab}-tab`}
+        >
         <Suspense fallback={
           <div className="flex items-center justify-center py-16">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-              <p className="text-gray-600 text-lg">Loading converter...</p>
+              <p className="text-gray-600 text-lg">{t('app.loadingConverter')}</p>
             </div>
           </div>
         }>
@@ -82,6 +89,7 @@ function App() {
             }
           })()}
         </Suspense>
+        </div>
       </ErrorBoundary>
     );
   };
@@ -102,9 +110,9 @@ function App() {
                   <button
                     onClick={() => window.electron?.checkForUpdates()}
                     className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-gray-700 transition-colors"
-                    title="Check for Updates"
+                    title={t('app.checkUpdates')}
                   >
-                    Check for Updates
+                    {t('app.checkUpdates')}
                   </button>
                 )}
               </div>
@@ -117,7 +125,7 @@ function App() {
           </div>
 
           <footer className="text-center mt-16 text-gray-500 text-sm">
-            <p>Built with FastAPI + React + Tailwind CSS</p>
+            <p>{t('app.footer')}</p>
           </footer>
         </div>
       </div>

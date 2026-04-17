@@ -1241,3 +1241,47 @@ class TestEbookEdgeCases:
                         "xyz",  # Unsupported format
                         "test-session"
                     )
+
+
+class TestBleachXSSVectors:
+    """Negative tests for bleach sanitizer in _sanitize_html (S1/S2 coverage)."""
+
+    def _sanitize(self, html_input: str) -> str:
+        return EbookConverter()._sanitize_html(html_input)
+
+    def test_strips_onerror_attribute(self):
+        out = self._sanitize('<img src="x" onerror="alert(1)" />')
+        assert "onerror" not in out
+        assert "alert" not in out
+
+    def test_strips_onclick_attribute(self):
+        out = self._sanitize('<a href="#" onclick="steal()">click</a>')
+        assert "onclick" not in out
+        assert "steal" not in out
+
+    def test_strips_javascript_href(self):
+        out = self._sanitize('<a href="javascript:alert(1)">x</a>')
+        assert "javascript:" not in out.lower()
+
+    def test_strips_data_text_html_href(self):
+        out = self._sanitize('<a href="data:text/html,<script>alert(1)</script>">x</a>')
+        assert "<script" not in out.lower()
+
+    def test_strips_svg_onload(self):
+        out = self._sanitize('<svg onload="alert(1)"></svg>')
+        assert "onload" not in out
+        assert "<script" not in out.lower()
+
+    def test_strips_iframe(self):
+        out = self._sanitize('<iframe src="http://evil.example"></iframe>')
+        assert "<iframe" not in out.lower()
+
+    def test_strips_object_tag(self):
+        out = self._sanitize('<object data="malware.swf"></object>')
+        assert "<object" not in out.lower()
+
+    def test_preserves_safe_html(self):
+        out = self._sanitize('<p><strong>bold</strong> <em>italic</em></p>')
+        assert "<p>" in out
+        assert "<strong>" in out
+        assert "<em>" in out

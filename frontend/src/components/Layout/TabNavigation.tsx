@@ -30,16 +30,34 @@ interface TabNavigationProps {
 export const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
   const { t } = useTranslation();
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') {
+      return;
+    }
+    event.preventDefault();
+    let nextIndex = index;
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = tabs.length - 1;
+    const next = tabs[nextIndex];
+    onTabChange(next.id);
+    const el = document.getElementById(`${next.id}-tab`);
+    el?.focus();
+  };
+
   return (
     <div className="border-b border-gray-200 mb-8 overflow-x-auto">
       <nav className="flex space-x-8 min-w-min" role="tablist" aria-label="Tabs">
-        {tabs.map((tab) => (
+        {tabs.map((tab, index) => (
           <button
             key={tab.id}
             role="tab"
             aria-selected={activeTab === tab.id}
             aria-controls={`${tab.id}-panel`}
             id={`${tab.id}-tab`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
+            onKeyDown={(e) => handleKeyDown(e, index)}
             onClick={() => onTabChange(tab.id)}
             className={`
               py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 whitespace-nowrap

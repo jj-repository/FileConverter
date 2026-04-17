@@ -40,7 +40,7 @@ export const AudioConverter: React.FC = () => {
   const converter = useConverter({ defaultOutputFormat: 'mp3' });
 
   const handleConvert = async () => {
-    const options: any = { bitrate };
+    const options: Record<string, unknown> = { bitrate };
 
     if (sampleRate !== null) {
       options.sampleRate = sampleRate;

@@ -55,7 +55,7 @@ class FontConverter(BaseConverter):
         await self.send_progress(session_id, 10, "converting", "Starting font conversion")
 
         # Generate output filename
-        output_filename = f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        output_filename = f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
         output_path = settings.UPLOAD_DIR / output_filename
 
         _OPTIMIZE_DROP_TABLES = ["DSIG", "hdmx", "VDMX", "LTSH", "PCLT"]

@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     # Cleanup settings
     TEMP_FILE_LIFETIME: int = 3600  # 1 hour in seconds
 
+    # SVG rasterization default width when neither width nor height supplied
+    DEFAULT_SVG_RASTER_WIDTH: int = 800
+
     # Cache settings
     CACHE_ENABLED: bool = True
     CACHE_EXPIRATION_HOURS: int = 1  # Default cache lifetime

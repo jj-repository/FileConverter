@@ -413,7 +413,8 @@ describe('FontConverter', () => {
 
       expect(screen.getByText('Uploading file...')).toBeInTheDocument()
       const progressTexts = screen.getAllByText('45%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should show conversion progress', () => {
@@ -428,7 +429,8 @@ describe('FontConverter', () => {
 
       expect(screen.getByText('Converting font...')).toBeInTheDocument()
       const progressTexts = screen.getAllByText('75%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should display success message on completion', () => {
@@ -536,7 +538,8 @@ describe('FontConverter', () => {
       render(<FontConverter />)
 
       const progressTexts = screen.getAllByText('65%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
   })
 

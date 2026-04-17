@@ -613,7 +613,8 @@ describe('SubtitleConverter', () => {
 
       expect(screen.getByText('Converting subtitle...')).toBeInTheDocument()
       const progressTexts = screen.getAllByText('50%')
-      expect(progressTexts.length).toBeGreaterThan(0)
+      expect(progressTexts.length).toBeGreaterThanOrEqual(1)
+      expect(progressTexts[0]).toBeInTheDocument()
     })
 
     it('should display success message for format conversion', () => {

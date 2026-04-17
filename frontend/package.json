@@ -15,7 +15,7 @@
   },
   "author": {
     "name": "FileConverter",
-    "email": "noreply@fileconverter.app"
+    "email": "fileconverter@users.noreply.github.com"
   },
   "scripts": {
     "dev": "vite",
@@ -87,6 +87,7 @@
           "!venv/**/*",
           "!**/__pycache__/**/*",
           "!**/*.pyc",
+          "!**/.env*",
           "!build/**/*",
           "!*.spec",
           "!run_server.py"
@@ -120,7 +121,7 @@
       ],
       "category": "Utility",
       "icon": "build/icon.png",
-      "maintainer": "FileConverter <noreply@fileconverter.app>",
+      "maintainer": "FileConverter <fileconverter@users.noreply.github.com>",
       "artifactName": "FileConverter-Linux.${ext}"
     },
     "deb": {

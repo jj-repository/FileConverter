@@ -1,7 +1,18 @@
 {
   "app": {
     "title": "FileConverter - Convert Images, Videos, Audio & Documents",
-    "tagline": "A modern file conversion application"
+    "tagline": "A modern file conversion application",
+    "loadingConverter": "Loading converter...",
+    "checkUpdates": "Check for Updates",
+    "footer": "Built with FastAPI + React + Tailwind CSS"
+  },
+  "errors": {
+    "lazyLoadTitle": "Failed to load converter",
+    "lazyLoadBody": "There was a problem loading this component. Please try refreshing the page.",
+    "refreshPage": "Refresh Page",
+    "boundaryTitle": "Something went wrong",
+    "boundaryBody": "We apologize for the inconvenience. An unexpected error has occurred.",
+    "reloadPage": "Reload Page"
   },
   "nav": {
     "images": "Images",

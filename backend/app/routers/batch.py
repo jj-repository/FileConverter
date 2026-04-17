@@ -10,6 +10,7 @@ from starlette.background import BackgroundTask
 from app.config import settings
 from app.middleware.error_handler import sanitize_error_message
 from app.models.conversion import BatchConversionResponse, BatchZipResponse
+from app.routers.base_router import cleanup_after_download
 from app.services.batch_converter import BatchConverter
 from app.utils.file_handler import (
     cleanup_file,
@@ -26,14 +27,6 @@ from app.utils.validation import (
     validate_mime_type,
 )
 from app.utils.websocket_security import check_rate_limit, session_validator
-
-
-def _cleanup_after_download(path: str):
-    try:
-        Path(path).unlink(missing_ok=True)
-    except Exception:
-        pass
-
 
 router = APIRouter()
 batch_converter = BatchConverter()
@@ -246,6 +239,12 @@ async def create_download_zip(
     if not re.match(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$", session_id):
         raise HTTPException(status_code=400, detail="Invalid session ID format")
 
+    # Ensure session was actually registered by /convert — blocks UUID-guessing
+    # attackers from downloading another user's ZIP on a shared instance.
+    is_valid, reason = session_validator.is_valid_session(session_id)
+    if not is_valid:
+        raise HTTPException(status_code=404, detail=reason or "Session not found")
+
     try:
         # Validate and collect file paths
         file_paths = []
@@ -292,5 +291,5 @@ async def download_file(filename: str):
         filename=filename,
         media_type=media_type,
         headers={"Content-Disposition": make_content_disposition(filename)},
-        background=BackgroundTask(_cleanup_after_download, str(file_path)),
+        background=BackgroundTask(cleanup_after_download, str(file_path)),
     )

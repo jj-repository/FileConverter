@@ -1,7 +1,18 @@
 {
   "app": {
     "title": "FileConverter - Konwertuj obrazy, filmy, audio i dokumenty",
-    "tagline": "Nowoczesna aplikacja do konwersji plików"
+    "tagline": "Nowoczesna aplikacja do konwersji plików",
+    "loadingConverter": "Ładowanie konwertera...",
+    "checkUpdates": "Sprawdź aktualizacje",
+    "footer": "Zbudowane z FastAPI + React + Tailwind CSS"
+  },
+  "errors": {
+    "lazyLoadTitle": "Nie udało się załadować konwertera",
+    "lazyLoadBody": "Wystąpił problem z ładowaniem tego komponentu. Odśwież stronę.",
+    "refreshPage": "Odśwież stronę",
+    "boundaryTitle": "Coś poszło nie tak",
+    "boundaryBody": "Przepraszamy. Wystąpił nieoczekiwany błąd.",
+    "reloadPage": "Przeładuj stronę"
   },
   "nav": {
     "images": "Obrazy",

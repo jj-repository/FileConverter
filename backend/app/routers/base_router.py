@@ -175,13 +175,22 @@ async def handle_action(
             cleanup_file(input_path)
 
 
+_formats_cache: dict = {}
+
+
 async def handle_formats(converter: Any) -> dict:
-    """Shared formats endpoint."""
+    """Shared formats endpoint. Cached per-converter; static data."""
+    key = id(converter)
+    cached = _formats_cache.get(key)
+    if cached is not None:
+        return cached
     formats = await converter.get_supported_formats()
-    return {
+    payload = {
         "input_formats": formats["input"],
         "output_formats": formats["output"],
     }
+    _formats_cache[key] = payload
+    return payload
 
 
 async def handle_info(

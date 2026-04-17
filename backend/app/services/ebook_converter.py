@@ -6,11 +6,11 @@ Handles conversion between EPUB and other formats using EbookLib
 import asyncio
 import html
 import logging
-import re
 import uuid
 from pathlib import Path
 from typing import Any, Dict
 
+import bleach
 from bs4 import BeautifulSoup
 from ebooklib import epub
 from reportlab.lib.pagesizes import letter
@@ -62,7 +62,7 @@ class EbookConverter(BaseConverter):
         input_format = input_path.suffix[1:].lower()
 
         # Generate output filename
-        output_filename = f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        output_filename = f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
         output_path = settings.UPLOAD_DIR / output_filename
 
         try:
@@ -132,28 +132,68 @@ class EbookConverter(BaseConverter):
         result = await asyncio.to_thread(_sync_extract)
         output_path.write_text(result, encoding="utf-8")
 
+    # Allowlist for HTML sanitization via bleach
+    _ALLOWED_TAGS = [
+        "a",
+        "abbr",
+        "acronym",
+        "b",
+        "blockquote",
+        "br",
+        "code",
+        "div",
+        "em",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "hr",
+        "i",
+        "img",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "span",
+        "strong",
+        "sub",
+        "sup",
+        "table",
+        "tbody",
+        "td",
+        "th",
+        "thead",
+        "tr",
+        "u",
+        "ul",
+        "html",
+        "head",
+        "body",
+        "title",
+        "meta",
+        "header",
+    ]
+    # Omitting 'style' avoids needing a CSS sanitizer; style attrs are dropped.
+    _ALLOWED_ATTRS = {
+        "*": ["class", "id"],
+        "a": ["href", "title"],
+        "img": ["src", "alt", "title", "width", "height"],
+        "meta": ["charset", "name", "content"],
+    }
+    _ALLOWED_PROTOCOLS = ["http", "https", "mailto"]
+
     def _sanitize_html(self, html_content: str) -> str:
-        """Remove dangerous HTML elements for XSS prevention"""
-        # Remove script tags and their content
-        html_content = re.sub(
-            r"<script[^>]*>.*?</script>",
-            "",
+        """Sanitize HTML via bleach to prevent XSS (scripts, events, js: URIs, etc.)"""
+        return bleach.clean(
             html_content,
-            flags=re.DOTALL | re.IGNORECASE,
+            tags=self._ALLOWED_TAGS,
+            attributes=self._ALLOWED_ATTRS,
+            protocols=self._ALLOWED_PROTOCOLS,
+            strip=True,
+            strip_comments=True,
         )
-        # Remove event handlers
-        html_content = re.sub(
-            r'\s+on\w+\s*=\s*["\'][^"\']*["\']', "", html_content, flags=re.IGNORECASE
-        )
-        html_content = re.sub(r"\s+on\w+\s*=\s*\S+", "", html_content, flags=re.IGNORECASE)
-        # Remove javascript: URLs
-        html_content = re.sub(
-            r'href\s*=\s*["\']javascript:[^"\']*["\']',
-            'href="#"',
-            html_content,
-            flags=re.IGNORECASE,
-        )
-        return html_content
 
     async def _epub_to_html(self, book: epub.EpubBook, output_path: Path, session_id: str):
         """Convert EPUB to single HTML file"""
@@ -168,7 +208,7 @@ class EbookConverter(BaseConverter):
             ]
             title = book.get_metadata("DC", "title")
             if title:
-                parts.append(f"<title>{title[0][0]}</title>")
+                parts.append(f"<title>{html.escape(title[0][0])}</title>")
             parts += [
                 "<style>",
                 "body { font-family: Georgia, serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }",
@@ -180,10 +220,10 @@ class EbookConverter(BaseConverter):
                 "<header>",
             ]
             if title:
-                parts.append(f"<h1>{title[0][0]}</h1>")
+                parts.append(f"<h1>{html.escape(title[0][0])}</h1>")
             creator = book.get_metadata("DC", "creator")
             if creator:
-                parts.append(f"<p><strong>Author:</strong> {creator[0][0]}</p>")
+                parts.append(f"<p><strong>Author:</strong> {html.escape(creator[0][0])}</p>")
             parts += ["</header>", "<hr>"]
             for item in book.get_items():
                 if item.get_type() == 9:  # ITEM_DOCUMENT
@@ -215,37 +255,28 @@ class EbookConverter(BaseConverter):
             story.append(Paragraph(f"By {creator[0][0]}", styles["Heading2"]))
             story.append(Spacer(1, 0.5 * inch))
 
-        # Extract text content
+        # Extract text content. BeautifulSoup parse is CPU-bound — offload per item.
+        def _extract_paragraphs(raw_html: bytes) -> list[str]:
+            soup = BeautifulSoup(raw_html, "html.parser")
+            for tag in soup(["script", "style"]):
+                tag.decompose()
+            text = soup.get_text()
+            lines = (line.strip() for line in text.splitlines())
+            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+            joined = "\n".join(chunk for chunk in chunks if chunk)
+            return [p for p in joined.split("\n\n") if p.strip()]
+
         items = list(book.get_items())
         for i, item in enumerate(items):
             if item.get_type() == 9:  # ITEM_DOCUMENT
-                html_content = item.get_content()
-                soup = BeautifulSoup(html_content, "html.parser")
-
-                # Remove script and style tags
-                for script in soup(["script", "style"]):
-                    script.decompose()
-
-                # Get text
-                text = soup.get_text()
-
-                # Clean up whitespace
-                lines = (line.strip() for line in text.splitlines())
-                chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-                text = "\n".join(chunk for chunk in chunks if chunk)
-
-                # Add paragraphs to PDF
-                if text.strip():
-                    paragraphs = text.split("\n\n")
-                    for para in paragraphs:
-                        if para.strip():
-                            try:
-                                story.append(Paragraph(para, styles["BodyText"]))
-                                story.append(Spacer(1, 0.1 * inch))
-                            except Exception as e:
-                                # Skip problematic paragraphs
-                                logger.warning(f"Skipped paragraph due to error: {e}")
-                                continue
+                paragraphs = await asyncio.to_thread(_extract_paragraphs, item.get_content())
+                for para in paragraphs:
+                    try:
+                        story.append(Paragraph(para, styles["BodyText"]))
+                        story.append(Spacer(1, 0.1 * inch))
+                    except Exception as e:
+                        logger.warning(f"Skipped paragraph due to error: {e}")
+                        continue
 
             # Update progress
             if i % 5 == 0:
@@ -291,7 +322,7 @@ class EbookConverter(BaseConverter):
 
     async def _txt_to_epub(self, input_path: Path, book: epub.EpubBook, session_id: str):
         """Convert plain text to EPUB"""
-        text = input_path.read_text(encoding="utf-8")
+        text = await asyncio.to_thread(input_path.read_text, encoding="utf-8")
 
         # Create chapter
         chapter = epub.EpubHtml(title="Content", file_name="content.xhtml", lang="en")
@@ -318,11 +349,12 @@ class EbookConverter(BaseConverter):
 
     async def _html_to_epub(self, input_path: Path, book: epub.EpubBook, session_id: str):
         """Convert HTML to EPUB"""
-        html = input_path.read_text(encoding="utf-8")
+        raw_html = await asyncio.to_thread(input_path.read_text, encoding="utf-8")
+        safe_html = await asyncio.to_thread(self._sanitize_html, raw_html)
 
         # Create chapter
         chapter = epub.EpubHtml(title="Content", file_name="content.xhtml", lang="en")
-        chapter.set_content(html.encode("utf-8"))
+        chapter.set_content(safe_html.encode("utf-8"))
 
         # Add chapter to book
         book.add_item(chapter)

@@ -36,6 +36,8 @@ class AudioConverter(BaseConverter):
                 settings.FFPROBE_PATH,
                 "-v",
                 "error",
+                "-protocol_whitelist",
+                "file",
                 "-show_entries",
                 "format=duration",
                 "-of",
@@ -109,9 +111,7 @@ class AudioConverter(BaseConverter):
         total_duration = await self.get_audio_duration(input_path)
 
         # Generate output path
-        output_path = (
-            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
-        )
+        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
 
         await self.send_progress(session_id, 5, "converting", "Preparing conversion")
 
@@ -258,6 +258,8 @@ class AudioConverter(BaseConverter):
                 settings.FFPROBE_PATH,
                 "-v",
                 "quiet",
+                "-protocol_whitelist",
+                "file",
                 "-print_format",
                 "json",
                 "-show_format",

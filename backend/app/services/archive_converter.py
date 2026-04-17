@@ -19,6 +19,11 @@ except ImportError:
 from app.config import settings
 from app.services.base_converter import BaseConverter
 
+# Zip-bomb mitigation: refuse archives whose uncompressed total exceeds this,
+# or individual members with compression ratio above MAX_RATIO.
+_MAX_UNCOMPRESSED_BYTES = max(settings.ARCHIVE_MAX_SIZE * 10, 1024 * 1024 * 1024)
+_MAX_COMPRESSION_RATIO = 100
+
 
 class ArchiveConverter(BaseConverter):
     """Archive compression/conversion service"""
@@ -73,9 +78,7 @@ class ArchiveConverter(BaseConverter):
         Returns:
             Path to converted archive
         """
-        await self.send_progress(
-            session_id, 0, "converting", "Starting archive conversion"
-        )
+        await self.send_progress(session_id, 0, "converting", "Starting archive conversion")
 
         # Validate format
         input_format = self._detect_format(input_path)
@@ -87,10 +90,7 @@ class ArchiveConverter(BaseConverter):
             raise ValueError(f"Unsupported output format: {output_format}")
 
         # Generate output path
-        output_path = (
-            settings.UPLOAD_DIR
-            / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
-        )
+        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
 
         # Get options
         compression_level = options.get("compression_level", 6)
@@ -98,9 +98,7 @@ class ArchiveConverter(BaseConverter):
         try:
             # If same format, just copy
             if input_format == output_format:
-                await self.send_progress(
-                    session_id, 50, "converting", "Copying archive"
-                )
+                await self.send_progress(session_id, 50, "converting", "Copying archive")
                 shutil.copy(input_path, output_path)
                 await self.send_progress(session_id, 100, "completed", "Archive copied")
                 return output_path
@@ -122,15 +120,11 @@ class ArchiveConverter(BaseConverter):
                     temp_extract_path, output_path, output_format, compression_level
                 )
 
-            await self.send_progress(
-                session_id, 100, "completed", "Archive conversion completed"
-            )
+            await self.send_progress(session_id, 100, "completed", "Archive conversion completed")
             return output_path
 
         except Exception as e:
-            await self.send_progress(
-                session_id, 0, "failed", f"Conversion failed: {str(e)}"
-            )
+            await self.send_progress(session_id, 0, "failed", f"Conversion failed: {str(e)}")
             raise
 
     def _detect_format(self, file_path: Path) -> str:
@@ -154,23 +148,32 @@ class ArchiveConverter(BaseConverter):
 
     async def _extract_archive(self, archive_path: Path, extract_to: Path, format: str):
         """Extract archive to directory with security validation"""
-        await asyncio.to_thread(
-            self._sync_extract_archive, archive_path, extract_to, format
-        )
+        await asyncio.to_thread(self._sync_extract_archive, archive_path, extract_to, format)
 
     def _sync_extract_archive(self, archive_path: Path, extract_to: Path, format: str):
         """Synchronous archive extraction (called from thread pool)"""
         if format == "zip":
             with zipfile.ZipFile(archive_path, "r") as zf:
+                # Zip-bomb: reject if uncompressed total exceeds cap, or any
+                # single member's compression ratio is suspicious.
+                total_uncompressed = 0
+                for info in zf.infolist():
+                    total_uncompressed += info.file_size
+                    if info.compress_size > 0:
+                        ratio = info.file_size / info.compress_size
+                        if ratio > _MAX_COMPRESSION_RATIO and info.file_size > 1024 * 1024:
+                            raise ValueError(
+                                f"Zip-bomb detected: member {info.filename} ratio={ratio:.0f}"
+                            )
+                if total_uncompressed > _MAX_UNCOMPRESSED_BYTES:
+                    raise ValueError(
+                        f"Archive uncompressed size {total_uncompressed} exceeds cap {_MAX_UNCOMPRESSED_BYTES}"
+                    )
                 # Security: validate all members before extraction
                 safe_members = []
                 for member in zf.namelist():
                     # Check for path traversal attempts
-                    if (
-                        member.startswith("/")
-                        or ".." in member
-                        or member.startswith("\\")
-                    ):
+                    if member.startswith("/") or ".." in member or member.startswith("\\"):
                         raise ValueError(f"Unsafe zip member: {member}")
                     # Check for absolute Windows paths
                     if len(member) > 1 and member[1] == ":":
@@ -189,6 +192,12 @@ class ArchiveConverter(BaseConverter):
 
         elif format in ["tar", "tar.gz", "tgz", "tar.bz2", "tbz2"]:
             with tarfile.open(archive_path, "r:*") as tf:
+                # Zip-bomb: refuse archives that decompress past the cap.
+                total_uncompressed = sum(m.size for m in tf.getmembers() if m.isfile())
+                if total_uncompressed > _MAX_UNCOMPRESSED_BYTES:
+                    raise ValueError(
+                        f"Archive uncompressed size {total_uncompressed} exceeds cap {_MAX_UNCOMPRESSED_BYTES}"
+                    )
                 # Security: comprehensive path traversal prevention
                 safe_members = []
                 extract_resolved = extract_to.resolve()
@@ -202,9 +211,7 @@ class ArchiveConverter(BaseConverter):
                         raise ValueError(f"Unsafe archive member: {member.name}")
                     # Check for absolute Windows paths
                     if len(member.name) > 1 and member.name[1] == ":":
-                        raise ValueError(
-                            f"Unsafe archive member (absolute path): {member.name}"
-                        )
+                        raise ValueError(f"Unsafe archive member (absolute path): {member.name}")
                     # Check symlinks point within extract directory
                     if member.issym() or member.islnk():
                         link_target = member.linkname
@@ -305,9 +312,7 @@ class ArchiveConverter(BaseConverter):
             files = [f for f in files if f.is_file()]
             if files:
                 with open(files[0], "rb") as f_in:
-                    with gzip.open(
-                        output_path, "wb", compresslevel=compression_level
-                    ) as f_out:
+                    with gzip.open(output_path, "wb", compresslevel=compression_level) as f_out:
                         shutil.copyfileobj(f_in, f_out)
             else:
                 raise ValueError("No files found to compress")

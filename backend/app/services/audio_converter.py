@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import subprocess
 import sys
@@ -12,7 +13,6 @@ from app.utils.subprocess_utils import parse_ffmpeg_progress as _parse_ffmpeg_pr
 from app.utils.subprocess_utils import subprocess_kwargs as _subprocess_kwargs
 
 logger = logging.getLogger(__name__)
-
 
 
 class AudioConverter(BaseConverter):
@@ -59,7 +59,6 @@ class AudioConverter(BaseConverter):
             logger.error(f"Error getting audio duration: {e}")
             return 0.0
 
-
     def get_audio_codec(self, output_format: str, codec: Optional[str] = None) -> str:
         """Get appropriate audio codec for output format"""
         if codec:
@@ -99,26 +98,19 @@ class AudioConverter(BaseConverter):
         Returns:
             Path to converted audio
         """
-        await self.send_progress(
-            session_id, 0, "converting", "Starting audio conversion"
-        )
+        await self.send_progress(session_id, 0, "converting", "Starting audio conversion")
 
         # Validate format
         input_format = input_path.suffix.lower().lstrip(".")
-        if not self.validate_format(
-            input_format, output_format, self.supported_formats
-        ):
-            raise ValueError(
-                f"Unsupported conversion: {input_format} to {output_format}"
-            )
+        if not self.validate_format(input_format, output_format, self.supported_formats):
+            raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Get audio duration for progress tracking
         total_duration = await self.get_audio_duration(input_path)
 
         # Generate output path
         output_path = (
-            settings.UPLOAD_DIR
-            / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
         )
 
         await self.send_progress(session_id, 5, "converting", "Preparing conversion")
@@ -164,8 +156,9 @@ class AudioConverter(BaseConverter):
         cmd = [
             settings.FFMPEG_PATH,
             "-nostdin",
-                "-protocol_whitelist", "file,pipe",
-                "-i",
+            "-protocol_whitelist",
+            "file,pipe",
+            "-i",
             str(input_path),
             "-y",  # Overwrite output file
             "-progress",
@@ -192,9 +185,7 @@ class AudioConverter(BaseConverter):
         # Add output file
         cmd.append(str(output_path))
 
-        await self.send_progress(
-            session_id, 10, "converting", "Starting FFmpeg conversion"
-        )
+        await self.send_progress(session_id, 10, "converting", "Starting FFmpeg conversion")
 
         # Run FFmpeg conversion with progress tracking and timeout
         try:
@@ -243,11 +234,7 @@ class AudioConverter(BaseConverter):
                 )
 
             if process.returncode != 0:
-                error_msg = (
-                    stderr.decode("utf-8", errors="ignore")
-                    if stderr
-                    else "Unknown error"
-                )
+                error_msg = stderr.decode("utf-8", errors="ignore") if stderr else "Unknown error"
                 raise Exception(f"FFmpeg conversion failed: {error_msg[:200]}")
 
             await self.send_progress(session_id, 98, "converting", "Finalizing audio")
@@ -256,16 +243,12 @@ class AudioConverter(BaseConverter):
             if not output_path.exists():
                 raise Exception("Output file was not created")
 
-            await self.send_progress(
-                session_id, 100, "completed", "Audio conversion completed"
-            )
+            await self.send_progress(session_id, 100, "completed", "Audio conversion completed")
 
             return output_path
 
         except Exception as e:
-            await self.send_progress(
-                session_id, 0, "failed", f"Conversion failed: {str(e)}"
-            )
+            await self.send_progress(session_id, 0, "failed", f"Conversion failed: {str(e)}")
             raise
 
     async def get_audio_metadata(self, file_path: Path) -> Dict[str, Any]:
@@ -293,17 +276,11 @@ class AudioConverter(BaseConverter):
             )
 
             if result.returncode == 0:
-                import json
-
                 data = json.loads(result.stdout)
 
                 # Extract audio stream info
                 audio_stream = next(
-                    (
-                        s
-                        for s in data.get("streams", [])
-                        if s.get("codec_type") == "audio"
-                    ),
+                    (s for s in data.get("streams", []) if s.get("codec_type") == "audio"),
                     {},
                 )
 

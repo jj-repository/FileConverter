@@ -220,7 +220,7 @@ export const handlers = [
     })
   }),
 
-  http.post('/api/batch/zip', async () => {
+  http.post('/api/batch/download-zip', async () => {
     await delay(100)
     return HttpResponse.json({
       message: 'ZIP file created successfully',

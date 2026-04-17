@@ -5,6 +5,7 @@ from typing import Annotated, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 
 from app.config import settings
 from app.middleware.error_handler import sanitize_error_message
@@ -67,12 +68,8 @@ async def convert_batch(
     ] = None,
     # Video options with validation
     codec: Annotated[Optional[VideoCodec], Form(description="Video codec")] = None,
-    resolution: Annotated[
-        Optional[VideoResolution], Form(description="Video resolution")
-    ] = None,
-    bitrate: Annotated[
-        Optional[VideoBitrate], Form(description="Video/audio bitrate")
-    ] = None,
+    resolution: Annotated[Optional[VideoResolution], Form(description="Video resolution")] = None,
+    bitrate: Annotated[Optional[VideoBitrate], Form(description="Video/audio bitrate")] = None,
     # Audio options with validation
     sample_rate: Annotated[
         Optional[int],
@@ -101,9 +98,7 @@ async def convert_batch(
         | settings.DOCUMENT_FORMATS
     )
     if output_format.lower() not in all_formats:
-        raise HTTPException(
-            status_code=400, detail=f"Unsupported output format: {output_format}"
-        )
+        raise HTTPException(status_code=400, detail=f"Unsupported output format: {output_format}")
 
     session_id = str(uuid.uuid4())
     session_validator.register_session(session_id)
@@ -126,9 +121,7 @@ async def convert_batch(
         # Save all uploaded files
         for file in files:
             # Validate file size based on file type
-            input_format = (
-                file.filename.split(".")[-1].lower() if "." in file.filename else ""
-            )
+            input_format = file.filename.split(".")[-1].lower() if "." in file.filename else ""
 
             # Determine file type for size validation
             if input_format in settings.IMAGE_FORMATS:
@@ -251,9 +244,7 @@ async def create_download_zip(
     - **filenames**: List of filenames to include in ZIP
     """
     # Validate session_id format
-    if not re.match(
-        r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$", session_id
-    ):
+    if not re.match(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$", session_id):
         raise HTTPException(status_code=400, detail="Invalid session ID format")
 
     try:
@@ -302,4 +293,5 @@ async def download_file(filename: str):
         filename=filename,
         media_type=media_type,
         headers={"Content-Disposition": make_content_disposition(filename)},
+        background=BackgroundTask(_cleanup_after_download, str(file_path)),
     )

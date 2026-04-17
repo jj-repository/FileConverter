@@ -13,7 +13,6 @@ from app.utils.subprocess_utils import subprocess_kwargs as _subprocess_kwargs
 logger = logging.getLogger(__name__)
 
 
-
 class DocumentConverter(BaseConverter):
     """Document conversion service using Pandoc and other libraries"""
 
@@ -64,9 +63,7 @@ class DocumentConverter(BaseConverter):
         Returns:
             Path to converted document
         """
-        await self.send_progress(
-            session_id, 0, "converting", "Starting document conversion"
-        )
+        await self.send_progress(session_id, 0, "converting", "Starting document conversion")
 
         # Check if Pandoc is available
         if not self.pandoc_available:
@@ -77,17 +74,12 @@ class DocumentConverter(BaseConverter):
 
         # Validate format
         input_format = input_path.suffix.lower().lstrip(".")
-        if not self.validate_format(
-            input_format, output_format, self.supported_formats
-        ):
-            raise ValueError(
-                f"Unsupported conversion: {input_format} to {output_format}"
-            )
+        if not self.validate_format(input_format, output_format, self.supported_formats):
+            raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
         output_path = (
-            settings.UPLOAD_DIR
-            / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
         )
 
         await self.send_progress(session_id, 10, "converting", "Preparing conversion")
@@ -120,9 +112,7 @@ class DocumentConverter(BaseConverter):
         if output_format == "pdf":
             cmd.extend(["--pdf-engine=pdflatex"])
 
-        await self.send_progress(
-            session_id, 20, "converting", "Converting document with Pandoc"
-        )
+        await self.send_progress(session_id, 20, "converting", "Converting document with Pandoc")
 
         # Run Pandoc conversion with timeout
         try:
@@ -136,9 +126,7 @@ class DocumentConverter(BaseConverter):
                 **_async_kwargs,
             )
 
-            await self.send_progress(
-                session_id, 50, "converting", "Processing document"
-            )
+            await self.send_progress(session_id, 50, "converting", "Processing document")
 
             # Wait for process to complete with timeout
             try:
@@ -159,24 +147,18 @@ class DocumentConverter(BaseConverter):
                 error_msg = stderr.decode("utf-8", errors="ignore")
                 raise Exception(f"Pandoc conversion failed: {error_msg[:200]}")
 
-            await self.send_progress(
-                session_id, 90, "converting", "Finalizing document"
-            )
+            await self.send_progress(session_id, 90, "converting", "Finalizing document")
 
             # Verify output file exists
             if not output_path.exists():
                 raise Exception("Output file was not created")
 
-            await self.send_progress(
-                session_id, 100, "completed", "Document conversion completed"
-            )
+            await self.send_progress(session_id, 100, "completed", "Document conversion completed")
 
             return output_path
 
         except Exception as e:
-            await self.send_progress(
-                session_id, 0, "failed", f"Conversion failed: {str(e)}"
-            )
+            await self.send_progress(session_id, 0, "failed", f"Conversion failed: {str(e)}")
             raise
 
     def _get_pandoc_format(self, format_ext: str) -> str:
@@ -207,6 +189,7 @@ class DocumentConverter(BaseConverter):
                 try:
                     cmd = [
                         settings.PANDOC_PATH,
+                        "--sandbox",
                         str(file_path),
                         "-f",
                         self._get_pandoc_format(input_format),

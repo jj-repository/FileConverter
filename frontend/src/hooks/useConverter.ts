@@ -142,7 +142,8 @@ export const useConverter = (options: UseConverterOptions) => {
     try {
       const urlParts = url.split('/');
       const defaultFilename = urlParts[urlParts.length - 1] || `converted.${outputFormat}`;
-      const filename = customFilename ? `${customFilename}.${outputFormat}` : defaultFilename;
+      const safeCustom = customFilename ? sanitizeFilename(customFilename) : null;
+      const filename = safeCustom ? `${safeCustom}.${outputFormat}` : defaultFilename;
 
       const result = await window.electron.downloadFile({
         url: `${API_BASE_URL}${url}`,

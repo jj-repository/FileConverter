@@ -32,10 +32,14 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabCh
 
   return (
     <div className="border-b border-gray-200 mb-8 overflow-x-auto">
-      <nav className="flex space-x-8 min-w-min" aria-label="Tabs">
+      <nav className="flex space-x-8 min-w-min" role="tablist" aria-label="Tabs">
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`${tab.id}-panel`}
+            id={`${tab.id}-tab`}
             onClick={() => onTabChange(tab.id)}
             className={`
               py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 whitespace-nowrap

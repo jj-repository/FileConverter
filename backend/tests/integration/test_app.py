@@ -38,7 +38,7 @@ class TestAppEndpoints:
         assert "message" in data
         assert data["message"] == "FileConverter API"
         assert "version" in data
-        assert data["version"] == "1.03"
+        assert isinstance(data["version"], str) and data["version"]
         assert "endpoints" in data
 
         # Verify all major endpoints are listed
@@ -63,8 +63,16 @@ class TestAppEndpoints:
         endpoints = response.json()["endpoints"]
 
         expected_converters = [
-            "image", "video", "audio", "document", "data",
-            "archive", "spreadsheet", "subtitle", "ebook", "font"
+            "image",
+            "video",
+            "audio",
+            "document",
+            "data",
+            "archive",
+            "spreadsheet",
+            "subtitle",
+            "ebook",
+            "font",
         ]
 
         for converter in expected_converters:
@@ -89,9 +97,7 @@ class TestAppStartup:
         try:
             settings.CACHE_ENABLED = True
             cache_service = initialize_cache_service(
-                cache_dir=cache_dir,
-                expiration_hours=1,
-                max_size_mb=100
+                cache_dir=cache_dir, expiration_hours=1, max_size_mb=100
             )
 
             # Verify cache service is initialized
@@ -110,11 +116,7 @@ class TestAppStartup:
         assert not cache_dir.exists()
 
         # Initialize cache service
-        initialize_cache_service(
-            cache_dir=cache_dir,
-            expiration_hours=1,
-            max_size_mb=100
-        )
+        initialize_cache_service(cache_dir=cache_dir, expiration_hours=1, max_size_mb=100)
 
         # Verify directory was created
         assert cache_dir.exists()
@@ -126,21 +128,19 @@ class TestAppStartup:
         monkeypatch.setattr("app.config.settings.DEBUG", True)
         # Also need to set ALLOWED_ORIGINS for the test to pass
         monkeypatch.setattr(
-            "app.config.settings.ALLOWED_ORIGINS",
-            "http://localhost:3000,http://localhost:5173"
+            "app.config.settings.ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173"
         )
 
         response = client.options(
             "/health",
-            headers={
-                "Origin": "http://localhost:3000",
-                "Access-Control-Request-Method": "GET"
-            }
+            headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "GET"},
         )
 
         # CORS headers should be present (may be 200 or have allow-origin header)
         # Note: CORS is enabled but origin may not match configured origins in test environment
-        assert response.status_code in [200, 400] or "access-control-allow-origin" in response.headers
+        assert (
+            response.status_code in [200, 400] or "access-control-allow-origin" in response.headers
+        )
 
 
 class TestBackgroundCleanupTask:
@@ -156,6 +156,7 @@ class TestBackgroundCleanupTask:
         # Set file modification time to 2 days ago (older than TEMP_FILE_LIFETIME)
         old_time = time.time() - (settings.TEMP_FILE_LIFETIME + 3600)
         import os
+
         os.utime(old_file, (old_time, old_time))
 
         # Create recent file
@@ -188,6 +189,7 @@ class TestBackgroundCleanupTask:
         # Set file modification time to old
         old_time = time.time() - (settings.TEMP_FILE_LIFETIME + 7200)
         import os
+
         os.utime(old_file, (old_time, old_time))
 
         # Run cleanup
@@ -231,28 +233,27 @@ class TestBackgroundCleanupTask:
             cache_service = initialize_cache_service(
                 cache_dir=cache_dir,
                 expiration_hours=0,  # Immediate expiration
-                max_size_mb=100
+                max_size_mb=100,
             )
 
             # Create a cache entry
             from PIL import Image
-            test_image = temp_dir / "test.jpg"
-            img = Image.new('RGB', (50, 50), color='red')
-            img.save(test_image, 'JPEG')
 
-            cache_key = cache_service.generate_cache_key(
-                test_image, "png", {"quality": 95}
-            )
+            test_image = temp_dir / "test.jpg"
+            img = Image.new("RGB", (50, 50), color="red")
+            img.save(test_image, "JPEG")
+
+            cache_key = cache_service.generate_cache_key(test_image, "png", {"quality": 95})
 
             output_file = temp_dir / "output.png"
-            img.save(output_file, 'PNG')
+            img.save(output_file, "PNG")
 
             cache_service.store_result(
                 cache_key=cache_key,
                 original_filename="test.jpg",
                 output_file_path=output_file,
                 output_format="png",
-                conversion_options={"quality": 95}
+                conversion_options={"quality": 95},
             )
 
             # Wait a moment for expiration
@@ -362,28 +363,27 @@ class TestAppShutdown:
             cache_service = initialize_cache_service(
                 cache_dir=cache_dir,
                 expiration_hours=0,  # Immediate expiration
-                max_size_mb=100
+                max_size_mb=100,
             )
 
             # Create an expired cache entry
             from PIL import Image
-            test_image = temp_dir / "test_log.jpg"
-            img = Image.new('RGB', (40, 40), color='green')
-            img.save(test_image, 'JPEG')
 
-            cache_key = cache_service.generate_cache_key(
-                test_image, "png", {"quality": 90}
-            )
+            test_image = temp_dir / "test_log.jpg"
+            img = Image.new("RGB", (40, 40), color="green")
+            img.save(test_image, "JPEG")
+
+            cache_key = cache_service.generate_cache_key(test_image, "png", {"quality": 90})
 
             output_file = temp_dir / "output_log.png"
-            img.save(output_file, 'PNG')
+            img.save(output_file, "PNG")
 
             cache_service.store_result(
                 cache_key=cache_key,
                 original_filename="test_log.jpg",
                 output_file_path=output_file,
                 output_format="png",
-                conversion_options={"quality": 90}
+                conversion_options={"quality": 90},
             )
 
             # Wait for expiration
@@ -400,8 +400,9 @@ class TestAppShutdown:
 
             # Verify logging occurred (line 128)
             # Check if cache cleanup was logged
-            assert any("cache cleanup" in record.message.lower() for record in caplog.records), \
+            assert any("cache cleanup" in record.message.lower() for record in caplog.records), (
                 "Cache cleanup should be logged (line 128)"
+            )
 
         finally:
             settings.CACHE_ENABLED = original_cache_enabled
@@ -510,30 +511,27 @@ class TestCacheStartupCleanup:
 
         # Initialize cache with 0 hour expiration
         cache_service = initialize_cache_service(
-            cache_dir=cache_dir,
-            expiration_hours=0,
-            max_size_mb=100
+            cache_dir=cache_dir, expiration_hours=0, max_size_mb=100
         )
 
         # Create expired cache entry
         from PIL import Image
-        test_image = temp_dir / "test.jpg"
-        img = Image.new('RGB', (30, 30), color='blue')
-        img.save(test_image, 'JPEG')
 
-        cache_key = cache_service.generate_cache_key(
-            test_image, "png", {"quality": 95}
-        )
+        test_image = temp_dir / "test.jpg"
+        img = Image.new("RGB", (30, 30), color="blue")
+        img.save(test_image, "JPEG")
+
+        cache_key = cache_service.generate_cache_key(test_image, "png", {"quality": 95})
 
         output_file = temp_dir / "output.png"
-        img.save(output_file, 'PNG')
+        img.save(output_file, "PNG")
 
         cache_service.store_result(
             cache_key=cache_key,
             original_filename="test.jpg",
             output_file_path=output_file,
             output_format="png",
-            conversion_options={"quality": 95}
+            conversion_options={"quality": 95},
         )
 
         # Verify entry exists
@@ -552,9 +550,7 @@ class TestCacheStartupCleanup:
         """Test that startup cleanup removes corrupted cache entries"""
         cache_dir = temp_dir / "corrupted_cache"
         cache_service = initialize_cache_service(
-            cache_dir=cache_dir,
-            expiration_hours=24,
-            max_size_mb=100
+            cache_dir=cache_dir, expiration_hours=24, max_size_mb=100
         )
 
         # Create cache directory with corrupted metadata

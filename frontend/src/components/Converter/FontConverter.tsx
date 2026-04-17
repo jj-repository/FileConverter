@@ -140,7 +140,7 @@ export const FontConverter: React.FC = () => {
                 </div>
               </div>
 
-              {window.electron && (
+              {window.electron?.isElectron && (
                 <div>
                   <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
                     Custom Filename (optional)
@@ -156,7 +156,7 @@ export const FontConverter: React.FC = () => {
                 </div>
               )}
 
-              {window.electron && (
+              {window.electron?.isElectron && (
                 <div>
                   <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
                     Output Directory
@@ -224,7 +224,7 @@ export const FontConverter: React.FC = () => {
                 </div>
               )}
 
-              {converter.downloadUrl && converter.status === 'completed' && !window.electron && (
+              {converter.downloadUrl && converter.status === 'completed' && !window.electron?.isElectron && (
                 <div className="text-center">
                   <a
                     href={converter.downloadUrl}

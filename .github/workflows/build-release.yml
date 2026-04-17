@@ -6,6 +6,9 @@ on:
       - 'v*.*.*'  # Triggers on version tags like v1.0.0
   workflow_dispatch:  # Allows manual trigger
 
+permissions:
+  contents: read
+
 jobs:
   build:
     strategy:
@@ -47,7 +50,7 @@ jobs:
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install pyinstaller==6.14.2
 
       - name: Setup Python virtual environment (Windows)
         if: runner.os == 'Windows'
@@ -135,6 +138,7 @@ jobs:
           path: |
             frontend/dist-electron/*.AppImage
             frontend/dist-electron/*.deb
+          retention-days: 1
 
       - name: Upload artifacts (Windows)
         if: runner.os == 'Windows'
@@ -143,6 +147,7 @@ jobs:
           name: windows-release
           path: |
             frontend/dist-electron/*.exe
+          retention-days: 1
 
   release:
     needs: build

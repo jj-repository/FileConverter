@@ -90,6 +90,7 @@ export const SubtitleConverter: React.FC = () => {
             <div className="border-b border-gray-200">
               <div className="flex space-x-4" role="tablist">
                 <button
+                  id="convert-format-tab"
                   role="tab"
                   aria-selected={!adjustTimingMode}
                   aria-controls="convert-format-panel"
@@ -103,6 +104,7 @@ export const SubtitleConverter: React.FC = () => {
                   Convert Format
                 </button>
                 <button
+                  id="adjust-timing-tab"
                   role="tab"
                   aria-selected={adjustTimingMode}
                   aria-controls="adjust-timing-panel"

@@ -34,9 +34,9 @@ class Settings(BaseSettings):
 
     # File size limits (in bytes)
     MAX_UPLOAD_SIZE: int = 524288000  # 500MB
-    VIDEO_MAX_SIZE: int = 524288000   # 500MB
-    IMAGE_MAX_SIZE: int = 104857600   # 100MB
-    AUDIO_MAX_SIZE: int = 104857600   # 100MB
+    VIDEO_MAX_SIZE: int = 524288000  # 500MB
+    IMAGE_MAX_SIZE: int = 104857600  # 100MB
+    AUDIO_MAX_SIZE: int = 104857600  # 100MB
     DOCUMENT_MAX_SIZE: int = 52428800  # 50MB
     ARCHIVE_MAX_SIZE: int = 524288000  # 500MB
     SPREADSHEET_MAX_SIZE: int = 104857600  # 100MB
@@ -58,9 +58,50 @@ class Settings(BaseSettings):
     PANDOC_PATH: str = ""
 
     # Supported formats
-    IMAGE_FORMATS: Set[str] = {"png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "ico", "heic", "heif", "svg", "tga"}
-    VIDEO_FORMATS: Set[str] = {"mp4", "avi", "mov", "mkv", "webm", "flv", "wmv", "m4v", "3gp", "3g2", "mts", "m2ts", "vob", "ts", "ogv"}
-    AUDIO_FORMATS: Set[str] = {"mp3", "wav", "flac", "aac", "ogg", "m4a", "wma", "opus", "alac", "ape", "mka"}
+    IMAGE_FORMATS: Set[str] = {
+        "png",
+        "jpg",
+        "jpeg",
+        "webp",
+        "gif",
+        "bmp",
+        "tiff",
+        "ico",
+        "heic",
+        "heif",
+        "svg",
+        "tga",
+    }
+    VIDEO_FORMATS: Set[str] = {
+        "mp4",
+        "avi",
+        "mov",
+        "mkv",
+        "webm",
+        "flv",
+        "wmv",
+        "m4v",
+        "3gp",
+        "3g2",
+        "mts",
+        "m2ts",
+        "vob",
+        "ts",
+        "ogv",
+    }
+    AUDIO_FORMATS: Set[str] = {
+        "mp3",
+        "wav",
+        "flac",
+        "aac",
+        "ogg",
+        "m4a",
+        "wma",
+        "opus",
+        "alac",
+        "ape",
+        "mka",
+    }
     DOCUMENT_FORMATS: Set[str] = {"txt", "pdf", "docx", "md", "html", "rtf", "odt"}
     DATA_FORMATS: Set[str] = {"csv", "json", "xml", "yaml", "yml", "toml", "ini", "jsonl"}
     ARCHIVE_FORMATS: Set[str] = {"zip", "tar", "tar.gz", "tgz", "tar.bz2", "tbz2", "gz", "7z"}
@@ -71,9 +112,30 @@ class Settings(BaseSettings):
 
     # FFmpeg allowed options (whitelist for security)
     ALLOWED_VIDEO_CODECS: Set[str] = {"libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4", "h264"}
-    ALLOWED_AUDIO_CODECS: Set[str] = {"aac", "libmp3lame", "libvorbis", "libopus", "flac", "pcm_s16le", "wmav2"}
+    ALLOWED_AUDIO_CODECS: Set[str] = {
+        "aac",
+        "libmp3lame",
+        "libvorbis",
+        "libopus",
+        "flac",
+        "pcm_s16le",
+        "wmav2",
+    }
     ALLOWED_RESOLUTIONS: Set[str] = {"original", "480p", "720p", "1080p", "4k", "2k"}
-    ALLOWED_BITRATES: Set[str] = {"500k", "1M", "2M", "3M", "4M", "5M", "8M", "10M", "128k", "192k", "256k", "320k"}
+    ALLOWED_BITRATES: Set[str] = {
+        "500k",
+        "1M",
+        "2M",
+        "3M",
+        "4M",
+        "5M",
+        "8M",
+        "10M",
+        "128k",
+        "192k",
+        "256k",
+        "320k",
+    }
     ALLOWED_SAMPLE_RATES: Set[str] = {"44100", "48000", "96000", "22050"}
     ALLOWED_AUDIO_CHANNELS: Set[str] = {"1", "2"}
 
@@ -102,7 +164,7 @@ class Settings(BaseSettings):
     # Must be at least MIN_ADMIN_API_KEY_LENGTH characters when set
     ADMIN_API_KEY: str = ""
 
-    @field_validator('ADMIN_API_KEY')
+    @field_validator("ADMIN_API_KEY")
     @classmethod
     def validate_admin_api_key(cls, v: str) -> str:
         """Validate ADMIN_API_KEY has sufficient length when set"""
@@ -113,7 +175,7 @@ class Settings(BaseSettings):
                 f"Admin endpoints will be disabled. Use a longer, randomly generated key."
             )
             _config_logger.warning(warning_msg)
-            print(f"\n{'='*80}\n{warning_msg}\n{'='*80}\n", file=sys.stderr)
+            print(f"\n{'=' * 80}\n{warning_msg}\n{'=' * 80}\n", file=sys.stderr)
             # Return empty string to disable admin endpoints with weak key
             return ""
         return v
@@ -131,13 +193,14 @@ class Settings(BaseSettings):
             if isinstance(self.ALLOWED_ORIGINS, list):
                 origins = self.ALLOWED_ORIGINS
             else:
-                origins = [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+                origins = [
+                    origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()
+                ]
 
             # In production, warn if localhost origins are configured
             if not self.DEBUG:
                 localhost_origins = [o for o in origins if "localhost" in o or "127.0.0.1" in o]
                 if localhost_origins:
-                    import logging
                     logging.getLogger(__name__).warning(
                         f"Localhost origins configured in production mode: {localhost_origins}. "
                         "This may be a security risk."

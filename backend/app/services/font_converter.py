@@ -52,11 +52,7 @@ class FontConverter(BaseConverter):
         Returns:
             Path to converted font file
         """
-        await self.send_progress(
-            session_id, 10, "converting", "Starting font conversion"
-        )
-
-        input_path.suffix[1:].lower()
+        await self.send_progress(session_id, 10, "converting", "Starting font conversion")
 
         # Generate output filename
         output_filename = f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
@@ -84,9 +80,7 @@ class FontConverter(BaseConverter):
 
             result = await asyncio.to_thread(_sync_font_convert)
 
-            await self.send_progress(
-                session_id, 100, "converting", "Conversion complete"
-            )
+            await self.send_progress(session_id, 100, "converting", "Conversion complete")
             return result
 
         except Exception as e:
@@ -105,9 +99,7 @@ class FontConverter(BaseConverter):
 
     async def _apply_subset(self, font: TTFont, subset_text: str, session_id: str):
         """Apply subsetting to keep only specified characters"""
-        await self.send_progress(
-            session_id, 60, "converting", "Applying font subsetting"
-        )
+        await self.send_progress(session_id, 60, "converting", "Applying font subsetting")
 
         # Create subsetter
         subsetter = Subsetter()
@@ -138,73 +130,60 @@ class FontConverter(BaseConverter):
             "format": file_path.suffix[1:].lower(),
         }
 
-        font = None
-        try:
-            font = TTFont(str(file_path))
-
-            # Get font name
-            name_table = font.get("name")
-            if name_table:
-                # Get font family name (ID 1)
-                for record in name_table.names:
-                    if record.nameID == 1:  # Font Family
-                        try:
-                            info["family_name"] = record.toUnicode()
+        def _sync_get_info() -> dict:
+            font = None
+            try:
+                font = TTFont(str(file_path))
+                result: dict = {}
+                name_table = font.get("name")
+                if name_table:
+                    for record in name_table.names:
+                        if record.nameID == 1:
+                            try:
+                                result["family_name"] = record.toUnicode()
+                            except (UnicodeDecodeError, AttributeError) as e:
+                                logger.debug(f"Failed to decode font family name: {e}")
                             break
-                        except (UnicodeDecodeError, AttributeError) as e:
-                            logger.debug(f"Failed to decode font family name: {str(e)}")
-                            pass
-
-                # Get font subfamily (style) name (ID 2)
-                for record in name_table.names:
-                    if record.nameID == 2:  # Subfamily
-                        try:
-                            info["style_name"] = record.toUnicode()
+                    for record in name_table.names:
+                        if record.nameID == 2:
+                            try:
+                                result["style_name"] = record.toUnicode()
+                            except (UnicodeDecodeError, AttributeError) as e:
+                                logger.debug(f"Failed to decode font style name: {e}")
                             break
-                        except (UnicodeDecodeError, AttributeError) as e:
-                            logger.debug(f"Failed to decode font style name: {str(e)}")
-                            pass
-
-                # Get full font name (ID 4)
-                for record in name_table.names:
-                    if record.nameID == 4:  # Full name
-                        try:
-                            info["full_name"] = record.toUnicode()
+                    for record in name_table.names:
+                        if record.nameID == 4:
+                            try:
+                                result["full_name"] = record.toUnicode()
+                            except (UnicodeDecodeError, AttributeError) as e:
+                                logger.debug(f"Failed to decode full font name: {e}")
                             break
-                        except (UnicodeDecodeError, AttributeError) as e:
-                            logger.debug(f"Failed to decode full font name: {str(e)}")
-                            pass
-
-                # Get version (ID 5)
-                for record in name_table.names:
-                    if record.nameID == 5:  # Version
-                        try:
-                            info["version"] = record.toUnicode()
+                    for record in name_table.names:
+                        if record.nameID == 5:
+                            try:
+                                result["version"] = record.toUnicode()
+                            except (UnicodeDecodeError, AttributeError) as e:
+                                logger.debug(f"Failed to decode font version: {e}")
                             break
-                        except (UnicodeDecodeError, AttributeError) as e:
-                            logger.debug(f"Failed to decode font version: {str(e)}")
-                            pass
+                if "glyf" in font:
+                    result["glyph_count"] = len(font["glyf"].glyphs)
+                elif "CFF " in font:
+                    result["glyph_count"] = (
+                        font["CFF "].cff.topDictIndex[0].CharStrings.charStringsIndex.count
+                    )
+                if hasattr(font, "flavor"):
+                    result["is_web_font"] = font.flavor in ["woff", "woff2"]
+                    if font.flavor:
+                        result["web_format"] = font.flavor
+                return result
+            except Exception as e:
+                logger.warning(f"Could not extract font metadata: {e}")
+                return {}
+            finally:
+                if font is not None:
+                    font.close()
 
-            # Get glyph count
-            if "glyf" in font:  # TrueType
-                info["glyph_count"] = len(font["glyf"].glyphs)
-            elif "CFF " in font:  # OpenType/CFF
-                info["glyph_count"] = (
-                    font["CFF "].cff.topDictIndex[0].CharStrings.charStringsIndex.count
-                )
-
-            # Check if it's a web font
-            if hasattr(font, "flavor"):
-                info["is_web_font"] = font.flavor in ["woff", "woff2"]
-                if font.flavor:
-                    info["web_format"] = font.flavor
-
-        except Exception as e:
-            logger.warning(f"Could not extract font metadata: {e}")
-        finally:
-            if font is not None:
-                font.close()
-
+        info.update(await asyncio.to_thread(_sync_get_info))
         return info
 
     async def optimize_font(self, input_path: Path, session_id: str) -> Path:
@@ -218,48 +197,29 @@ class FontConverter(BaseConverter):
         Returns:
             Path to optimized font file
         """
-        await self.send_progress(
-            session_id, 10, "converting", "Starting font optimization"
-        )
+        await self.send_progress(session_id, 10, "converting", "Starting font optimization")
 
         output_filename = f"{input_path.stem}_optimized{input_path.suffix}"
         output_path = settings.UPLOAD_DIR / output_filename
 
-        font = None
-        try:
-            font = TTFont(str(input_path))
+        tables_to_drop = ["DSIG", "hdmx", "VDMX", "LTSH", "PCLT"]
 
-            await self.send_progress(
-                session_id, 50, "converting", "Optimizing font tables"
-            )
+        def _sync_optimize() -> None:
+            font = None
+            try:
+                font = TTFont(str(input_path))
+                for table in tables_to_drop:
+                    if table in font:
+                        del font[table]
+                font.save(str(output_path))
+            except Exception as e:
+                logger.error(f"Font optimization failed: {e}")
+                raise
+            finally:
+                if font is not None:
+                    font.close()
 
-            # Remove unnecessary tables for web use
-            tables_to_drop = [
-                "DSIG",  # Digital signature
-                "hdmx",  # Horizontal device metrics
-                "VDMX",  # Vertical device metrics
-                "LTSH",  # Linear threshold
-                "PCLT",  # PCL 5 data
-            ]
-
-            for table in tables_to_drop:
-                if table in font:
-                    del font[table]
-
-            await self.send_progress(
-                session_id, 80, "converting", "Saving optimized font"
-            )
-
-            font.save(str(output_path))
-
-            await self.send_progress(
-                session_id, 100, "converting", "Optimization complete"
-            )
-            return output_path
-
-        except Exception as e:
-            logger.error(f"Font optimization failed: {e}")
-            raise
-        finally:
-            if font is not None:
-                font.close()
+        await self.send_progress(session_id, 50, "converting", "Optimizing font tables")
+        await asyncio.to_thread(_sync_optimize)
+        await self.send_progress(session_id, 100, "converting", "Optimization complete")
+        return output_path

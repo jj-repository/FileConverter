@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import subprocess
 import sys
@@ -12,7 +13,6 @@ from app.utils.subprocess_utils import parse_ffmpeg_progress as _parse_ffmpeg_pr
 from app.utils.subprocess_utils import subprocess_kwargs as _subprocess_kwargs
 
 logger = logging.getLogger(__name__)
-
 
 
 class VideoConverter(BaseConverter):
@@ -58,7 +58,6 @@ class VideoConverter(BaseConverter):
         except Exception as e:
             logger.error(f"Error getting video duration: {e}")
             return 0.0
-
 
     def get_video_codec_for_format(
         self, output_format: str, user_codec: Optional[str] = None
@@ -115,26 +114,19 @@ class VideoConverter(BaseConverter):
         Returns:
             Path to converted video
         """
-        await self.send_progress(
-            session_id, 0, "converting", "Starting video conversion"
-        )
+        await self.send_progress(session_id, 0, "converting", "Starting video conversion")
 
         # Validate format
         input_format = input_path.suffix.lower().lstrip(".")
-        if not self.validate_format(
-            input_format, output_format, self.supported_formats
-        ):
-            raise ValueError(
-                f"Unsupported conversion: {input_format} to {output_format}"
-            )
+        if not self.validate_format(input_format, output_format, self.supported_formats):
+            raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Get video duration for progress tracking
         total_duration = await self.get_video_duration(input_path)
 
         # Generate output path
         output_path = (
-            settings.UPLOAD_DIR
-            / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
         )
 
         await self.send_progress(session_id, 5, "converting", "Preparing conversion")
@@ -143,15 +135,11 @@ class VideoConverter(BaseConverter):
         # Get appropriate codec for the output format (or use user-specified codec)
         codec = self.get_video_codec_for_format(output_format, options.get("codec"))
         if codec not in settings.ALLOWED_VIDEO_CODECS:
-            raise ValueError(
-                f"Invalid codec: {codec}. Allowed: {settings.ALLOWED_VIDEO_CODECS}"
-            )
+            raise ValueError(f"Invalid codec: {codec}. Allowed: {settings.ALLOWED_VIDEO_CODECS}")
 
         bitrate = options.get("bitrate", "2M")
         if bitrate not in settings.ALLOWED_BITRATES:
-            raise ValueError(
-                f"Invalid bitrate: {bitrate}. Allowed: {settings.ALLOWED_BITRATES}"
-            )
+            raise ValueError(f"Invalid bitrate: {bitrate}. Allowed: {settings.ALLOWED_BITRATES}")
 
         resolution = options.get("resolution", "original")
         if resolution not in settings.ALLOWED_RESOLUTIONS:
@@ -162,8 +150,9 @@ class VideoConverter(BaseConverter):
         cmd = [
             settings.FFMPEG_PATH,
             "-nostdin",
-                "-protocol_whitelist", "file,pipe",
-                "-i",
+            "-protocol_whitelist",
+            "file,pipe",
+            "-i",
             str(input_path),
             "-y",  # Overwrite output file
             "-progress",
@@ -196,9 +185,7 @@ class VideoConverter(BaseConverter):
         # Add output file
         cmd.append(str(output_path))
 
-        await self.send_progress(
-            session_id, 10, "converting", "Starting FFmpeg conversion"
-        )
+        await self.send_progress(session_id, 10, "converting", "Starting FFmpeg conversion")
 
         # Run FFmpeg conversion with progress tracking
         try:
@@ -243,9 +230,7 @@ class VideoConverter(BaseConverter):
                     await process.communicate()
                 except Exception:
                     pass
-                raise Exception(
-                    f"Conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds"
-                )
+                raise Exception(f"Conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds")
             except Exception:
                 # Ensure process is terminated and streams consumed on any error
                 if process.returncode is None:
@@ -270,16 +255,12 @@ class VideoConverter(BaseConverter):
             if not output_path.exists():
                 raise Exception("Output file was not created")
 
-            await self.send_progress(
-                session_id, 100, "completed", "Video conversion completed"
-            )
+            await self.send_progress(session_id, 100, "completed", "Video conversion completed")
 
             return output_path
 
         except Exception as e:
-            await self.send_progress(
-                session_id, 0, "failed", f"Conversion failed: {str(e)}"
-            )
+            await self.send_progress(session_id, 0, "failed", f"Conversion failed: {str(e)}")
             raise
 
     async def get_video_metadata(self, file_path: Path) -> Dict[str, Any]:
@@ -307,27 +288,17 @@ class VideoConverter(BaseConverter):
             )
 
             if result.returncode == 0:
-                import json
-
                 data = json.loads(result.stdout)
 
                 # Extract video stream info
                 video_stream = next(
-                    (
-                        s
-                        for s in data.get("streams", [])
-                        if s.get("codec_type") == "video"
-                    ),
+                    (s for s in data.get("streams", []) if s.get("codec_type") == "video"),
                     {},
                 )
 
                 # Extract audio stream info
                 audio_stream = next(
-                    (
-                        s
-                        for s in data.get("streams", [])
-                        if s.get("codec_type") == "audio"
-                    ),
+                    (s for s in data.get("streams", []) if s.get("codec_type") == "audio"),
                     {},
                 )
 

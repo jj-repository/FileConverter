@@ -222,7 +222,7 @@ export const BatchConverter: React.FC = () => {
               <div className="max-h-64 overflow-y-auto space-y-2">
                 {selectedFiles.map((file, index) => (
                   <div
-                    key={index}
+                    key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
                     className="flex items-center justify-between bg-white p-3 rounded border border-gray-200"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">

@@ -65,22 +65,6 @@ def make_content_disposition(filename: str, disposition: str = "attachment") -> 
         return f"{disposition}; filename=\"{ascii_fallback}\"; filename*=UTF-8''{utf8_encoded}"
 
 
-def _parse_fps_safe(fps_str: str) -> float:
-    """Safely parse FPS from fraction string like '30000/1001'"""
-    try:
-        fps_str = str(fps_str).strip()
-        if "/" in fps_str:
-            parts = fps_str.split("/")
-            if len(parts) == 2:
-                numerator = float(parts[0])
-                denominator = float(parts[1])
-                if denominator != 0:
-                    return round(numerator / denominator, 2)
-        return float(fps_str)
-    except (ValueError, ZeroDivisionError, AttributeError):
-        return 0.0
-
-
 async def save_upload_file(
     upload_file: UploadFile, destination_dir: Path = settings.TEMP_DIR
 ) -> Path:

@@ -57,9 +57,7 @@ class EbookConverter(BaseConverter):
         Returns:
             Path to converted file
         """
-        await self.send_progress(
-            session_id, 10, "converting", "Starting eBook conversion"
-        )
+        await self.send_progress(session_id, 10, "converting", "Starting eBook conversion")
 
         input_format = input_path.suffix[1:].lower()
 
@@ -69,21 +67,13 @@ class EbookConverter(BaseConverter):
 
         try:
             if input_format == "epub":
-                await self._convert_from_epub(
-                    input_path, output_path, output_format, session_id
-                )
+                await self._convert_from_epub(input_path, output_path, output_format, session_id)
             elif output_format == "epub":
-                await self._convert_to_epub(
-                    input_path, input_format, output_path, session_id
-                )
+                await self._convert_to_epub(input_path, input_format, output_path, session_id)
             else:
-                raise ValueError(
-                    f"Unsupported conversion: {input_format} → {output_format}"
-                )
+                raise ValueError(f"Unsupported conversion: {input_format} → {output_format}")
 
-            await self.send_progress(
-                session_id, 100, "converting", "Conversion complete"
-            )
+            await self.send_progress(session_id, 100, "converting", "Conversion complete")
             return output_path
 
         except Exception as e:
@@ -112,60 +102,35 @@ class EbookConverter(BaseConverter):
         else:
             raise ValueError(f"Unsupported output format: {output_format}")
 
-    async def _epub_to_txt(
-        self, book: epub.EpubBook, output_path: Path, session_id: str
-    ):
+    async def _epub_to_txt(self, book: epub.EpubBook, output_path: Path, session_id: str):
         """Convert EPUB to plain text"""
-        text_content = []
+        await self.send_progress(session_id, 60, "converting", "Extracting text content")
 
-        # Extract title and author if available
-        title = book.get_metadata("DC", "title")
-        if title:
-            text_content.append(f"Title: {title[0][0]}\n")
+        def _sync_extract() -> str:
+            text_content = []
+            title = book.get_metadata("DC", "title")
+            if title:
+                text_content.append(f"Title: {title[0][0]}\n")
+            creator = book.get_metadata("DC", "creator")
+            if creator:
+                text_content.append(f"Author: {creator[0][0]}\n")
+            text_content.append("\n" + "=" * 80 + "\n\n")
+            for item in book.get_items():
+                if item.get_type() == 9:  # ITEM_DOCUMENT (HTML)
+                    soup = BeautifulSoup(item.get_content(), "html.parser")
+                    for tag in soup(["script", "style"]):
+                        tag.decompose()
+                    text = soup.get_text()
+                    lines = (line.strip() for line in text.splitlines())
+                    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+                    text = "\n".join(chunk for chunk in chunks if chunk)
+                    if text.strip():
+                        text_content.append(text)
+                        text_content.append("\n\n")
+            return "\n".join(text_content)
 
-        creator = book.get_metadata("DC", "creator")
-        if creator:
-            text_content.append(f"Author: {creator[0][0]}\n")
-
-        text_content.append("\n" + "=" * 80 + "\n\n")
-
-        # Extract text from HTML items
-        items = list(book.get_items())
-        for i, item in enumerate(items):
-            if item.get_type() == 9:  # ITEM_DOCUMENT (HTML)
-                html_content = item.get_content()
-                soup = BeautifulSoup(html_content, "html.parser")
-
-                # Remove script and style tags
-                for script in soup(["script", "style"]):
-                    script.decompose()
-
-                # Get text
-                text = soup.get_text()
-
-                # Clean up whitespace
-                lines = (line.strip() for line in text.splitlines())
-                chunks = (
-                    phrase.strip() for line in lines for phrase in line.split("  ")
-                )
-                text = "\n".join(chunk for chunk in chunks if chunk)
-
-                if text.strip():
-                    text_content.append(text)
-                    text_content.append("\n\n")
-
-            # Update progress
-            if i % 10 == 0:
-                progress = 50 + int((i / len(items)) * 40)
-                await self.send_progress(
-                    session_id,
-                    progress,
-                    "converting",
-                    f"Processing content ({i}/{len(items)})",
-                )
-
-        # Write to file
-        output_path.write_text("\n".join(text_content), encoding="utf-8")
+        result = await asyncio.to_thread(_sync_extract)
+        output_path.write_text(result, encoding="utf-8")
 
     def _sanitize_html(self, html_content: str) -> str:
         """Remove dangerous HTML elements for XSS prevention"""
@@ -180,9 +145,7 @@ class EbookConverter(BaseConverter):
         html_content = re.sub(
             r'\s+on\w+\s*=\s*["\'][^"\']*["\']', "", html_content, flags=re.IGNORECASE
         )
-        html_content = re.sub(
-            r"\s+on\w+\s*=\s*\S+", "", html_content, flags=re.IGNORECASE
-        )
+        html_content = re.sub(r"\s+on\w+\s*=\s*\S+", "", html_content, flags=re.IGNORECASE)
         # Remove javascript: URLs
         html_content = re.sub(
             r'href\s*=\s*["\']javascript:[^"\']*["\']',
@@ -192,80 +155,49 @@ class EbookConverter(BaseConverter):
         )
         return html_content
 
-    async def _epub_to_html(
-        self, book: epub.EpubBook, output_path: Path, session_id: str
-    ):
+    async def _epub_to_html(self, book: epub.EpubBook, output_path: Path, session_id: str):
         """Convert EPUB to single HTML file"""
-        html_parts = []
+        await self.send_progress(session_id, 60, "converting", "Building HTML output")
 
-        # Add HTML header
-        html_parts.append("<!DOCTYPE html>")
-        html_parts.append("<html>")
-        html_parts.append("<head>")
-        html_parts.append('<meta charset="UTF-8">')
+        def _sync_build() -> str:
+            parts = [
+                "<!DOCTYPE html>",
+                "<html>",
+                "<head>",
+                '<meta charset="UTF-8">',
+            ]
+            title = book.get_metadata("DC", "title")
+            if title:
+                parts.append(f"<title>{title[0][0]}</title>")
+            parts += [
+                "<style>",
+                "body { font-family: Georgia, serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }",
+                "h1, h2, h3 { color: #333; }",
+                "p { margin: 1em 0; }",
+                "</style>",
+                "</head>",
+                "<body>",
+                "<header>",
+            ]
+            if title:
+                parts.append(f"<h1>{title[0][0]}</h1>")
+            creator = book.get_metadata("DC", "creator")
+            if creator:
+                parts.append(f"<p><strong>Author:</strong> {creator[0][0]}</p>")
+            parts += ["</header>", "<hr>"]
+            for item in book.get_items():
+                if item.get_type() == 9:  # ITEM_DOCUMENT
+                    html_content = item.get_content().decode("utf-8", errors="replace")
+                    soup = BeautifulSoup(html_content, "html.parser")
+                    body = soup.find("body")
+                    parts.append(str(body) if body else html_content)
+            parts += ["</body>", "</html>"]
+            return self._sanitize_html("\n".join(parts))
 
-        # Add title
-        title = book.get_metadata("DC", "title")
-        if title:
-            html_parts.append(f"<title>{title[0][0]}</title>")
+        result = await asyncio.to_thread(_sync_build)
+        output_path.write_text(result, encoding="utf-8")
 
-        html_parts.append("<style>")
-        html_parts.append(
-            "body { font-family: Georgia, serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }"
-        )
-        html_parts.append("h1, h2, h3 { color: #333; }")
-        html_parts.append("p { margin: 1em 0; }")
-        html_parts.append("</style>")
-        html_parts.append("</head>")
-        html_parts.append("<body>")
-
-        # Add metadata
-        html_parts.append("<header>")
-        if title:
-            html_parts.append(f"<h1>{title[0][0]}</h1>")
-        creator = book.get_metadata("DC", "creator")
-        if creator:
-            html_parts.append(f"<p><strong>Author:</strong> {creator[0][0]}</p>")
-        html_parts.append("</header>")
-        html_parts.append("<hr>")
-
-        # Extract HTML content
-        items = list(book.get_items())
-        for i, item in enumerate(items):
-            if item.get_type() == 9:  # ITEM_DOCUMENT
-                html_content = item.get_content().decode("utf-8", errors="replace")
-                soup = BeautifulSoup(html_content, "html.parser")
-
-                # Extract body content
-                body = soup.find("body")
-                if body:
-                    html_parts.append(str(body))
-                else:
-                    html_parts.append(html_content)
-
-            # Update progress
-            if i % 10 == 0:
-                progress = 50 + int((i / len(items)) * 40)
-                await self.send_progress(
-                    session_id,
-                    progress,
-                    "converting",
-                    f"Processing content ({i}/{len(items)})",
-                )
-
-        # Close HTML
-        html_parts.append("</body>")
-        html_parts.append("</html>")
-
-        # Sanitize assembled HTML to prevent stored XSS
-        assembled_html = self._sanitize_html("\n".join(html_parts))
-
-        # Write to file
-        output_path.write_text(assembled_html, encoding="utf-8")
-
-    async def _epub_to_pdf(
-        self, book: epub.EpubBook, output_path: Path, session_id: str
-    ):
+    async def _epub_to_pdf(self, book: epub.EpubBook, output_path: Path, session_id: str):
         """Convert EPUB to PDF (simple text-based conversion)"""
         # Create PDF
         doc = SimpleDocTemplate(str(output_path), pagesize=letter)
@@ -299,9 +231,7 @@ class EbookConverter(BaseConverter):
 
                 # Clean up whitespace
                 lines = (line.strip() for line in text.splitlines())
-                chunks = (
-                    phrase.strip() for line in lines for phrase in line.split("  ")
-                )
+                chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
                 text = "\n".join(chunk for chunk in chunks if chunk)
 
                 # Add paragraphs to PDF
@@ -353,17 +283,13 @@ class EbookConverter(BaseConverter):
         elif input_format == "html":
             await self._html_to_epub(input_path, book, session_id)
         else:
-            raise ValueError(
-                f"Conversion from {input_format} to EPUB not yet supported"
-            )
+            raise ValueError(f"Conversion from {input_format} to EPUB not yet supported")
 
         # Write EPUB file
         await self.send_progress(session_id, 90, "converting", "Writing EPUB file")
         await asyncio.to_thread(epub.write_epub, str(output_path), book)
 
-    async def _txt_to_epub(
-        self, input_path: Path, book: epub.EpubBook, session_id: str
-    ):
+    async def _txt_to_epub(self, input_path: Path, book: epub.EpubBook, session_id: str):
         """Convert plain text to EPUB"""
         text = input_path.read_text(encoding="utf-8")
 
@@ -390,9 +316,7 @@ class EbookConverter(BaseConverter):
         book.add_item(epub.EpubNcx())
         book.add_item(epub.EpubNav())
 
-    async def _html_to_epub(
-        self, input_path: Path, book: epub.EpubBook, session_id: str
-    ):
+    async def _html_to_epub(self, input_path: Path, book: epub.EpubBook, session_id: str):
         """Convert HTML to EPUB"""
         html = input_path.read_text(encoding="utf-8")
 
@@ -428,7 +352,7 @@ class EbookConverter(BaseConverter):
         # Try to extract EPUB metadata
         if file_path.suffix.lower() == ".epub":
             try:
-                book = epub.read_epub(str(file_path))
+                book = await asyncio.to_thread(epub.read_epub, str(file_path))
 
                 title = book.get_metadata("DC", "title")
                 if title:

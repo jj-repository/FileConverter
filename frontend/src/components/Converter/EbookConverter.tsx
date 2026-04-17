@@ -5,6 +5,7 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { ebookAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { useFormats } from '../../hooks/useFormats';
 import { EBOOK_FORMATS } from '../../config/constants';
 
 
@@ -12,6 +13,7 @@ export const EbookConverter: React.FC = () => {
   const { t } = useTranslation();
 
   const converter = useConverter({ defaultOutputFormat: 'epub' });
+  const { inputFormats, outputFormats } = useFormats(ebookAPI, EBOOK_FORMATS);
 
   const handleConvert = async () => {
     await converter.handleConvert(ebookAPI, {});
@@ -73,7 +75,7 @@ export const EbookConverter: React.FC = () => {
         <div className="space-y-6">
           <DropZone
             onFileSelect={converter.handleFileSelect}
-            acceptedFormats={EBOOK_FORMATS}
+            acceptedFormats={inputFormats}
             fileType="ebook"
           />
 
@@ -98,7 +100,7 @@ export const EbookConverter: React.FC = () => {
                   className="input"
                   aria-label="Select output format for ebook conversion"
                 >
-                  {EBOOK_FORMATS.map((format) => (
+                  {outputFormats.map((format) => (
                     <option key={format} value={format}>
                       {format.toUpperCase()}
                     </option>

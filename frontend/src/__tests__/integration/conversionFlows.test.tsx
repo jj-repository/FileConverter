@@ -237,15 +237,14 @@ describe('Integration: Conversion Flows', () => {
       })
       await user.click(convertButton)
 
-      // Wait for error or conversion attempt
+      // Wait for the error to actually surface — either a role=alert element
+      // or error text. `allButtons.length > 0` as a fallback made this test
+      // vacuous (buttons are always present).
       await waitFor(
         () => {
           const alerts = screen.queryAllByRole('alert')
           const errorText = screen.queryByText(/conversion failed|invalid image format/i)
-          const allButtons = screen.queryAllByRole('button')
-
-          // Error shown OR button state changed (attempt was made)
-          expect(alerts.length > 0 || errorText !== null || allButtons.length > 0).toBe(true)
+          expect(alerts.length > 0 || errorText !== null).toBe(true)
         },
         { timeout: 2000 }
       )
@@ -287,13 +286,13 @@ describe('Integration: Conversion Flows', () => {
       // Wait for conversion attempt (error or other response)
       await new Promise(resolve => setTimeout(resolve, 500))
 
-      // Look for reset button (using translation key)
-      const resetButton = screen.queryByRole('button', {
-        name: 'common.reset',
+      // Look for reset button (using translation key). The test's whole
+      // point is "reset is available after failure" — require that button.
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', { name: 'common.reset' })
+        ).toBeInTheDocument()
       })
-
-      // Test passes if reset button exists or error was handled
-      expect(resetButton !== null || screen.queryAllByRole('button').length > 0).toBe(true)
     })
   })
 
@@ -462,15 +461,11 @@ describe('Integration: Conversion Flows', () => {
         expect(screen.getByText('test.jpg')).toBeInTheDocument()
       })
 
-      // Find format dropdown
-      const formatSelects = screen.queryAllByLabelText(/converter.outputFormat/i)
-      if (formatSelects.length > 0) {
-        await user.selectOptions(formatSelects[0], 'png')
-
-        // Verify selection
-        const select = formatSelects[0] as HTMLSelectElement
-        expect(select.value).toBe('png')
-      }
+      // Find format dropdown — require it; silently skipping the assertion
+      // when not found turned this into a no-op test for months.
+      const formatSelect = screen.getByLabelText(/output format/i) as HTMLSelectElement
+      await user.selectOptions(formatSelect, 'png')
+      expect(formatSelect.value).toBe('png')
 
       const convertButton = screen.getByRole('button', {
         name: /convert/i,

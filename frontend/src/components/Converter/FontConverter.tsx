@@ -5,6 +5,7 @@ import { Button } from '../Common/Button';
 import { Card } from '../Common/Card';
 import { fontAPI } from '../../services/api';
 import { useConverter } from '../../hooks/useConverter';
+import { useFormats } from '../../hooks/useFormats';
 import { FONT_FORMATS } from '../../config/constants';
 
 
@@ -14,6 +15,7 @@ export const FontConverter: React.FC = () => {
   const [optimize, setOptimize] = useState<boolean>(true);
 
   const converter = useConverter({ defaultOutputFormat: 'woff2' });
+  const { inputFormats, outputFormats } = useFormats(fontAPI, FONT_FORMATS);
 
   const handleConvert = async () => {
     await converter.handleConvert(fontAPI, {
@@ -72,7 +74,7 @@ export const FontConverter: React.FC = () => {
         <div className="space-y-6">
           <DropZone
             onFileSelect={converter.handleFileSelect}
-            acceptedFormats={FONT_FORMATS}
+            acceptedFormats={inputFormats}
             fileType="font"
           />
 
@@ -97,7 +99,7 @@ export const FontConverter: React.FC = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   aria-label="Select output format for font conversion"
                 >
-                  {FONT_FORMATS.map((format) => (
+                  {outputFormats.map((format) => (
                     <option key={format} value={format}>
                       {format.toUpperCase()}
                     </option>

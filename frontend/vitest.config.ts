@@ -32,10 +32,15 @@ export default defineConfig({
       ],
       include: ['src/**/*.{ts,tsx}'],
       all: true,
-      lines: 60,
-      functions: 60,
-      branches: 60,
-      statements: 60,
+      // Thresholds must live under `coverage.thresholds` to be enforced
+      // by `vitest run --coverage` (vitest v1+). At the top level they are
+      // silently ignored.
+      thresholds: {
+        lines: 60,
+        functions: 60,
+        branches: 60,
+        statements: 60,
+      },
     },
   },
   resolve: {

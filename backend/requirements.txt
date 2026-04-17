@@ -21,6 +21,7 @@ pypdf>=5.0.0
 markdown==3.10.2
 EbookLib==0.20
 beautifulsoup4==4.14.3
+bleach==6.2.0
 lxml==6.0.4
 reportlab==4.4.10
 fonttools==4.62.1

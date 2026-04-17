@@ -498,6 +498,17 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
           return;
         }
 
+        const MAX_DOWNLOAD_BYTES = 500 * 1024 * 1024; // 500 MB
+        let bytesReceived = 0;
+        response.on('data', (chunk) => {
+          bytesReceived += chunk.length;
+          if (bytesReceived > MAX_DOWNLOAD_BYTES) {
+            fileStream.destroy();
+            response.destroy();
+            fs.unlink(outputPath, () => {});
+            reject(new Error('Download exceeded maximum allowed size (500 MB)'));
+          }
+        });
         response.pipe(fileStream);
 
         fileStream.on('finish', () => {

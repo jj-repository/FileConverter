@@ -129,7 +129,7 @@ class BatchConverter:
 
         if parallel:
             # Process files in parallel with concurrency limit
-            sem = asyncio.Semaphore(4)
+            sem = asyncio.Semaphore(settings.BATCH_CONCURRENCY)
 
             async def limited_convert(index, input_path):
                 async with sem:
@@ -143,8 +143,7 @@ class BatchConverter:
                     )
 
             tasks = [
-                limited_convert(index, input_path)
-                for index, input_path in enumerate(input_paths)
+                limited_convert(index, input_path) for index, input_path in enumerate(input_paths)
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -210,9 +209,7 @@ class BatchConverter:
                 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
                     for file_path in file_paths:
                         # Convert to Path if string
-                        path_obj = (
-                            Path(file_path) if isinstance(file_path, str) else file_path
-                        )
+                        path_obj = Path(file_path) if isinstance(file_path, str) else file_path
                         if path_obj.exists():
                             zipf.write(path_obj, path_obj.name)
             except Exception:

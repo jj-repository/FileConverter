@@ -132,11 +132,11 @@ export const SubtitleConverter: React.FC = () => {
               <div id="convert-format-panel" role="tabpanel" aria-labelledby="convert-format-tab">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor={converter.ids.outputFormat} className="block text-sm font-medium text-gray-700 mb-2">
                       {t('common.outputFormat')}
                     </label>
                     <select
-                      id="output-format"
+                      id={converter.ids.outputFormat}
                       value={converter.outputFormat}
                       onChange={(e) => converter.setOutputFormat(e.target.value)}
                       className="input"
@@ -248,11 +248,11 @@ export const SubtitleConverter: React.FC = () => {
             )}
 
             <div>
-              <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor={converter.ids.customFilename} className="block text-sm font-medium text-gray-700 mb-2">
                 {t('common.customFilename')}
               </label>
               <input
-                id="custom-filename"
+                id={converter.ids.customFilename}
                 type="text"
                 value={converter.customFilename}
                 onChange={(e) => converter.setCustomFilename(e.target.value)}
@@ -268,12 +268,12 @@ export const SubtitleConverter: React.FC = () => {
 
             {window.electron?.isElectron && (
               <div>
-                <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor={converter.ids.outputDirectory} className="block text-sm font-medium text-gray-700 mb-2">
                   {t('common.outputDirectory')}
                 </label>
                 <div className="flex gap-2">
                   <input
-                    id="output-directory"
+                    id={converter.ids.outputDirectory}
                     type="text"
                     value={converter.outputDirectory || t('common.defaultDownloads')}
                     readOnly

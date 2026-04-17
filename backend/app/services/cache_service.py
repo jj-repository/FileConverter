@@ -9,7 +9,6 @@ import hashlib
 import json
 import logging
 import shutil
-import threading
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -48,9 +47,7 @@ class CacheMetadata:
 class CacheService:
     """Service for managing conversion result caching"""
 
-    def __init__(
-        self, cache_dir: Path, expiration_hours: int = 1, max_size_mb: int = 1000
-    ):
+    def __init__(self, cache_dir: Path, expiration_hours: int = 1, max_size_mb: int = 1000):
         """
         Initialize cache service
 
@@ -64,8 +61,7 @@ class CacheService:
         self.max_size_mb = max_size_mb
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-        # Statistics with thread-safe access
-        self._stats_lock = threading.Lock()
+        # GIL protects simple int increments; no lock needed for stats counters
         self.stats = {"hits": 0, "misses": 0, "total_requests": 0}
 
     async def generate_file_hash(self, file_path: Path) -> str:
@@ -197,9 +193,8 @@ class CacheService:
             raise
 
     def _increment_stat(self, stat_name: str) -> None:
-        """Thread-safe increment of a statistics counter"""
-        with self._stats_lock:
-            self.stats[stat_name] += 1
+        """Increment a statistics counter (GIL ensures atomic int increment)"""
+        self.stats[stat_name] += 1
 
     def get_cached_result(self, cache_key: str) -> Optional[CacheMetadata]:
         """
@@ -290,9 +285,7 @@ class CacheService:
             try:
                 self._remove_cache_entry(cache_key)
             except (OSError, IOError, PermissionError) as cleanup_error:
-                logger.warning(
-                    f"Failed to cleanup cache entry {cache_key}: {cleanup_error}"
-                )
+                logger.warning(f"Failed to cleanup cache entry {cache_key}: {cleanup_error}")
 
     def _remove_cache_entry(self, cache_key: str) -> None:
         """
@@ -424,8 +417,7 @@ class CacheService:
             "expired_removed": expired_stats["expired_removed"],
             "corrupted_removed": expired_stats["corrupted_removed"],
             "size_limit_removed": size_stats["entries_removed"],
-            "total_space_freed_mb": expired_stats["space_freed_mb"]
-            + size_stats["space_freed_mb"],
+            "total_space_freed_mb": expired_stats["space_freed_mb"] + size_stats["space_freed_mb"],
         }
 
         logger.info(
@@ -475,9 +467,8 @@ class CacheService:
         total_size = self.get_total_cache_size()
         entry_count = sum(1 for p in self.cache_dir.iterdir() if p.is_dir())
 
-        with self._stats_lock:
-            stats_copy = self.stats.copy()
-            hit_rate = self._calculate_hit_rate_unlocked()
+        stats_copy = self.stats.copy()
+        hit_rate = self._calculate_hit_rate_unlocked()
 
         return {
             "cache_dir": str(self.cache_dir),
@@ -490,7 +481,7 @@ class CacheService:
         }
 
     def _calculate_hit_rate_unlocked(self) -> float:
-        """Calculate hit rate without acquiring lock (caller must hold lock)"""
+        """Calculate hit rate (no lock needed — GIL-safe reads)"""
         total = self.stats["total_requests"]
         if total == 0:
             return 0.0
@@ -503,8 +494,7 @@ class CacheService:
         Returns:
             Hit rate as decimal (0.0 to 1.0)
         """
-        with self._stats_lock:
-            return self._calculate_hit_rate_unlocked()
+        return self._calculate_hit_rate_unlocked()
 
     def clear_all(self) -> None:
         """
@@ -518,9 +508,7 @@ class CacheService:
                 self._remove_cache_entry(cache_path.name)
                 removed += 1
 
-        # Reset statistics with thread safety
-        with self._stats_lock:
-            self.stats = {"hits": 0, "misses": 0, "total_requests": 0}
+        self.stats = {"hits": 0, "misses": 0, "total_requests": 0}
 
         logger.info(f"Cleared {removed} cache entries and reset statistics")
 

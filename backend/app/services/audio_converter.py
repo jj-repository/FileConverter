@@ -228,7 +228,7 @@ class AudioConverter(BaseConverter):
                 try:
                     await asyncio.wait_for(process.communicate(), timeout=5.0)
                 except asyncio.TimeoutError:
-                    pass  # Process didn't exit cleanly, continue anyway
+                    logger.warning("Process did not exit cleanly after kill; continuing")
                 raise Exception(
                     f"Audio conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds"
                 )

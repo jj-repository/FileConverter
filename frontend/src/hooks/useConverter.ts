@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
+import type { AxiosError } from 'axios';
 import { ConversionStatus } from '../types/conversion';
 import { useWebSocket } from './useWebSocket';
-import { API_BASE_URL, AUTO_DOWNLOAD_DELAY, FORCE_RERENDER_DELAY } from '../config/constants';
+import { API_BASE_URL, AUTO_DOWNLOAD_DELAY } from '../config/constants';
 import { getFriendlyErrorMessage } from '../utils/errorMessages';
 
 /**
@@ -30,9 +31,7 @@ interface UseConverterOptions {
   notifications?: NotificationCallbacks;
 }
 
-interface ConvertOptions {
-  [key: string]: any;
-}
+type ConvertOptions = Record<string, unknown>;
 
 interface ConversionResponse {
   session_id: string;
@@ -43,6 +42,13 @@ interface ConversionResponse {
 
 export const useConverter = (options: UseConverterOptions) => {
   const { defaultOutputFormat, onConversionComplete, notifications } = options;
+
+  const uid = useId();
+  const ids = {
+    outputFormat: `${uid}-output-format`,
+    customFilename: `${uid}-custom-filename`,
+    outputDirectory: `${uid}-output-directory`,
+  };
 
   // Notification helpers with fallbacks
   const notify = {
@@ -214,19 +220,14 @@ export const useConverter = (options: UseConverterOptions) => {
             await autoDownload(response.download_url!);
           }, AUTO_DOWNLOAD_DELAY);
         }
-
-        // Force re-render
-        setTimeout(() => {
-          setStatus('completed');
-          setShowFeedback(true);
-        }, FORCE_RERENDER_DELAY);
       } else if (response.status === 'failed') {
         const rawError = response.error || 'Conversion failed';
         setError(getFriendlyErrorMessage(rawError));
         setStatus('failed');
       }
-    } catch (err: any) {
-      const rawError = err.response?.data?.detail || err.message || 'Conversion failed';
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ detail?: string }>;
+      const rawError = axiosErr.response?.data?.detail || (err instanceof Error ? err.message : 'Conversion failed');
       setError(getFriendlyErrorMessage(rawError));
       setStatus('failed');
       setShowFeedback(true);
@@ -313,6 +314,9 @@ export const useConverter = (options: UseConverterOptions) => {
   });
 
   return {
+    // Unique IDs for form elements (prevents duplicate id= across simultaneous instances)
+    ids,
+
     // State
     selectedFile,
     outputFormat,

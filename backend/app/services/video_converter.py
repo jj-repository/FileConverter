@@ -229,7 +229,7 @@ class VideoConverter(BaseConverter):
                 try:
                     await process.communicate()
                 except Exception:
-                    pass
+                    logger.warning("Failed to consume streams after kill; continuing")
                 raise Exception(f"Conversion timed out after {settings.SUBPROCESS_TIMEOUT} seconds")
             except Exception:
                 # Ensure process is terminated and streams consumed on any error
@@ -238,7 +238,7 @@ class VideoConverter(BaseConverter):
                     try:
                         await process.communicate()
                     except Exception:
-                        pass
+                        logger.warning("Failed to consume streams after error kill; continuing")
                 raise
 
             if process.returncode != 0:

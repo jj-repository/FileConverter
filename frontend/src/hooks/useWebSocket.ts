@@ -13,6 +13,11 @@ export const useWebSocket = (sessionId: string | null) => {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shouldReconnectRef = useRef(true);
+  const sessionIdRef = useRef(sessionId);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
 
   // Calculate exponential backoff delay
   const getReconnectDelay = useCallback((attempt: number) => {
@@ -33,7 +38,8 @@ export const useWebSocket = (sessionId: string | null) => {
   }, []);
 
   const connect = useCallback(() => {
-    if (!sessionId) return;
+    const currentSessionId = sessionIdRef.current;
+    if (!currentSessionId) return;
 
     // Clear any pending reconnect
     clearReconnectTimeout();
@@ -45,7 +51,7 @@ export const useWebSocket = (sessionId: string | null) => {
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/progress/${sessionId}`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/progress/${currentSessionId}`;
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -115,7 +121,7 @@ export const useWebSocket = (sessionId: string | null) => {
         console.error('Failed to create WebSocket:', error);
       }
     }
-  }, [sessionId, getReconnectDelay, clearReconnectTimeout]);
+  }, [getReconnectDelay, clearReconnectTimeout]);
 
   const disconnect = useCallback(() => {
     shouldReconnectRef.current = false;

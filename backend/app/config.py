@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     CACHE_EXPIRATION_HOURS: int = 1  # Default cache lifetime
     CACHE_MAX_SIZE_MB: int = 1000  # Maximum cache size in MB
 
+    # Batch processing
+    BATCH_CONCURRENCY: int = 4  # Max parallel conversions in batch
+
     # Binary paths (will be set after initialization to use bundled binaries)
     FFMPEG_PATH: str = ""
     FFPROBE_PATH: str = ""

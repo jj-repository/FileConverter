@@ -47,13 +47,7 @@ test.describe('Accessibility', () => {
     await expect(fileInput).toBeAttached()
 
     // Should have accessible name (via label or aria-label)
-    const accessibleName = await fileInput.getAttribute('aria-label')
-    const hasLabel = await page.evaluate((input) => {
-      const el = document.querySelector('input[type="file"]')
-      return !!el?.labels?.length
-    })
-
-    expect(accessibleName || hasLabel).toBeTruthy()
+    await expect(fileInput).toHaveAccessibleName()
   })
 
   test('should have accessible convert button', async ({ page }) => {

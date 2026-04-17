@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 from app.config import settings
 from app.services.base_converter import BaseConverter
 from app.utils.subprocess_utils import parse_ffmpeg_progress as _parse_ffmpeg_progress
+from app.utils.subprocess_utils import parse_fps as _parse_fps
 from app.utils.subprocess_utils import subprocess_kwargs as _subprocess_kwargs
 
 logger = logging.getLogger(__name__)
@@ -310,21 +311,10 @@ class VideoConverter(BaseConverter):
                     "height": video_stream.get("height", 0),
                     "video_codec": video_stream.get("codec_name", ""),
                     "audio_codec": audio_stream.get("codec_name", ""),
-                    "fps": self._parse_fps(video_stream.get("r_frame_rate", "0/1")),
+                    "fps": _parse_fps(video_stream.get("r_frame_rate", "0/1")),
                     "bitrate": int(data.get("format", {}).get("bit_rate", 0)),
                 }
             else:
                 return {"error": "Failed to probe video"}
         except Exception as e:
             return {"error": str(e)}
-
-    def _parse_fps(self, fps_str: str) -> float:
-        """Parse FPS from fraction string like '30000/1001'"""
-        try:
-            if "/" in fps_str:
-                num, denom = fps_str.split("/")
-                return float(num) / float(denom) if float(denom) != 0 else 0
-            return float(fps_str)
-        except (ValueError, ZeroDivisionError, AttributeError) as e:
-            logger.warning(f"Failed to parse FPS '{fps_str}': {str(e)}")
-            return 0.0

@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary';
@@ -13,6 +14,7 @@ export const Button = memo<ButtonProps>(function Button({
   className = '',
   ...props
 }) {
+  const { t } = useTranslation();
   const baseClasses = 'btn';
   const variantClasses = variant === 'primary' ? 'btn-primary' : 'btn-secondary';
   const isDisabled = disabled || loading;
@@ -47,7 +49,7 @@ export const Button = memo<ButtonProps>(function Button({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             />
           </svg>
-          <span>Processing...</span>
+          <span>{t('common.processing')}</span>
         </span>
       ) : (
         children

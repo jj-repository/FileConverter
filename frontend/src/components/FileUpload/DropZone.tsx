@@ -119,6 +119,18 @@ function getMimeType(fileType: string): string {
       return 'audio/*';
     case 'document':
       return 'application/*,text/*';
+    case 'subtitle':
+      return 'text/*,application/x-subrip';
+    case 'ebook':
+      return 'application/epub+zip,application/x-mobipocket-ebook,text/*';
+    case 'font':
+      return 'font/*,application/font-woff,application/font-woff2';
+    case 'archive':
+      return 'application/zip,application/x-tar,application/x-7z-compressed,application/gzip';
+    case 'data':
+      return 'application/json,application/xml,text/csv,text/*';
+    case 'spreadsheet':
+      return 'application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv';
     default:
       return '*/*';
   }

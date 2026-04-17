@@ -9,6 +9,7 @@ const MAX_RECONNECT_DELAY = 30000; // 30 seconds
 export const useWebSocket = (sessionId: string | null) => {
   const [progress, setProgress] = useState<ProgressUpdate | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const reconnectAttemptRef = useRef(0);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,7 +59,8 @@ export const useWebSocket = (sessionId: string | null) => {
 
       ws.onopen = () => {
         setIsConnected(true);
-        reconnectAttemptRef.current = 0; // Reset retry counter on successful connection
+        reconnectAttemptRef.current = 0;
+        setReconnectAttempt(0);
         if (import.meta.env.DEV) {
           console.log('WebSocket connected');
         }
@@ -110,6 +112,7 @@ export const useWebSocket = (sessionId: string | null) => {
 
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectAttemptRef.current += 1;
+            setReconnectAttempt(reconnectAttemptRef.current);
             connect();
           }, delay);
         }
@@ -138,6 +141,7 @@ export const useWebSocket = (sessionId: string | null) => {
   const reconnect = useCallback(() => {
     shouldReconnectRef.current = true;
     reconnectAttemptRef.current = 0;
+    setReconnectAttempt(0);
     connect();
   }, [connect]);
 
@@ -145,6 +149,7 @@ export const useWebSocket = (sessionId: string | null) => {
     // Reset state when sessionId changes
     setProgress(null);
     reconnectAttemptRef.current = 0;
+    setReconnectAttempt(0);
     shouldReconnectRef.current = true;
 
     if (sessionId) {
@@ -159,7 +164,7 @@ export const useWebSocket = (sessionId: string | null) => {
   return {
     progress,
     isConnected,
-    reconnectAttempt: reconnectAttemptRef.current,
+    reconnectAttempt,
     maxReconnectAttempts: MAX_RECONNECT_ATTEMPTS,
     reconnect,
   };

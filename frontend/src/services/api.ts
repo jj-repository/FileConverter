@@ -11,7 +11,7 @@ type OptionAppender = (formData: FormData, options: ConversionOptions) => void;
 
 interface ConverterAPI {
   convert: (file: File, options: ConversionOptions) => Promise<ConversionResponse>;
-  getFormats: () => Promise<{ input_formats: string[]; output_formats: string[] }>;
+  getFormats: () => Promise<{ input_formats: string[]; output_formats: string[]; notes?: Record<string, string> }>;
   downloadFile: (filename: string) => string;
 }
 

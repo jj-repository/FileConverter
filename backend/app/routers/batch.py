@@ -1,7 +1,7 @@
 import re
 import uuid
 from pathlib import Path
-from typing import Annotated, List, Literal, Optional
+from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -39,14 +39,6 @@ router = APIRouter()
 batch_converter = BatchConverter()
 
 
-# Whitelist types for batch parameters (reuse from other routers)
-VideoCodec = Literal["libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4", "h264"]
-VideoResolution = Literal["original", "480p", "720p", "1080p", "4k", "2k"]
-VideoBitrate = Literal[
-    "500k", "1M", "2M", "3M", "4M", "5M", "8M", "10M", "128k", "192k", "256k", "320k"
-]
-
-
 @router.post(
     "/convert",
     response_model=BatchConversionResponse,
@@ -67,9 +59,9 @@ async def convert_batch(
         Optional[int], Form(ge=1, le=10000, description="Image height (1-10000)")
     ] = None,
     # Video options with validation
-    codec: Annotated[Optional[VideoCodec], Form(description="Video codec")] = None,
-    resolution: Annotated[Optional[VideoResolution], Form(description="Video resolution")] = None,
-    bitrate: Annotated[Optional[VideoBitrate], Form(description="Video/audio bitrate")] = None,
+    codec: Annotated[Optional[str], Form(description="Video codec")] = None,
+    resolution: Annotated[Optional[str], Form(description="Video resolution")] = None,
+    bitrate: Annotated[Optional[str], Form(description="Video/audio bitrate")] = None,
     # Audio options with validation
     sample_rate: Annotated[
         Optional[int],
@@ -99,6 +91,13 @@ async def convert_batch(
     )
     if output_format.lower() not in all_formats:
         raise HTTPException(status_code=400, detail=f"Unsupported output format: {output_format}")
+
+    if codec and codec not in settings.ALLOWED_VIDEO_CODECS:
+        raise HTTPException(status_code=400, detail=f"Unsupported video codec: {codec}")
+    if resolution and resolution not in settings.ALLOWED_RESOLUTIONS:
+        raise HTTPException(status_code=400, detail=f"Unsupported resolution: {resolution}")
+    if bitrate and bitrate not in settings.ALLOWED_BITRATES:
+        raise HTTPException(status_code=400, detail=f"Unsupported bitrate: {bitrate}")
 
     session_id = str(uuid.uuid4())
     session_validator.register_session(session_id)

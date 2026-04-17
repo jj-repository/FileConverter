@@ -127,10 +127,8 @@ test.describe('Form Interactions', () => {
     await page.getByRole('button', { name: /images/i }).first().click()
     await expect(page.getByText(/image converter/i).first()).toBeVisible()
 
-    // File should be reset (not persisted across tabs)
+    // File selection should not persist when switching converter tabs
     const fileNameVisible = await page.getByText('test-image.png').isVisible().catch(() => false)
-
-    // Either file is reset (not visible) or persisted (visible) - both are valid behaviors
-    expect(typeof fileNameVisible).toBe('boolean')
+    expect(fileNameVisible).toBe(false)
   })
 })

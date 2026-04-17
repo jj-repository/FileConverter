@@ -105,7 +105,7 @@ def validate_file_size(file: UploadFile, file_type: str) -> None:
         "video": settings.VIDEO_MAX_SIZE,
         "audio": settings.AUDIO_MAX_SIZE,
         "document": settings.DOCUMENT_MAX_SIZE,
-        "data": settings.DOCUMENT_MAX_SIZE,
+        "data": settings.DATA_MAX_SIZE,
         "archive": settings.ARCHIVE_MAX_SIZE,
         "spreadsheet": settings.SPREADSHEET_MAX_SIZE,
         "subtitle": settings.SUBTITLE_MAX_SIZE,
@@ -174,9 +174,7 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
         is_valid = any(expected in mime_type for expected in expected_types)
 
         if not is_valid:
-            logger.warning(
-                f"MIME type mismatch: expected {expected_types}, got {mime_type}"
-            )
+            logger.warning(f"MIME type mismatch: expected {expected_types}, got {mime_type}")
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid file type. Detected MIME type: {mime_type}",
@@ -216,9 +214,7 @@ def get_file_type_from_format(file_format: str) -> str:
     elif file_format in settings.DATA_FORMATS:
         return "data"
     else:
-        raise HTTPException(
-            status_code=400, detail=f"Unknown file format: {file_format}"
-        )
+        raise HTTPException(status_code=400, detail=f"Unknown file format: {file_format}")
 
 
 def validate_download_filename(filename: str, base_dir: Path) -> Path:
@@ -260,9 +256,7 @@ def validate_download_filename(filename: str, base_dir: Path) -> Path:
 
     # Resolve to absolute path
     try:
-        resolved_path = file_path.resolve(
-            strict=True
-        )  # strict=True raises if path doesn't exist
+        resolved_path = file_path.resolve(strict=True)  # strict=True raises if path doesn't exist
         resolved_base = base_dir.resolve()
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")

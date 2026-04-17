@@ -484,6 +484,7 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
     return new Promise((resolve, reject) => {
       // Enforce HTTPS for external (non-localhost) downloads
       if (!isLocalhost && parsedUrl.protocol !== 'https:') {
+        fileStream.destroy();
         reject(new Error('Only HTTPS is allowed for external downloads'));
         return;
       }
@@ -493,6 +494,8 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
 
       protocol.get(url, (response) => {
         if (response.statusCode !== 200) {
+          fileStream.destroy();
+          response.resume(); // drain the response to free the socket
           reject(new Error(`Failed to download: ${response.statusCode}`));
           return;
         }

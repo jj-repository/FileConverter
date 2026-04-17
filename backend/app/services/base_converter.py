@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from app.models.conversion import ConversionStatus
+
 logger = logging.getLogger(__name__)
 
 # Global lock management for cache file operations to prevent race conditions
@@ -108,7 +110,9 @@ class BaseConverter(ABC):
             if cached_result is not None:
                 # Cache hit - return cached result
                 logger.info(f"Cache hit for {cache_key} (session: {session_id})")
-                await self.send_progress(session_id, 100, "completed", "Retrieved from cache")
+                await self.send_progress(
+                    session_id, 100, ConversionStatus.COMPLETED, "Retrieved from cache"
+                )
 
                 # Copy cached file to output location with lock to prevent race conditions
                 cached_file = Path(cached_result.output_file)

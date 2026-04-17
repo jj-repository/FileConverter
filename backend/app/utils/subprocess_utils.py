@@ -11,6 +11,17 @@ if sys.platform == "win32":
     subprocess_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
 
 
+def parse_fps(fps_str: str) -> float:
+    """Parse FPS from a fraction string like '30000/1001' or plain float string."""
+    try:
+        if "/" in fps_str:
+            num, denom = fps_str.split("/")
+            return float(num) / float(denom) if float(denom) != 0 else 0.0
+        return float(fps_str)
+    except (ValueError, ZeroDivisionError, AttributeError):
+        return 0.0
+
+
 def parse_ffmpeg_progress(line: str, total_duration: float) -> Optional[float]:
     """Parse FFmpeg progress from output line.
 

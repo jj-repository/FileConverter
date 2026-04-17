@@ -226,10 +226,15 @@ export const FontConverter: React.FC = () => {
                 </div>
               )}
 
-              {converter.downloadUrl && converter.status === 'completed' && !window.electron?.isElectron && (
-                <div className="text-center">
-                  <Button onClick={converter.handleDownload} className="mx-auto">
-                    {t('converter.font.download')}
+              {converter.status === 'completed' && (
+                <div className="flex gap-4">
+                  {!window.electron?.isElectron && converter.downloadUrl && (
+                    <Button onClick={converter.handleDownload} className="flex-1">
+                      {t('converter.font.download')}
+                    </Button>
+                  )}
+                  <Button onClick={converter.handleReset} variant="secondary">
+                    {t('common.convertAnother')}
                   </Button>
                 </div>
               )}

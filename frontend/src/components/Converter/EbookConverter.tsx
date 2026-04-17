@@ -190,10 +190,15 @@ export const EbookConverter: React.FC = () => {
                 </div>
               )}
 
-              {converter.downloadUrl && converter.status === 'completed' && !window.electron?.isElectron && (
-                <div className="text-center">
-                  <Button onClick={() => converter.handleDownload?.()} variant="primary">
-                    {t('ebook.download_button', 'Download Converted eBook')}
+              {converter.status === 'completed' && (
+                <div className="flex gap-4">
+                  {!window.electron?.isElectron && converter.downloadUrl && (
+                    <Button onClick={() => converter.handleDownload?.()} className="flex-1">
+                      {t('ebook.download_button', 'Download Converted eBook')}
+                    </Button>
+                  )}
+                  <Button onClick={converter.handleReset} variant="secondary">
+                    {t('common.convertAnother')}
                   </Button>
                 </div>
               )}

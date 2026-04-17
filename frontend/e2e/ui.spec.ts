@@ -67,7 +67,7 @@ test.describe('UI and Layout', () => {
     const selectCount = await selects.count()
 
     // Should have at least one select element (format dropdown)
-    expect(selectCount).toBeGreaterThanOrEqual(0)
+    expect(selectCount).toBeGreaterThan(0)
   })
 
   test('should display converter options panel', async ({ page }) => {

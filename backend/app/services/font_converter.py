@@ -9,7 +9,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fontTools.subset import Options, Subsetter
+from fontTools.subset import Subsetter
 from fontTools.ttLib import TTFont
 
 from app.config import settings
@@ -58,6 +58,8 @@ class FontConverter(BaseConverter):
         output_filename = f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
         output_path = settings.UPLOAD_DIR / output_filename
 
+        _OPTIMIZE_DROP_TABLES = ["DSIG", "hdmx", "VDMX", "LTSH", "PCLT"]
+
         try:
             await self.send_progress(session_id, 30, "converting", "Loading font file")
 
@@ -68,6 +70,10 @@ class FontConverter(BaseConverter):
                     subsetter = Subsetter()
                     subsetter.populate(text=subset_text)
                     subsetter.subset(font)
+                if options.get("optimize", True):
+                    for table in _OPTIMIZE_DROP_TABLES:
+                        if table in font:
+                            del font[table]
                 flavor = self._get_output_flavor(output_format)
                 if flavor:
                     font.flavor = flavor
@@ -96,23 +102,6 @@ class FontConverter(BaseConverter):
             "otf": None,  # No flavor needed
         }
         return flavor_map.get(output_format)
-
-    async def _apply_subset(self, font: TTFont, subset_text: str, session_id: str):
-        """Apply subsetting to keep only specified characters"""
-        await self.send_progress(session_id, 60, "converting", "Applying font subsetting")
-
-        # Create subsetter
-        subsetter = Subsetter()
-
-        # Configure options
-        options = Options()
-        options.drop_tables = []  # Don't drop any tables by default
-
-        # Add glyphs for the subset text
-        subsetter.populate(text=subset_text)
-
-        # Apply subset
-        subsetter.subset(font)
 
     async def get_info(self, file_path: Path) -> Dict[str, Any]:
         """

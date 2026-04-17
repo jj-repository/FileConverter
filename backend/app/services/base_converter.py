@@ -22,9 +22,7 @@ logger = logging.getLogger(__name__)
 # - _CACHE_LOCK_MAX_SIZE: Maximum number of locks to maintain. Prevents unbounded memory
 #   growth in high-traffic scenarios. 1000 locks = ~1000 concurrent unique conversions.
 #   If exceeded, oldest locks are removed during cleanup.
-_cache_locks: Dict[
-    str, tuple[asyncio.Lock, float]
-] = {}  # cache_key -> (lock, last_used_timestamp)
+_cache_locks: Dict[str, tuple[asyncio.Lock, float]] = {}  # cache_key -> (lock, last_used_timestamp)
 _cache_locks_lock = asyncio.Lock()
 _CACHE_LOCK_MAX_AGE = 300  # seconds (5 minutes)
 _CACHE_LOCK_MAX_SIZE = 1000  # maximum concurrent unique file locks
@@ -48,16 +46,23 @@ async def _cleanup_stale_locks():
         logger.debug(f"Cleaned up {len(stale_keys)} stale cache locks")
 
 
-# Import from dedicated module (separation of concerns)
-from app.services.websocket_manager import WebSocketManager, ws_manager  # noqa: F401
+from app.services.websocket_manager import WebSocketManager
 
 
 class BaseConverter(ABC):
     """Abstract base class for all file converters"""
 
     def __init__(self, websocket_manager: Optional[WebSocketManager] = None):
-        self.websocket_manager = websocket_manager or ws_manager
+        self._websocket_manager = websocket_manager
         self._cache_enabled = True  # Can be disabled per converter if needed
+
+    @property
+    def websocket_manager(self) -> WebSocketManager:
+        if self._websocket_manager is None:
+            from app.services.websocket_manager import ws_manager
+
+            self._websocket_manager = ws_manager
+        return self._websocket_manager
 
     async def convert_with_cache(
         self,
@@ -87,11 +92,7 @@ class BaseConverter(ABC):
         cache_service = get_cache_service()
 
         # If cache is disabled or not available, proceed with normal conversion
-        if (
-            not settings.CACHE_ENABLED
-            or not self._cache_enabled
-            or cache_service is None
-        ):
+        if not settings.CACHE_ENABLED or not self._cache_enabled or cache_service is None:
             return await self.convert(input_path, output_format, options, session_id)
 
         try:
@@ -102,16 +103,12 @@ class BaseConverter(ABC):
             logger.debug(f"Cache key generated: {cache_key}")
 
             # Check cache (blocking I/O, run in thread)
-            cached_result = await asyncio.to_thread(
-                cache_service.get_cached_result, cache_key
-            )
+            cached_result = await asyncio.to_thread(cache_service.get_cached_result, cache_key)
 
             if cached_result is not None:
                 # Cache hit - return cached result
                 logger.info(f"Cache hit for {cache_key} (session: {session_id})")
-                await self.send_progress(
-                    session_id, 100, "completed", "Retrieved from cache"
-                )
+                await self.send_progress(session_id, 100, "completed", "Retrieved from cache")
 
                 # Copy cached file to output location with lock to prevent race conditions
                 cached_file = Path(cached_result.output_file)
@@ -142,9 +139,7 @@ class BaseConverter(ABC):
                         # Use try-except to handle race condition where file is deleted between check and copy
                         try:
                             if cached_file.exists():
-                                await asyncio.to_thread(
-                                    shutil.copy2, cached_file, output_path
-                                )
+                                await asyncio.to_thread(shutil.copy2, cached_file, output_path)
                             else:
                                 # Cached file was deleted, need to reconvert
                                 logger.warning(
@@ -168,9 +163,7 @@ class BaseConverter(ABC):
             logger.debug(f"Cache miss for {cache_key} (session: {session_id})")
 
             # Perform actual conversion
-            output_path = await self.convert(
-                input_path, output_format, options, session_id
-            )
+            output_path = await self.convert(input_path, output_format, options, session_id)
 
             # Store result in cache
             try:
@@ -191,9 +184,7 @@ class BaseConverter(ABC):
 
         except Exception as e:
             # If any cache operation fails, fall back to normal conversion
-            logger.error(
-                f"Cache operation failed, falling back to normal conversion: {e}"
-            )
+            logger.error(f"Cache operation failed, falling back to normal conversion: {e}")
             return await self.convert(input_path, output_format, options, session_id)
 
     @abstractmethod

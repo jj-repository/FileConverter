@@ -1,27 +1,23 @@
-import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from starlette.background import BackgroundTask
 
 from app.config import settings
-from app.middleware.error_handler import sanitize_error_message
-from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
+from app.models.conversion import ConversionResponse, FileInfo
 from app.routers.base_router import (
     cleanup_after_download,
+    handle_action,
     handle_convert,
     handle_info_raw,
 )
 from app.services.font_converter import FontConverter
-from app.utils.file_handler import cleanup_file, make_content_disposition, save_upload_file
+from app.utils.file_handler import make_content_disposition
 from app.utils.validation import (
     FONT_MIME_TYPES,
     validate_download_filename,
-    validate_file_extension,
-    validate_file_size,
-    validate_mime_type,
 )
-from app.utils.websocket_security import check_rate_limit, session_validator
+from app.utils.websocket_security import check_rate_limit
 
 router = APIRouter()
 converter = FontConverter()
@@ -61,42 +57,15 @@ async def convert_font(
 )
 async def optimize_font(file: UploadFile = File(...)):
     """Optimize a font by removing unnecessary data."""
-    session_id = str(uuid.uuid4())
-    session_validator.register_session(session_id)
-    input_path = None
-
-    try:
-        validate_file_extension(file.filename, settings.FONT_FORMATS)
-        validate_file_size(file, "font")
-        input_path = await save_upload_file(file, settings.TEMP_DIR)
-        validate_mime_type(input_path, FONT_MIME_TYPES)
-
-        output_path = await converter.optimize_font(
-            input_path=input_path,
-            session_id=session_id,
-        )
-        cleanup_file(input_path)
-        input_path = None
-
-        return ConversionResponse(
-            session_id=session_id,
-            status=ConversionStatus.COMPLETED,
-            message="Optimization successful",
-            output_file=output_path.name,
-            download_url=f"/api/font/download/{output_path.name}",
-        )
-    except HTTPException:
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Optimization failed: {sanitize_error_message(str(e))}",
-        )
-    finally:
-        if input_path:
-            cleanup_file(input_path)
+    return await handle_action(
+        file,
+        action=converter.optimize_font,
+        formats=settings.FONT_FORMATS,
+        category="font",
+        mime_types=FONT_MIME_TYPES,
+        api_prefix="font",
+        action_label="Optimization",
+    )
 
 
 @router.get("/download/{filename}", dependencies=[Depends(check_rate_limit)])

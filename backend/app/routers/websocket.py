@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.services.base_converter import ws_manager
+from app.services.websocket_manager import ws_manager
 from app.utils.websocket_security import rate_limiter, session_validator
 
 logger = logging.getLogger(__name__)
@@ -48,12 +48,14 @@ async def websocket_progress(websocket: WebSocket, session_id: str):
 
     try:
         # Send initial connection message
-        await websocket.send_json({
-            "session_id": session_id,
-            "progress": 0,
-            "status": "pending",
-            "message": "WebSocket connected"
-        })
+        await websocket.send_json(
+            {
+                "session_id": session_id,
+                "progress": 0,
+                "status": "pending",
+                "message": "WebSocket connected",
+            }
+        )
 
         # Keep connection alive
         while True:

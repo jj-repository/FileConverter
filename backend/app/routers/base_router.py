@@ -128,6 +128,53 @@ async def handle_download(
     )
 
 
+async def handle_action(
+    file: UploadFile,
+    *,
+    action,
+    formats: set,
+    category: str,
+    mime_types: dict,
+    api_prefix: str,
+    action_label: str = "Operation",
+    **action_kwargs: Any,
+) -> ConversionResponse:
+    """Shared flow for endpoints that call an arbitrary async action on an uploaded file."""
+    session_id = str(uuid.uuid4())
+    session_validator.register_session(session_id)
+    input_path = None
+
+    try:
+        validate_file_extension(file.filename, formats)
+        validate_file_size(file, category)
+        input_path = await save_upload_file(file, settings.TEMP_DIR)
+        validate_mime_type(input_path, mime_types)
+
+        output_path = await action(input_path=input_path, session_id=session_id, **action_kwargs)
+        cleanup_file(input_path)
+        input_path = None
+
+        return ConversionResponse(
+            session_id=session_id,
+            status=ConversionStatus.COMPLETED,
+            message=f"{action_label} successful",
+            output_file=output_path.name,
+            download_url=f"/api/{api_prefix}/download/{output_path.name}",
+        )
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"{action_label} failed: {sanitize_error_message(str(e))}",
+        )
+    finally:
+        if input_path:
+            cleanup_file(input_path)
+
+
 async def handle_formats(converter: Any) -> dict:
     """Shared formats endpoint."""
     formats = await converter.get_supported_formats()

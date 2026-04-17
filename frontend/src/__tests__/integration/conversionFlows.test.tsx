@@ -106,8 +106,8 @@ describe('Integration: Conversion Flows', () => {
       // Wait a moment for the conversion action to be triggered
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      // Test passes if we got here without errors
-      expect(true).toBe(true)
+      // App remains stable after conversion attempt
+      expect(screen.getByText('converter.image.title')).toBeInTheDocument()
     })
 
     it('should display upload progress during file upload', async () => {
@@ -250,8 +250,8 @@ describe('Integration: Conversion Flows', () => {
         { timeout: 2000 }
       )
 
-      // Test passes if error handling was attempted
-      expect(true).toBe(true)
+      // App remains stable after error handling
+      expect(screen.getByText('converter.image.title')).toBeInTheDocument()
     })
 
     it('should allow reset after error', async () => {
@@ -348,8 +348,8 @@ describe('Integration: Conversion Flows', () => {
       // Wait a moment for the conversion action to be triggered
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      // Test passes if we got here without errors
-      expect(true).toBe(true)
+      // App remains stable after receiving progress updates
+      expect(screen.getByText('converter.image.title')).toBeInTheDocument()
     })
 
     it('should handle WebSocket disconnection gracefully', async () => {
@@ -440,8 +440,8 @@ describe('Integration: Conversion Flows', () => {
         await new Promise(resolve => setTimeout(resolve, 500))
       }
 
-      // Test passes if we got this far (files uploaded successfully)
-      expect(true).toBe(true)
+      // Files remain listed after upload (upload succeeded without errors)
+      expect(screen.getByText('file1.jpg')).toBeInTheDocument()
     })
   })
 
@@ -517,8 +517,8 @@ describe('Integration: Conversion Flows', () => {
       // Wait a moment for the conversion action to be triggered
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      // Test passes if we got here without errors
-      expect(true).toBe(true)
+      // App remains stable after second conversion cycle
+      expect(screen.getByText('converter.image.title')).toBeInTheDocument()
     })
   })
 

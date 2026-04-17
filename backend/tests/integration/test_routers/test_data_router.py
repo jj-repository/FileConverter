@@ -34,32 +34,17 @@ def sample_json(temp_dir):
     json_path = temp_dir / "test_data.json"
     data = {
         "users": [
-            {
-                "id": 1,
-                "name": "John Doe",
-                "email": "john@example.com",
-                "age": 30,
-                "active": True
-            },
+            {"id": 1, "name": "John Doe", "email": "john@example.com", "age": 30, "active": True},
             {
                 "id": 2,
                 "name": "Jane Smith",
                 "email": "jane@example.com",
                 "age": 28,
-                "active": False
+                "active": False,
             },
-            {
-                "id": 3,
-                "name": "Bob Johnson",
-                "email": "bob@example.com",
-                "age": 35,
-                "active": True
-            }
+            {"id": 3, "name": "Bob Johnson", "email": "bob@example.com", "age": 35, "active": True},
         ],
-        "metadata": {
-            "version": "1.0",
-            "timestamp": "2024-01-01T00:00:00Z"
-        }
+        "metadata": {"version": "1.0", "timestamp": "2024-01-01T00:00:00Z"},
     }
     json_path.write_text(json.dumps(data, indent=2))
     return json_path
@@ -143,11 +128,11 @@ class TestDataConvert:
 
     def test_convert_json_to_csv_success(self, client, sample_json):
         """Test successful JSON to CSV conversion"""
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.json", f, "application/json")},
-                data={"output_format": "csv"}
+                data={"output_format": "csv"},
             )
 
         assert response.status_code == 200
@@ -159,11 +144,11 @@ class TestDataConvert:
 
     def test_convert_csv_to_json_success(self, client, sample_csv):
         """Test successful CSV to JSON conversion"""
-        with open(sample_csv, 'rb') as f:
+        with open(sample_csv, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.csv", f, "text/csv")},
-                data={"output_format": "json"}
+                data={"output_format": "json"},
             )
 
         assert response.status_code == 200
@@ -175,11 +160,11 @@ class TestDataConvert:
 
     def test_convert_xml_to_json_success(self, client, sample_xml):
         """Test successful XML to JSON conversion"""
-        with open(sample_xml, 'rb') as f:
+        with open(sample_xml, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.xml", f, "application/xml")},
-                data={"output_format": "json"}
+                data={"output_format": "json"},
             )
 
         assert response.status_code == 200
@@ -189,11 +174,11 @@ class TestDataConvert:
 
     def test_convert_with_delimiter_parameter(self, client, sample_json):
         """Test conversion with custom CSV delimiter parameter"""
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.json", f, "application/json")},
-                data={"output_format": "csv", "delimiter": ";"}
+                data={"output_format": "csv", "delimiter": ";"},
             )
 
         assert response.status_code == 200
@@ -203,11 +188,11 @@ class TestDataConvert:
 
     def test_convert_json_to_xml_success(self, client, sample_json):
         """Test successful JSON to XML conversion"""
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.json", f, "application/json")},
-                data={"output_format": "xml"}
+                data={"output_format": "xml"},
             )
 
         assert response.status_code == 200
@@ -217,11 +202,11 @@ class TestDataConvert:
 
     def test_convert_csv_to_xml_success(self, client, sample_csv):
         """Test successful CSV to XML conversion"""
-        with open(sample_csv, 'rb') as f:
+        with open(sample_csv, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.csv", f, "text/csv")},
-                data={"output_format": "xml"}
+                data={"output_format": "xml"},
             )
 
         assert response.status_code == 200
@@ -231,11 +216,11 @@ class TestDataConvert:
 
     def test_convert_with_pretty_print_true(self, client, sample_csv):
         """Test conversion with pretty print enabled for JSON output"""
-        with open(sample_csv, 'rb') as f:
+        with open(sample_csv, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.csv", f, "text/csv")},
-                data={"output_format": "json", "pretty": "true"}
+                data={"output_format": "json", "pretty": "true"},
             )
 
         assert response.status_code == 200
@@ -244,11 +229,11 @@ class TestDataConvert:
 
     def test_convert_with_pretty_print_false(self, client, sample_csv):
         """Test conversion with pretty print disabled for JSON output"""
-        with open(sample_csv, 'rb') as f:
+        with open(sample_csv, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.csv", f, "text/csv")},
-                data={"output_format": "json", "pretty": "false"}
+                data={"output_format": "json", "pretty": "false"},
             )
 
         assert response.status_code == 200
@@ -257,25 +242,27 @@ class TestDataConvert:
 
     def test_convert_invalid_output_format(self, client, sample_json):
         """Test conversion with invalid output format"""
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.json", f, "application/json")},
-                data={"output_format": "invalid_format"}
+                data={"output_format": "invalid_format"},
             )
 
         assert response.status_code == 400
         response_data = response.json()
         error_msg = response_data.get("detail") or response_data.get("error")
-        assert "Unsupported output format" in str(error_msg) or "unsupported" in str(error_msg).lower()
+        assert (
+            "Unsupported output format" in str(error_msg) or "unsupported" in str(error_msg).lower()
+        )
 
     def test_convert_malformed_json_input(self, client, malformed_json):
         """Test conversion with malformed JSON input data"""
-        with open(malformed_json, 'rb') as f:
+        with open(malformed_json, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("malformed.json", f, "application/json")},
-                data={"output_format": "csv"}
+                data={"output_format": "csv"},
             )
 
         # Should fail with 400 or 500 depending on error handling
@@ -287,18 +274,19 @@ class TestDataConvert:
         fake_file = temp_dir / "invalid.exe"
         fake_file.write_text("not a data file")
 
-        with open(fake_file, 'rb') as f:
+        with open(fake_file, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("invalid.exe", f, "application/octet-stream")},
-                data={"output_format": "json"}
+                data={"output_format": "json"},
             )
 
         assert response.status_code == 400
         response_data = response.json()
         error_msg = response_data.get("detail") or response_data.get("error")
-        assert ("Invalid or unsupported file extension" in str(error_msg) or
-                "Unsupported file format" in str(error_msg))
+        assert "Invalid or unsupported file extension" in str(
+            error_msg
+        ) or "Unsupported file format" in str(error_msg)
 
 
 class TestDataFormats:
@@ -347,11 +335,11 @@ class TestDataDownload:
     def test_download_converted_file(self, client, sample_json):
         """Test downloading a converted data file"""
         # First, convert a data file
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             convert_response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.json", f, "application/json")},
-                data={"output_format": "csv"}
+                data={"output_format": "csv"},
             )
 
         assert convert_response.status_code == 200
@@ -383,8 +371,9 @@ class TestDataDownload:
         for malicious_name in malicious_filenames:
             response = client.get(f"/api/data/download/{malicious_name}")
             # Should either be 400 (validation) or 404 (not found)
-            assert response.status_code in [400, 404], \
+            assert response.status_code in [400, 404], (
                 f"Path traversal not blocked for: {malicious_name}"
+            )
 
     def test_download_absolute_path_blocked(self, client):
         """Test that absolute path access is blocked"""
@@ -403,10 +392,9 @@ class TestDataInfo:
 
     def test_get_data_info_json_success(self, client, sample_json):
         """Test successful JSON data info retrieval"""
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response = client.post(
-                "/api/data/info",
-                files={"file": ("test.json", f, "application/json")}
+                "/api/data/info", files={"file": ("test.json", f, "application/json")}
             )
 
         assert response.status_code == 200
@@ -420,11 +408,8 @@ class TestDataInfo:
 
     def test_get_data_info_csv_success(self, client, sample_csv):
         """Test successful CSV data info retrieval"""
-        with open(sample_csv, 'rb') as f:
-            response = client.post(
-                "/api/data/info",
-                files={"file": ("test.csv", f, "text/csv")}
-            )
+        with open(sample_csv, "rb") as f:
+            response = client.post("/api/data/info", files={"file": ("test.csv", f, "text/csv")})
 
         assert response.status_code == 200
         data = response.json()
@@ -436,10 +421,9 @@ class TestDataInfo:
 
     def test_get_data_info_xml_success(self, client, sample_xml):
         """Test successful XML data info retrieval"""
-        with open(sample_xml, 'rb') as f:
+        with open(sample_xml, "rb") as f:
             response = client.post(
-                "/api/data/info",
-                files={"file": ("test.xml", f, "application/xml")}
+                "/api/data/info", files={"file": ("test.xml", f, "application/xml")}
             )
 
         assert response.status_code == 200
@@ -452,11 +436,8 @@ class TestDataInfo:
 
     def test_get_data_info_includes_row_count(self, client, sample_csv):
         """Test that data info includes row count information"""
-        with open(sample_csv, 'rb') as f:
-            response = client.post(
-                "/api/data/info",
-                files={"file": ("test.csv", f, "text/csv")}
-            )
+        with open(sample_csv, "rb") as f:
+            response = client.post("/api/data/info", files={"file": ("test.csv", f, "text/csv")})
 
         assert response.status_code == 200
         metadata = response.json()["metadata"]
@@ -464,11 +445,8 @@ class TestDataInfo:
 
     def test_get_data_info_includes_column_info(self, client, sample_csv):
         """Test that data info includes column information"""
-        with open(sample_csv, 'rb') as f:
-            response = client.post(
-                "/api/data/info",
-                files={"file": ("test.csv", f, "text/csv")}
-            )
+        with open(sample_csv, "rb") as f:
+            response = client.post("/api/data/info", files={"file": ("test.csv", f, "text/csv")})
 
         assert response.status_code == 200
         metadata = response.json()["metadata"]
@@ -481,10 +459,9 @@ class TestDataInfo:
         invalid_file = temp_dir / "invalid.txt"
         invalid_file.write_text("not a data file")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
-                "/api/data/info",
-                files={"file": ("invalid.txt", f, "text/plain")}
+                "/api/data/info", files={"file": ("invalid.txt", f, "text/plain")}
             )
 
         # Returns 400 or 500 depending on validation stage
@@ -503,11 +480,11 @@ class TestDataSecurityValidation:
         ]
 
         for malicious_name in malicious_filenames:
-            with open(sample_json, 'rb') as f:
+            with open(sample_json, "rb") as f:
                 response = client.post(
                     "/api/data/convert",
                     files={"file": (malicious_name, f, "application/json")},
-                    data={"output_format": "csv"}
+                    data={"output_format": "csv"},
                 )
 
             # Should succeed (filename sanitized) or fail safely
@@ -515,24 +492,24 @@ class TestDataSecurityValidation:
             if response.status_code == 200:
                 # Verify output filename doesn't contain shell metacharacters
                 output_file = response.json()["output_file"]
-                dangerous_chars = [';', '$', '`', '|', '&', '<', '>']
+                dangerous_chars = [";", "$", "`", "|", "&", "<", ">"]
                 for char in dangerous_chars:
                     assert char not in output_file
 
     def test_null_byte_injection_blocked(self, client, sample_json):
         """Test that null byte injection is sanitized"""
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test\x00.json", f, "application/json")},
-                data={"output_format": "csv"}
+                data={"output_format": "csv"},
             )
 
         # Null bytes are sanitized, so conversion succeeds
         # but output filename should not contain null bytes
         if response.status_code == 200:
             output_file = response.json()["output_file"]
-            assert '\x00' not in output_file
+            assert "\x00" not in output_file
         else:
             # Or it fails validation
             assert response.status_code in [400, 500]
@@ -543,11 +520,11 @@ class TestDataConversionFormats:
 
     def test_convert_to_json_format(self, client, sample_csv):
         """Test conversion to JSON format"""
-        with open(sample_csv, 'rb') as f:
+        with open(sample_csv, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.csv", f, "text/csv")},
-                data={"output_format": "json"}
+                data={"output_format": "json"},
             )
 
         assert response.status_code == 200
@@ -555,11 +532,11 @@ class TestDataConversionFormats:
 
     def test_convert_to_csv_format(self, client, sample_json):
         """Test conversion to CSV format"""
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.json", f, "application/json")},
-                data={"output_format": "csv"}
+                data={"output_format": "csv"},
             )
 
         assert response.status_code == 200
@@ -567,11 +544,11 @@ class TestDataConversionFormats:
 
     def test_convert_to_xml_format(self, client, sample_json):
         """Test conversion to XML format"""
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.json", f, "application/json")},
-                data={"output_format": "xml"}
+                data={"output_format": "xml"},
             )
 
         assert response.status_code == 200
@@ -580,22 +557,22 @@ class TestDataConversionFormats:
     def test_convert_multiple_chained_formats(self, client, sample_json):
         """Test chained conversions (JSON -> CSV -> XML)"""
         # First conversion: JSON to CSV
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response1 = client.post(
                 "/api/data/convert",
                 files={"file": ("test.json", f, "application/json")},
-                data={"output_format": "csv"}
+                data={"output_format": "csv"},
             )
 
         assert response1.status_code == 200
         assert response1.json()["output_file"].endswith(".csv")
 
         # Second conversion: CSV to XML (simulated with new file)
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response2 = client.post(
                 "/api/data/convert",
                 files={"file": ("test.json", f, "application/json")},
-                data={"output_format": "xml"}
+                data={"output_format": "xml"},
             )
 
         assert response2.status_code == 200
@@ -617,7 +594,7 @@ class TestDataCleanup:
             cleanup_calls.append(str(file_path))
             return original_cleanup(file_path)
 
-        monkeypatch.setattr("app.routers.data.cleanup_file", mock_cleanup)
+        monkeypatch.setattr("app.routers.base_router.cleanup_file", mock_cleanup)
 
         output_file = settings.UPLOAD_DIR / "test_output_data.csv"
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -631,13 +608,13 @@ class TestDataCleanup:
         def mock_conversion_response(*args, **kwargs):
             raise Exception("Simulated error after conversion")
 
-        monkeypatch.setattr("app.routers.data.ConversionResponse", mock_conversion_response)
+        monkeypatch.setattr("app.routers.base_router.ConversionResponse", mock_conversion_response)
 
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response = client.post(
                 "/api/data/convert",
                 files={"file": ("test.json", f, "application/json")},
-                data={"output_format": "csv"}
+                data={"output_format": "csv"},
             )
 
         assert response.status_code == 500
@@ -659,17 +636,16 @@ class TestDataCleanup:
             cleanup_calls.append(str(file_path))
             return original_cleanup(file_path)
 
-        monkeypatch.setattr("app.routers.data.cleanup_file", mock_cleanup)
+        monkeypatch.setattr("app.routers.base_router.cleanup_file", mock_cleanup)
 
         async def mock_get_data_info(self, input_path):
             raise Exception("Simulated info extraction error")
 
         monkeypatch.setattr(DataConverter, "get_data_info", mock_get_data_info)
 
-        with open(sample_json, 'rb') as f:
+        with open(sample_json, "rb") as f:
             response = client.post(
-                "/api/data/info",
-                files={"file": ("test.json", f, "application/json")}
+                "/api/data/info", files={"file": ("test.json", f, "application/json")}
             )
 
         assert response.status_code == 500

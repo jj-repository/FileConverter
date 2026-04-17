@@ -38,11 +38,11 @@ def sample_ttf_font(temp_dir):
     font_data = bytearray()
 
     # TTF file header (offset table)
-    font_data.extend(struct.pack('>i', 0x00010000))  # sfntVersion (TrueType)
-    font_data.extend(struct.pack('>H', 9))  # numTables
-    font_data.extend(struct.pack('>H', 128))  # searchRange
-    font_data.extend(struct.pack('>H', 3))  # entrySelector
-    font_data.extend(struct.pack('>H', 0))  # rangeShift
+    font_data.extend(struct.pack(">i", 0x00010000))  # sfntVersion (TrueType)
+    font_data.extend(struct.pack(">H", 9))  # numTables
+    font_data.extend(struct.pack(">H", 128))  # searchRange
+    font_data.extend(struct.pack(">H", 3))  # entrySelector
+    font_data.extend(struct.pack(">H", 0))  # rangeShift
 
     # Add minimal tables (simplified for testing)
     # Each table entry: tag (4 bytes), checksum (4), offset (4), length (4)
@@ -51,30 +51,33 @@ def sample_ttf_font(temp_dir):
 
     # Add minimal head, hhea, maxp, hmtx, loca, glyf, name, post, cmap tables
     tables = {
-        b'head': b'\x00' * 54 + b'\x5f\x0f\x3c\xf5' + b'\x00' * 100,  # head table
-        b'hhea': b'\x00\x01\x00\x00' + b'\x00' * 30,  # hhea table
-        b'maxp': b'\x00\x01\x00\x00' + b'\x00' * 26,  # maxp table
-        b'hmtx': b'\x00' * 4,  # minimal hmtx
-        b'loca': b'\x00' * 4,  # minimal loca
-        b'glyf': b'\x00' * 4,  # minimal glyf
-        b'name': b'\x00' * 6 + b'\x00' * 100,  # minimal name table
-        b'post': b'\x00\x03\x00\x00' + b'\x00' * 28,  # post table
-        b'cmap': b'\x00' * 4 + b'\x00' * 60,  # minimal cmap
+        b"head": b"\x00" * 54 + b"\x5f\x0f\x3c\xf5" + b"\x00" * 100,  # head table
+        b"hhea": b"\x00\x01\x00\x00" + b"\x00" * 30,  # hhea table
+        b"maxp": b"\x00\x01\x00\x00" + b"\x00" * 26,  # maxp table
+        b"hmtx": b"\x00" * 4,  # minimal hmtx
+        b"loca": b"\x00" * 4,  # minimal loca
+        b"glyf": b"\x00" * 4,  # minimal glyf
+        b"name": b"\x00" * 6 + b"\x00" * 100,  # minimal name table
+        b"post": b"\x00\x03\x00\x00" + b"\x00" * 28,  # post table
+        b"cmap": b"\x00" * 4 + b"\x00" * 60,  # minimal cmap
     }
 
     # Build complete font
     for tag in sorted(tables.keys()):
         data = tables[tag]
-        checksum = sum(struct.unpack('>%dI' % (len(data) // 4), data[:len(data) - len(data) % 4])) & 0xffffffff
+        checksum = (
+            sum(struct.unpack(">%dI" % (len(data) // 4), data[: len(data) - len(data) % 4]))
+            & 0xFFFFFFFF
+        )
         table_records.append((tag, checksum, current_offset, len(data)))
         current_offset += len(data)
 
     # Write table directory
     for tag, checksum, offset, length in table_records:
         font_data.extend(tag)
-        font_data.extend(struct.pack('>I', checksum))
-        font_data.extend(struct.pack('>I', offset))
-        font_data.extend(struct.pack('>I', length))
+        font_data.extend(struct.pack(">I", checksum))
+        font_data.extend(struct.pack(">I", offset))
+        font_data.extend(struct.pack(">I", length))
 
     # Write actual table data
     for tag in sorted(tables.keys()):
@@ -94,40 +97,43 @@ def sample_otf_font(temp_dir):
     font_data = bytearray()
 
     # OTF file header (offset table)
-    font_data.extend(struct.pack('>i', 0x4f54544f))  # sfntVersion (OTF - OTTO)
-    font_data.extend(struct.pack('>H', 8))  # numTables
-    font_data.extend(struct.pack('>H', 128))  # searchRange
-    font_data.extend(struct.pack('>H', 3))  # entrySelector
-    font_data.extend(struct.pack('>H', 0))  # rangeShift
+    font_data.extend(struct.pack(">i", 0x4F54544F))  # sfntVersion (OTF - OTTO)
+    font_data.extend(struct.pack(">H", 8))  # numTables
+    font_data.extend(struct.pack(">H", 128))  # searchRange
+    font_data.extend(struct.pack(">H", 3))  # entrySelector
+    font_data.extend(struct.pack(">H", 0))  # rangeShift
 
     # Add minimal tables
     table_records = []
     current_offset = 8 * 16 + 4 * 16  # After header and table directory
 
     tables = {
-        b'head': b'\x00' * 54 + b'\x5f\x0f\x3c\xf5' + b'\x00' * 100,
-        b'hhea': b'\x00\x01\x00\x00' + b'\x00' * 30,
-        b'maxp': b'\x00\x00\x50\x00' + b'\x00' * 26,  # CFF version
-        b'hmtx': b'\x00' * 4,
-        b'name': b'\x00' * 6 + b'\x00' * 100,
-        b'post': b'\x00\x03\x00\x00' + b'\x00' * 28,
-        b'cmap': b'\x00' * 4 + b'\x00' * 60,
-        b'CFF ': b'\x01\x00\x04\x04' + b'\x00' * 60,  # CFF table
+        b"head": b"\x00" * 54 + b"\x5f\x0f\x3c\xf5" + b"\x00" * 100,
+        b"hhea": b"\x00\x01\x00\x00" + b"\x00" * 30,
+        b"maxp": b"\x00\x00\x50\x00" + b"\x00" * 26,  # CFF version
+        b"hmtx": b"\x00" * 4,
+        b"name": b"\x00" * 6 + b"\x00" * 100,
+        b"post": b"\x00\x03\x00\x00" + b"\x00" * 28,
+        b"cmap": b"\x00" * 4 + b"\x00" * 60,
+        b"CFF ": b"\x01\x00\x04\x04" + b"\x00" * 60,  # CFF table
     }
 
     # Build complete font
     for tag in sorted(tables.keys()):
         data = tables[tag]
-        checksum = sum(struct.unpack('>%dI' % (len(data) // 4), data[:len(data) - len(data) % 4])) & 0xffffffff
+        checksum = (
+            sum(struct.unpack(">%dI" % (len(data) // 4), data[: len(data) - len(data) % 4]))
+            & 0xFFFFFFFF
+        )
         table_records.append((tag, checksum, current_offset, len(data)))
         current_offset += len(data)
 
     # Write table directory
     for tag, checksum, offset, length in table_records:
         font_data.extend(tag)
-        font_data.extend(struct.pack('>I', checksum))
-        font_data.extend(struct.pack('>I', offset))
-        font_data.extend(struct.pack('>I', length))
+        font_data.extend(struct.pack(">I", checksum))
+        font_data.extend(struct.pack(">I", offset))
+        font_data.extend(struct.pack(">I", length))
 
     # Write actual table data
     for tag in sorted(tables.keys()):
@@ -141,7 +147,7 @@ def sample_otf_font(temp_dir):
 def corrupted_font(temp_dir):
     """Create a corrupted font file for testing"""
     font_path = temp_dir / "corrupted.ttf"
-    font_path.write_bytes(b'\x00\x01\x00\x00INVALID_FONT_DATA_NOT_REAL')
+    font_path.write_bytes(b"\x00\x01\x00\x00INVALID_FONT_DATA_NOT_REAL")
     return font_path
 
 
@@ -150,11 +156,11 @@ class TestFontConvert:
 
     def test_convert_ttf_to_woff_success(self, client, sample_ttf_font):
         """Test successful TTF to WOFF conversion"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         # Accept both success and server error due to validation issues in router
@@ -170,11 +176,11 @@ class TestFontConvert:
     def test_convert_woff_to_ttf_success(self, client, sample_ttf_font, temp_dir):
         """Test successful WOFF to TTF conversion"""
         # First convert TTF to WOFF
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             convert_response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         # Skip if first conversion fails due to validation
@@ -184,11 +190,11 @@ class TestFontConvert:
             # Now convert WOFF back to TTF
             woff_path = settings.UPLOAD_DIR / woff_filename
             if woff_path.exists():
-                with open(woff_path, 'rb') as f:
+                with open(woff_path, "rb") as f:
                     response = client.post(
                         "/api/font/convert",
                         files={"file": ("test.woff", f, "font/woff")},
-                        data={"output_format": "ttf"}
+                        data={"output_format": "ttf"},
                     )
 
                 # Accept both success and error
@@ -199,11 +205,11 @@ class TestFontConvert:
 
     def test_convert_otf_to_ttf_success(self, client, sample_otf_font):
         """Test successful OTF to TTF conversion"""
-        with open(sample_otf_font, 'rb') as f:
+        with open(sample_otf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.otf", f, "font/otf")},
-                data={"output_format": "ttf"}
+                data={"output_format": "ttf"},
             )
 
         # Accept both success and error responses
@@ -215,11 +221,11 @@ class TestFontConvert:
 
     def test_convert_with_subsetting_parameter(self, client, sample_ttf_font):
         """Test conversion with font subsetting parameter"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff", "subset_text": "ABC"}
+                data={"output_format": "woff", "subset_text": "ABC"},
             )
 
         # Accept both success and error responses
@@ -230,11 +236,11 @@ class TestFontConvert:
 
     def test_convert_with_optimize_parameter(self, client, sample_ttf_font):
         """Test conversion with optimize parameter"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff", "optimize": True}
+                data={"output_format": "woff", "optimize": True},
             )
 
         # Accept both success and error responses
@@ -245,26 +251,30 @@ class TestFontConvert:
 
     def test_convert_invalid_output_format(self, client, sample_ttf_font):
         """Test conversion with invalid output format"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "invalid"}
+                data={"output_format": "invalid"},
             )
 
         # Should fail with validation error or internal error
         assert response.status_code in [400, 500]
         response_data = response.json()
         error_msg = response_data.get("detail") or response_data.get("error")
-        assert "Unsupported output format" in str(error_msg) or "Invalid output format" in str(error_msg) or error_msg is not None
+        assert (
+            "Unsupported output format" in str(error_msg)
+            or "Invalid output format" in str(error_msg)
+            or error_msg is not None
+        )
 
     def test_convert_corrupted_font_handling(self, client, corrupted_font):
         """Test conversion with corrupted font file"""
-        with open(corrupted_font, 'rb') as f:
+        with open(corrupted_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("corrupted.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         # Should fail with error status
@@ -279,19 +289,20 @@ class TestFontConvert:
         fake_file = temp_dir / "malware.exe"
         fake_file.write_bytes(b"not a font")
 
-        with open(fake_file, 'rb') as f:
+        with open(fake_file, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("malware.exe", f, "application/octet-stream")},
-                data={"output_format": "ttf"}
+                data={"output_format": "ttf"},
             )
 
         # Unsupported format returns 400 or 500 depending on validation stage
         assert response.status_code in [400, 500]
         response_data = response.json()
         error_msg = response_data.get("detail") or response_data.get("error")
-        assert ("Invalid or unsupported file extension" in str(error_msg) or
-                "Unsupported file format" in str(error_msg))
+        assert "Invalid or unsupported file extension" in str(
+            error_msg
+        ) or "Unsupported file format" in str(error_msg)
 
 
 class TestFontFormats:
@@ -336,11 +347,11 @@ class TestFontDownload:
     def test_download_converted_file(self, client, sample_ttf_font):
         """Test downloading a converted font file"""
         # First, convert a font
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             convert_response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         # Only test download if conversion succeeded
@@ -373,8 +384,9 @@ class TestFontDownload:
         for malicious_name in malicious_filenames:
             response = client.get(f"/api/font/download/{malicious_name}")
             # Should either be 400 (validation) or 404 (not found)
-            assert response.status_code in [400, 404], \
+            assert response.status_code in [400, 404], (
                 f"Path traversal not blocked for: {malicious_name}"
+            )
 
 
 class TestFontInfo:
@@ -382,11 +394,8 @@ class TestFontInfo:
 
     def test_get_font_info_success_ttf(self, client, sample_ttf_font):
         """Test successful font info retrieval for TTF"""
-        with open(sample_ttf_font, 'rb') as f:
-            response = client.post(
-                "/api/font/info",
-                files={"file": ("test.ttf", f, "font/ttf")}
-            )
+        with open(sample_ttf_font, "rb") as f:
+            response = client.post("/api/font/info", files={"file": ("test.ttf", f, "font/ttf")})
 
         # Accept both success and error due to validation issues
         if response.status_code == 200:
@@ -398,11 +407,8 @@ class TestFontInfo:
 
     def test_get_font_info_success_otf(self, client, sample_otf_font):
         """Test successful font info retrieval for OTF"""
-        with open(sample_otf_font, 'rb') as f:
-            response = client.post(
-                "/api/font/info",
-                files={"file": ("test.otf", f, "font/otf")}
-            )
+        with open(sample_otf_font, "rb") as f:
+            response = client.post("/api/font/info", files={"file": ("test.otf", f, "font/otf")})
 
         # Accept both success and error
         if response.status_code == 200:
@@ -414,11 +420,8 @@ class TestFontInfo:
 
     def test_get_font_info_includes_metadata(self, client, sample_ttf_font):
         """Test that font info includes font metadata"""
-        with open(sample_ttf_font, 'rb') as f:
-            response = client.post(
-                "/api/font/info",
-                files={"file": ("test.ttf", f, "font/ttf")}
-            )
+        with open(sample_ttf_font, "rb") as f:
+            response = client.post("/api/font/info", files={"file": ("test.ttf", f, "font/ttf")})
 
         # Accept both success and error
         if response.status_code == 200:
@@ -435,10 +438,9 @@ class TestFontInfo:
         invalid_file = temp_dir / "invalid.txt"
         invalid_file.write_text("not a font")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
-                "/api/font/info",
-                files={"file": ("invalid.txt", f, "text/plain")}
+                "/api/font/info", files={"file": ("invalid.txt", f, "text/plain")}
             )
 
         # Returns 400 or 500 depending on validation stage
@@ -450,11 +452,11 @@ class TestFontConversionFormats:
 
     def test_convert_to_ttf(self, client, sample_ttf_font):
         """Test conversion to TTF format"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "ttf"}
+                data={"output_format": "ttf"},
             )
 
         if response.status_code == 200:
@@ -462,11 +464,11 @@ class TestFontConversionFormats:
 
     def test_convert_to_otf(self, client, sample_ttf_font):
         """Test conversion to OTF format"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "otf"}
+                data={"output_format": "otf"},
             )
 
         if response.status_code == 200:
@@ -474,11 +476,11 @@ class TestFontConversionFormats:
 
     def test_convert_to_woff(self, client, sample_ttf_font):
         """Test conversion to WOFF format"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         if response.status_code == 200:
@@ -486,11 +488,11 @@ class TestFontConversionFormats:
 
     def test_convert_to_woff2(self, client, sample_ttf_font):
         """Test conversion to WOFF2 format"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff2"}
+                data={"output_format": "woff2"},
             )
 
         # WOFF2 support may vary, so accept success or error
@@ -511,11 +513,11 @@ class TestFontSecurityValidation:
         ]
 
         for malicious_name in malicious_filenames:
-            with open(sample_ttf_font, 'rb') as f:
+            with open(sample_ttf_font, "rb") as f:
                 response = client.post(
                     "/api/font/convert",
                     files={"file": (malicious_name, f, "font/ttf")},
-                    data={"output_format": "woff"}
+                    data={"output_format": "woff"},
                 )
 
             # Should succeed (filename sanitized) or fail safely
@@ -523,24 +525,26 @@ class TestFontSecurityValidation:
             if response.status_code == 200:
                 # Verify output filename doesn't contain shell metacharacters
                 output_file = response.json()["output_file"]
-                dangerous_chars = [';', '$', '`', '|', '&', '<', '>']
+                dangerous_chars = [";", "$", "`", "|", "&", "<", ">"]
                 for char in dangerous_chars:
-                    assert char not in output_file, f"Found dangerous char '{char}' in output: {output_file}"
+                    assert char not in output_file, (
+                        f"Found dangerous char '{char}' in output: {output_file}"
+                    )
 
     def test_null_byte_injection_blocked(self, client, sample_ttf_font):
         """Test that null byte injection is sanitized"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test\x00.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         # Null bytes are sanitized, so conversion succeeds or fails safely
         # but output filename should not contain null bytes
         if response.status_code == 200:
             output_file = response.json()["output_file"]
-            assert '\x00' not in output_file
+            assert "\x00" not in output_file
         else:
             # Or it fails validation
             assert response.status_code in [400, 500]
@@ -564,10 +568,9 @@ class TestFontOptimize:
 
     def test_optimize_ttf_success(self, client, sample_ttf_font):
         """Test successful TTF font optimization"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
-                "/api/font/optimize",
-                files={"file": ("test.ttf", f, "font/ttf")}
+                "/api/font/optimize", files={"file": ("test.ttf", f, "font/ttf")}
             )
 
         # Accept both success and error due to validation
@@ -581,10 +584,9 @@ class TestFontOptimize:
 
     def test_optimize_otf_success(self, client, sample_otf_font):
         """Test successful OTF font optimization"""
-        with open(sample_otf_font, 'rb') as f:
+        with open(sample_otf_font, "rb") as f:
             response = client.post(
-                "/api/font/optimize",
-                files={"file": ("test.otf", f, "font/otf")}
+                "/api/font/optimize", files={"file": ("test.otf", f, "font/otf")}
             )
 
         # Accept both success and error
@@ -596,11 +598,11 @@ class TestFontOptimize:
     def test_optimize_woff_success(self, client, sample_ttf_font, temp_dir):
         """Test optimization of WOFF font"""
         # First create a WOFF file
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             convert_response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         if convert_response.status_code == 200:
@@ -608,10 +610,9 @@ class TestFontOptimize:
             woff_path = settings.UPLOAD_DIR / woff_filename
 
             if woff_path.exists():
-                with open(woff_path, 'rb') as f:
+                with open(woff_path, "rb") as f:
                     response = client.post(
-                        "/api/font/optimize",
-                        files={"file": ("test.woff", f, "font/woff")}
+                        "/api/font/optimize", files={"file": ("test.woff", f, "font/woff")}
                     )
 
                 if response.status_code == 200:
@@ -624,10 +625,9 @@ class TestFontOptimize:
         invalid_file = temp_dir / "invalid.exe"
         invalid_file.write_bytes(b"not a font")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
-                "/api/font/optimize",
-                files={"file": ("invalid.exe", f, "application/octet-stream")}
+                "/api/font/optimize", files={"file": ("invalid.exe", f, "application/octet-stream")}
             )
 
         # Should fail with validation error
@@ -639,13 +639,12 @@ class TestFontOptimize:
         """Test optimization with file exceeding size limit"""
         # Create a file larger than FONT_MAX_SIZE
         large_file = temp_dir / "large.ttf"
-        large_data = b'\x00\x01\x00\x00' + b'\x00' * (settings.FONT_MAX_SIZE + 1000)
+        large_data = b"\x00\x01\x00\x00" + b"\x00" * (settings.FONT_MAX_SIZE + 1000)
         large_file.write_bytes(large_data)
 
-        with open(large_file, 'rb') as f:
+        with open(large_file, "rb") as f:
             response = client.post(
-                "/api/font/optimize",
-                files={"file": ("large.ttf", f, "font/ttf")}
+                "/api/font/optimize", files={"file": ("large.ttf", f, "font/ttf")}
             )
 
         # Should fail with size validation error (accept 500 for internal validation)
@@ -653,10 +652,9 @@ class TestFontOptimize:
 
     def test_optimize_corrupted_font_handling(self, client, corrupted_font):
         """Test optimization with corrupted font"""
-        with open(corrupted_font, 'rb') as f:
+        with open(corrupted_font, "rb") as f:
             response = client.post(
-                "/api/font/optimize",
-                files={"file": ("corrupted.ttf", f, "font/ttf")}
+                "/api/font/optimize", files={"file": ("corrupted.ttf", f, "font/ttf")}
             )
 
         # Should fail with error
@@ -668,10 +666,9 @@ class TestFontOptimize:
 
     def test_optimize_returns_session_id(self, client, sample_ttf_font):
         """Test that optimization returns a session ID"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
-                "/api/font/optimize",
-                files={"file": ("test.ttf", f, "font/ttf")}
+                "/api/font/optimize", files={"file": ("test.ttf", f, "font/ttf")}
             )
 
         if response.status_code == 200:
@@ -687,14 +684,14 @@ class TestFontErrorHandling:
     def test_convert_file_size_validation_error(self, client, temp_dir):
         """Test that oversized files are rejected in convert endpoint"""
         large_file = temp_dir / "large.ttf"
-        large_data = b'\x00\x01\x00\x00' + b'\x00' * (settings.FONT_MAX_SIZE + 1000)
+        large_data = b"\x00\x01\x00\x00" + b"\x00" * (settings.FONT_MAX_SIZE + 1000)
         large_file.write_bytes(large_data)
 
-        with open(large_file, 'rb') as f:
+        with open(large_file, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("large.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         # Should fail with validation error (accept 500 for internal handling)
@@ -703,14 +700,11 @@ class TestFontErrorHandling:
     def test_info_file_size_validation_error(self, client, temp_dir):
         """Test that oversized files are rejected in info endpoint"""
         large_file = temp_dir / "large.ttf"
-        large_data = b'\x00\x01\x00\x00' + b'\x00' * (settings.FONT_MAX_SIZE + 1000)
+        large_data = b"\x00\x01\x00\x00" + b"\x00" * (settings.FONT_MAX_SIZE + 1000)
         large_file.write_bytes(large_data)
 
-        with open(large_file, 'rb') as f:
-            response = client.post(
-                "/api/font/info",
-                files={"file": ("large.ttf", f, "font/ttf")}
-            )
+        with open(large_file, "rb") as f:
+            response = client.post("/api/font/info", files={"file": ("large.ttf", f, "font/ttf")})
 
         # Should fail with validation error (accept 500 for internal handling)
         assert response.status_code in [400, 413, 500]
@@ -720,11 +714,11 @@ class TestFontErrorHandling:
         invalid_file = temp_dir / "test.xyz"
         invalid_file.write_bytes(b"fake font data")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.xyz", f, "application/octet-stream")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         assert response.status_code in [400, 500]
@@ -736,10 +730,9 @@ class TestFontErrorHandling:
         invalid_file = temp_dir / "test.xyz"
         invalid_file.write_bytes(b"fake font data")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
-                "/api/font/info",
-                files={"file": ("test.xyz", f, "application/octet-stream")}
+                "/api/font/info", files={"file": ("test.xyz", f, "application/octet-stream")}
             )
 
         assert response.status_code in [400, 500]
@@ -751,10 +744,9 @@ class TestFontErrorHandling:
         invalid_file = temp_dir / "test.xyz"
         invalid_file.write_bytes(b"fake font data")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
-                "/api/font/optimize",
-                files={"file": ("test.xyz", f, "application/octet-stream")}
+                "/api/font/optimize", files={"file": ("test.xyz", f, "application/octet-stream")}
             )
 
         assert response.status_code in [400, 500]
@@ -765,11 +757,11 @@ class TestFontErrorHandling:
         """Test that input file is cleaned up on conversion exception"""
         initial_temp_files = list(settings.TEMP_DIR.glob("*"))
 
-        with open(corrupted_font, 'rb') as f:
+        with open(corrupted_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("corrupted.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         # Should fail
@@ -784,10 +776,9 @@ class TestFontErrorHandling:
         """Test that input file is cleaned up on optimization exception"""
         initial_temp_files = list(settings.TEMP_DIR.glob("*"))
 
-        with open(corrupted_font, 'rb') as f:
+        with open(corrupted_font, "rb") as f:
             response = client.post(
-                "/api/font/optimize",
-                files={"file": ("corrupted.ttf", f, "font/ttf")}
+                "/api/font/optimize", files={"file": ("corrupted.ttf", f, "font/ttf")}
             )
 
         # Should fail
@@ -801,10 +792,9 @@ class TestFontErrorHandling:
         """Test that temp file is cleaned up on info exception"""
         initial_temp_files = list(settings.TEMP_DIR.glob("*"))
 
-        with open(corrupted_font, 'rb') as f:
+        with open(corrupted_font, "rb") as f:
             response = client.post(
-                "/api/font/info",
-                files={"file": ("corrupted.ttf", f, "font/ttf")}
+                "/api/font/info", files={"file": ("corrupted.ttf", f, "font/ttf")}
             )
 
         # May succeed or fail depending on corruption level, but should clean up temp files
@@ -820,14 +810,11 @@ class TestFontConvertOptions:
 
     def test_convert_with_subset_text_option(self, client, sample_ttf_font):
         """Test conversion with subset_text option"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={
-                    "output_format": "woff",
-                    "subset_text": "Hello World"
-                }
+                data={"output_format": "woff", "subset_text": "Hello World"},
             )
 
         # Option should be accepted
@@ -837,14 +824,11 @@ class TestFontConvertOptions:
 
     def test_convert_with_optimize_false(self, client, sample_ttf_font):
         """Test conversion with optimize=False"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={
-                    "output_format": "woff",
-                    "optimize": False
-                }
+                data={"output_format": "woff", "optimize": False},
             )
 
         # Option should be accepted
@@ -854,15 +838,11 @@ class TestFontConvertOptions:
 
     def test_convert_with_all_options(self, client, sample_ttf_font):
         """Test conversion with all available options"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={
-                    "output_format": "woff",
-                    "subset_text": "ABC123",
-                    "optimize": True
-                }
+                data={"output_format": "woff", "subset_text": "ABC123", "optimize": True},
             )
 
         # All options should be accepted
@@ -873,14 +853,11 @@ class TestFontConvertOptions:
 
     def test_convert_empty_subset_text(self, client, sample_ttf_font):
         """Test conversion with empty subset_text"""
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={
-                    "output_format": "woff",
-                    "subset_text": ""
-                }
+                data={"output_format": "woff", "subset_text": ""},
             )
 
         # Empty subset text should be handled (treated as None)
@@ -905,18 +882,18 @@ class TestFontSuccessPaths:
 
         monkeypatch.setattr(FontConverter, "convert_with_cache", mock_convert_with_cache)
 
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         # Should succeed
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "completed"
-        assert data["message"] == "Conversion successful"
+        assert data["message"] == "Font conversion completed successfully"
         assert data["output_file"].endswith(".woff")
         assert "/api/font/download/" in data["download_url"]
         assert "session_id" in data
@@ -939,10 +916,9 @@ class TestFontSuccessPaths:
 
         monkeypatch.setattr(FontConverter, "optimize_font", mock_optimize_font)
 
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
-                "/api/font/optimize",
-                files={"file": ("test.ttf", f, "font/ttf")}
+                "/api/font/optimize", files={"file": ("test.ttf", f, "font/ttf")}
             )
 
         # Should succeed
@@ -967,7 +943,7 @@ class TestFontSuccessPaths:
             "style_name": "Regular",
             "version": "1.0",
             "num_glyphs": 100,
-            "file_size": 1024
+            "file_size": 1024,
         }
 
         async def mock_get_info(self, input_path):
@@ -976,11 +952,8 @@ class TestFontSuccessPaths:
 
         monkeypatch.setattr(FontConverter, "get_info", mock_get_info)
 
-        with open(sample_ttf_font, 'rb') as f:
-            response = client.post(
-                "/api/font/info",
-                files={"file": ("test.ttf", f, "font/ttf")}
-            )
+        with open(sample_ttf_font, "rb") as f:
+            response = client.post("/api/font/info", files={"file": ("test.ttf", f, "font/ttf")})
 
         # Should succeed
         assert response.status_code == 200
@@ -1015,16 +988,16 @@ class TestFontSuccessPaths:
 
         async def mock_convert_with_cache(self, input_path, output_format, options, session_id):
             # Verify subset_text option was passed
-            assert options.get('subset_text') == "ABC"
+            assert options.get("subset_text") == "ABC"
             return output_file
 
         monkeypatch.setattr(FontConverter, "convert_with_cache", mock_convert_with_cache)
 
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff", "subset_text": "ABC"}
+                data={"output_format": "woff", "subset_text": "ABC"},
             )
 
         assert response.status_code == 200
@@ -1051,11 +1024,11 @@ class TestFontSuccessPaths:
 
         monkeypatch.setattr(FontConverter, "convert_with_cache", mock_convert_with_cache)
 
-        with open(sample_ttf_font, 'rb') as f:
+        with open(sample_ttf_font, "rb") as f:
             response = client.post(
                 "/api/font/convert",
                 files={"file": ("test.ttf", f, "font/ttf")},
-                data={"output_format": "woff"}
+                data={"output_format": "woff"},
             )
 
         assert response.status_code == 200
@@ -1080,12 +1053,15 @@ class TestFontErrorHandling:
         font_path.write_bytes(b"fake ttf")
 
         # Mock validate_file_extension to raise ValueError
-        with patch("app.routers.font.validate_file_extension", side_effect=ValueError("Invalid font format")):
-            with open(font_path, 'rb') as f:
+        with patch(
+            "app.routers.font.validate_file_extension",
+            side_effect=ValueError("Invalid font format"),
+        ):
+            with open(font_path, "rb") as f:
                 response = client.post(
                     "/api/font/convert",
                     files={"file": ("test.ttf", f, "font/ttf")},
-                    data={"output_format": "woff"}
+                    data={"output_format": "woff"},
                 )
 
             # Should return 400 error for ValueError
@@ -1103,11 +1079,13 @@ class TestFontErrorHandling:
         font_path.write_bytes(b"fake ttf")
 
         # Mock validate_file_extension to raise ValueError
-        with patch("app.routers.font.validate_file_extension", side_effect=ValueError("Invalid font for optimization")):
-            with open(font_path, 'rb') as f:
+        with patch(
+            "app.routers.font.validate_file_extension",
+            side_effect=ValueError("Invalid font for optimization"),
+        ):
+            with open(font_path, "rb") as f:
                 response = client.post(
-                    "/api/font/optimize",
-                    files={"file": ("test.ttf", f, "font/ttf")}
+                    "/api/font/optimize", files={"file": ("test.ttf", f, "font/ttf")}
                 )
 
             # Should return 400 error for ValueError
@@ -1125,11 +1103,13 @@ class TestFontErrorHandling:
         font_path.write_bytes(b"fake ttf")
 
         # Mock validate_file_extension to raise ValueError
-        with patch("app.routers.font.validate_file_extension", side_effect=ValueError("Invalid font for info")):
-            with open(font_path, 'rb') as f:
+        with patch(
+            "app.routers.font.validate_file_extension",
+            side_effect=ValueError("Invalid font for info"),
+        ):
+            with open(font_path, "rb") as f:
                 response = client.post(
-                    "/api/font/info",
-                    files={"file": ("test.ttf", f, "font/ttf")}
+                    "/api/font/info", files={"file": ("test.ttf", f, "font/ttf")}
                 )
 
             # Should return 400 error for ValueError
@@ -1147,11 +1127,13 @@ class TestFontErrorHandling:
         font_path.write_bytes(b"fake ttf")
 
         # Mock get_info to raise exception
-        with patch("app.services.font_converter.FontConverter.get_info", side_effect=Exception("Info extraction failed")):
-            with open(font_path, 'rb') as f:
+        with patch(
+            "app.services.font_converter.FontConverter.get_info",
+            side_effect=Exception("Info extraction failed"),
+        ):
+            with open(font_path, "rb") as f:
                 response = client.post(
-                    "/api/font/info",
-                    files={"file": ("test.ttf", f, "font/ttf")}
+                    "/api/font/info", files={"file": ("test.ttf", f, "font/ttf")}
                 )
 
             # Should return 500 error for general exception

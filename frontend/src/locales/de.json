@@ -99,16 +99,43 @@
       "title": "Archiv-Konverter",
       "description": "Archive zwischen verschiedenen Formaten konvertieren",
       "compressionLevel": "Kompressionsstufe",
-      "convertArchive": "Archiv konvertieren"
+      "compressionLevelLabel": "Kompressionsstufe ({{level}})",
+      "faster": "Schneller",
+      "smaller": "Kleiner",
+      "convertArchive": "Archiv konvertieren",
+      "completed": "Archivkonvertierung erfolgreich abgeschlossen!"
     },
     "spreadsheet": {
       "title": "Tabellenkalkulations-Konverter",
       "description": "Tabellenkalkulationen zwischen verschiedenen Formaten konvertieren",
-      "convertSpreadsheet": "Tabelle konvertieren"
+      "note": "Formeln, Diagramme und erweiterte Formatierungen gehen bei der Konvertierung verloren. Nur Datenwerte werden übernommen.",
+      "xlsNotSupported": "XLS-Ausgabe nicht unterstützt. XLS-Lesen wird unterstützt.",
+      "delimiter": "Trennzeichen",
+      "delimiterHint": "Wird für CSV-Ausgabe verwendet",
+      "sheetName": "Blattname (Optional)",
+      "sheetNamePlaceholder": "Erstes Blatt standardmäßig",
+      "sheetNameHint": "Leer lassen, um das erste Blatt zu konvertieren",
+      "convertSpreadsheet": "Tabelle konvertieren",
+      "completed": "Tabellenkonvertierung erfolgreich abgeschlossen!"
     },
     "subtitle": {
       "title": "Untertitel-Konverter",
       "description": "Untertitel zwischen verschiedenen Formaten konvertieren",
+      "supportedFormats": "Unterstützte Formate: SRT (SubRip), VTT (WebVTT), ASS/SSA (Advanced SubStation Alpha), SUB (MicroDVD)",
+      "convertFormat": "Format konvertieren",
+      "adjustTiming": "Timing anpassen",
+      "adjustingTiming": "Anpassung läuft...",
+      "fps": "Bildrate (FPS)",
+      "fpsHint": "Erforderlich für SUB-Format-Timing",
+      "htmlTags": "HTML-Tags",
+      "keepHtmlTags": "HTML-Formatierungstags beibehalten",
+      "htmlTagsHint": "Erhalte <b>, <i>, usw.",
+      "timingOffset": "Zeitversatz (Millisekunden)",
+      "timingOffsetPlaceholder": "z.B. 2000 (Verzögerung) oder -2000 (Vorverlegen)",
+      "timingOffsetHint": "Positiv = Untertitel verzögern, Negativ = Untertitel vorverlagen",
+      "timingOffsetExample": "Beispiel: +2000ms verzögert um 2 Sekunden, -1500ms verlegt um 1,5 Sekunden vor",
+      "timingCompleted": "Untertitel-Timing erfolgreich um {{ms}}ms angepasst!",
+      "convertCompleted": "Untertitelkonvertierung erfolgreich abgeschlossen!",
       "convertSubtitle": "Untertitel konvertieren"
     },
     "ebook": {
@@ -119,6 +146,19 @@
     "font": {
       "title": "Schriftarten-Konverter",
       "description": "Schriftarten zwischen verschiedenen Formaten konvertieren",
+      "webInfo": "Schriftarten für Web und Desktop konvertieren.",
+      "ttfDesc": "TTF (TrueType): Kompatibelster Desktop-Format",
+      "otfDesc": "OTF (OpenType): Erweiterte Funktionen, besser für komplexe Typografie",
+      "woffDesc": "WOFF: Web Open Font Format, für Web optimiert",
+      "woff2Desc": "WOFF2: Bessere Kompression, nur moderne Browser",
+      "advancedOptions": "Erweiterte Optionen",
+      "subsetText": "Teilzeichensatz (Optional)",
+      "subsetTextHint": "Nur diese Zeichen einschließen, um die Dateigröße zu reduzieren",
+      "optimize": "Schriftart optimieren (unnötige Daten entfernen)",
+      "converting": "Schriftart wird konvertiert...",
+      "completed": "Konvertierung abgeschlossen!",
+      "readyToConvert": "Bereit zur Konvertierung",
+      "download": "Konvertierte Schriftart herunterladen",
       "convertFont": "Schriftart konvertieren"
     },
     "data": {

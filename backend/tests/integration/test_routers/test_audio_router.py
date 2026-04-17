@@ -37,11 +37,11 @@ class TestAudioConvert:
 
     def test_convert_mp3_to_wav_success(self, client, sample_audio):
         """Test successful MP3 to WAV conversion"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "wav"}
+                data={"output_format": "wav"},
             )
 
         assert response.status_code == 200
@@ -53,11 +53,11 @@ class TestAudioConvert:
 
     def test_convert_with_codec_parameter_mp3(self, client, sample_audio):
         """Test conversion with codec parameter (MP3)"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "mp3", "codec": "libmp3lame"}
+                data={"output_format": "mp3", "codec": "libmp3lame"},
             )
 
         assert response.status_code == 200
@@ -67,11 +67,11 @@ class TestAudioConvert:
 
     def test_convert_with_codec_parameter_aac(self, client, sample_audio):
         """Test conversion with AAC codec"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "aac", "codec": "aac"}
+                data={"output_format": "aac", "codec": "aac"},
             )
 
         # AAC support may vary, so accept either success or failure
@@ -83,11 +83,11 @@ class TestAudioConvert:
 
     def test_convert_with_codec_parameter_opus(self, client, sample_audio):
         """Test conversion with Opus codec"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "ogg", "codec": "libopus"}
+                data={"output_format": "ogg", "codec": "libopus"},
             )
 
         # Opus support may vary, so accept either success or failure
@@ -98,11 +98,11 @@ class TestAudioConvert:
 
     def test_convert_with_bitrate_128k(self, client, sample_audio):
         """Test conversion with 128k bitrate"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "mp3", "bitrate": "128k"}
+                data={"output_format": "mp3", "bitrate": "128k"},
             )
 
         assert response.status_code == 200
@@ -112,11 +112,11 @@ class TestAudioConvert:
 
     def test_convert_with_bitrate_320k(self, client, sample_audio):
         """Test conversion with 320k bitrate"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "mp3", "bitrate": "320k"}
+                data={"output_format": "mp3", "bitrate": "320k"},
             )
 
         assert response.status_code == 200
@@ -125,11 +125,11 @@ class TestAudioConvert:
 
     def test_convert_with_sample_rate_44100(self, client, sample_audio):
         """Test conversion with 44100 Hz sample rate"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "wav", "sample_rate": 44100}
+                data={"output_format": "wav", "sample_rate": 44100},
             )
 
         assert response.status_code == 200
@@ -139,11 +139,11 @@ class TestAudioConvert:
 
     def test_convert_with_sample_rate_48000(self, client, sample_audio):
         """Test conversion with 48000 Hz sample rate"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "wav", "sample_rate": 48000}
+                data={"output_format": "wav", "sample_rate": 48000},
             )
 
         assert response.status_code == 200
@@ -152,7 +152,7 @@ class TestAudioConvert:
 
     def test_convert_with_all_parameters(self, client, sample_audio):
         """Test conversion with multiple parameters combined"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
@@ -160,8 +160,8 @@ class TestAudioConvert:
                     "output_format": "wav",
                     "bitrate": "192k",
                     "sample_rate": 44100,
-                    "channels": 2
-                }
+                    "channels": 2,
+                },
             )
 
         assert response.status_code == 200
@@ -170,11 +170,11 @@ class TestAudioConvert:
 
     def test_convert_invalid_codec(self, client, sample_audio):
         """Test conversion with invalid codec"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "mp3", "codec": "invalid_codec"}
+                data={"output_format": "mp3", "codec": "invalid_codec"},
             )
 
         # Should return 422 (Pydantic validation for Literal type whitelist)
@@ -182,11 +182,11 @@ class TestAudioConvert:
 
     def test_convert_invalid_output_format(self, client, sample_audio):
         """Test conversion with invalid output format"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "invalid"}
+                data={"output_format": "invalid"},
             )
 
         assert response.status_code == 400
@@ -200,18 +200,19 @@ class TestAudioConvert:
         fake_file = temp_dir / "malware.exe"
         fake_file.write_text("not an audio file")
 
-        with open(fake_file, 'rb') as f:
+        with open(fake_file, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("malware.exe", f, "application/octet-stream")},
-                data={"output_format": "mp3"}
+                data={"output_format": "mp3"},
             )
 
         assert response.status_code == 400
         response_data = response.json()
         error_msg = response_data.get("detail") or response_data.get("error")
-        assert ("Invalid or unsupported file extension" in str(error_msg) or
-                "Unsupported file format" in str(error_msg))
+        assert "Invalid or unsupported file extension" in str(
+            error_msg
+        ) or "Unsupported file format" in str(error_msg)
 
 
 class TestAudioFormats:
@@ -245,11 +246,11 @@ class TestAudioDownload:
     def test_download_converted_file(self, client, sample_audio):
         """Test downloading a converted file"""
         # First, convert an audio file
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             convert_response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "wav"}
+                data={"output_format": "wav"},
             )
 
         assert convert_response.status_code == 200
@@ -281,8 +282,9 @@ class TestAudioDownload:
         for malicious_name in malicious_filenames:
             response = client.get(f"/api/audio/download/{malicious_name}")
             # Should either be 400 (validation) or 404 (not found)
-            assert response.status_code in [400, 404], \
+            assert response.status_code in [400, 404], (
                 f"Path traversal not blocked for: {malicious_name}"
+            )
 
 
 class TestAudioInfo:
@@ -290,11 +292,8 @@ class TestAudioInfo:
 
     def test_get_audio_info_success(self, client, sample_audio):
         """Test successful audio info retrieval"""
-        with open(sample_audio, 'rb') as f:
-            response = client.post(
-                "/api/audio/info",
-                files={"file": ("test.mp3", f, "audio/mpeg")}
-            )
+        with open(sample_audio, "rb") as f:
+            response = client.post("/api/audio/info", files={"file": ("test.mp3", f, "audio/mpeg")})
 
         assert response.status_code == 200
         data = response.json()
@@ -305,11 +304,8 @@ class TestAudioInfo:
 
     def test_get_audio_info_includes_audio_properties(self, client, sample_audio):
         """Test that audio info includes audio properties"""
-        with open(sample_audio, 'rb') as f:
-            response = client.post(
-                "/api/audio/info",
-                files={"file": ("test.mp3", f, "audio/mpeg")}
-            )
+        with open(sample_audio, "rb") as f:
+            response = client.post("/api/audio/info", files={"file": ("test.mp3", f, "audio/mpeg")})
 
         assert response.status_code == 200
         data = response.json()
@@ -317,8 +313,9 @@ class TestAudioInfo:
         # Audio metadata may include duration, sample_rate, channels, bitrate
         # At least some of these should be present
         possible_keys = ["duration", "sample_rate", "channels", "bitrate", "codec"]
-        assert any(key in metadata for key in possible_keys), \
+        assert any(key in metadata for key in possible_keys), (
             f"No audio properties found in metadata: {metadata}"
+        )
 
     def test_get_audio_info_invalid_file(self, client, temp_dir):
         """Test audio info with invalid file"""
@@ -326,10 +323,9 @@ class TestAudioInfo:
         invalid_file = temp_dir / "invalid.txt"
         invalid_file.write_text("not an audio file")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
-                "/api/audio/info",
-                files={"file": ("invalid.txt", f, "text/plain")}
+                "/api/audio/info", files={"file": ("invalid.txt", f, "text/plain")}
             )
 
         # Returns 400 or 500 depending on validation stage
@@ -348,11 +344,11 @@ class TestAudioSecurityValidation:
         ]
 
         for malicious_name in malicious_filenames:
-            with open(sample_audio, 'rb') as f:
+            with open(sample_audio, "rb") as f:
                 response = client.post(
                     "/api/audio/convert",
                     files={"file": (malicious_name, f, "audio/mpeg")},
-                    data={"output_format": "wav"}
+                    data={"output_format": "wav"},
                 )
 
             # Should succeed (filename sanitized) or fail safely
@@ -360,24 +356,24 @@ class TestAudioSecurityValidation:
             if response.status_code == 200:
                 # Verify output filename doesn't contain shell metacharacters
                 output_file = response.json()["output_file"]
-                dangerous_chars = [';', '$', '`', '|', '&', '<', '>']
+                dangerous_chars = [";", "$", "`", "|", "&", "<", ">"]
                 for char in dangerous_chars:
                     assert char not in output_file
 
     def test_null_byte_injection_blocked(self, client, sample_audio):
         """Test that null byte injection is sanitized"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test\x00.mp3", f, "audio/mpeg")},
-                data={"output_format": "wav"}
+                data={"output_format": "wav"},
             )
 
         # Null bytes are sanitized, so conversion succeeds
         # but output filename should not contain null bytes
         if response.status_code == 200:
             output_file = response.json()["output_file"]
-            assert '\x00' not in output_file
+            assert "\x00" not in output_file
         else:
             # Or it fails validation
             assert response.status_code in [400, 500]
@@ -388,11 +384,11 @@ class TestAudioConversionFormats:
 
     def test_convert_to_flac(self, client, sample_audio):
         """Test conversion to FLAC format"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "flac"}
+                data={"output_format": "flac"},
             )
 
         assert response.status_code == 200
@@ -400,11 +396,11 @@ class TestAudioConversionFormats:
 
     def test_convert_to_ogg(self, client, sample_audio):
         """Test conversion to OGG format"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "ogg"}
+                data={"output_format": "ogg"},
             )
 
         assert response.status_code == 200
@@ -412,11 +408,11 @@ class TestAudioConversionFormats:
 
     def test_convert_to_m4a(self, client, sample_audio):
         """Test conversion to M4A format"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "m4a"}
+                data={"output_format": "m4a"},
             )
 
         # M4A support may vary
@@ -426,11 +422,11 @@ class TestAudioConversionFormats:
 
     def test_convert_to_aac(self, client, sample_audio):
         """Test conversion to AAC format"""
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "aac"}
+                data={"output_format": "aac"},
             )
 
         # AAC support may vary
@@ -440,11 +436,11 @@ class TestAudioConversionFormats:
 
     def test_convert_wav_to_mp3(self, client, sample_audio_wav):
         """Test WAV to MP3 conversion"""
-        with open(sample_audio_wav, 'rb') as f:
+        with open(sample_audio_wav, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.wav", f, "audio/wav")},
-                data={"output_format": "mp3"}
+                data={"output_format": "mp3"},
             )
 
         assert response.status_code == 200
@@ -469,7 +465,7 @@ class TestAudioCleanup:
             cleanup_calls.append(str(file_path))
             return original_cleanup(file_path)
 
-        monkeypatch.setattr("app.routers.audio.cleanup_file", mock_cleanup)
+        monkeypatch.setattr("app.routers.base_router.cleanup_file", mock_cleanup)
 
         # Mock converter to succeed and return output path
         output_file = settings.UPLOAD_DIR / "test_output_audio.wav"
@@ -486,13 +482,13 @@ class TestAudioCleanup:
         def mock_conversion_response(*args, **kwargs):
             raise Exception("Simulated error after conversion")
 
-        monkeypatch.setattr("app.routers.audio.ConversionResponse", mock_conversion_response)
+        monkeypatch.setattr("app.routers.base_router.ConversionResponse", mock_conversion_response)
 
-        with open(sample_audio, 'rb') as f:
+        with open(sample_audio, "rb") as f:
             response = client.post(
                 "/api/audio/convert",
                 files={"file": ("test.mp3", f, "audio/mpeg")},
-                data={"output_format": "wav"}
+                data={"output_format": "wav"},
             )
 
         # Should return 500 error
@@ -519,7 +515,7 @@ class TestAudioCleanup:
             cleanup_calls.append(str(file_path))
             return original_cleanup(file_path)
 
-        monkeypatch.setattr("app.routers.audio.cleanup_file", mock_cleanup)
+        monkeypatch.setattr("app.routers.base_router.cleanup_file", mock_cleanup)
 
         # Mock get_audio_metadata to raise exception
         async def mock_get_audio_metadata(self, input_path):
@@ -527,11 +523,8 @@ class TestAudioCleanup:
 
         monkeypatch.setattr(AudioConverter, "get_audio_metadata", mock_get_audio_metadata)
 
-        with open(sample_audio, 'rb') as f:
-            response = client.post(
-                "/api/audio/info",
-                files={"file": ("test.mp3", f, "audio/mpeg")}
-            )
+        with open(sample_audio, "rb") as f:
+            response = client.post("/api/audio/info", files={"file": ("test.mp3", f, "audio/mpeg")})
 
         # Should return 500 error
         assert response.status_code == 500

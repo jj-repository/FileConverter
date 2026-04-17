@@ -41,15 +41,15 @@ export const FontConverter: React.FC = () => {
 
     switch (converter.status) {
       case 'uploading':
-        return 'Uploading file...';
+        return t('messages.uploadingFile');
       case 'converting':
-        return 'Converting font...';
+        return t('converter.font.converting');
       case 'completed':
-        return 'Conversion completed!';
+        return t('converter.font.completed');
       case 'failed':
-        return converter.error || 'Conversion failed';
+        return converter.error || t('common.failed');
       default:
-        return 'Ready to convert';
+        return t('converter.font.readyToConvert');
     }
   };
 
@@ -58,13 +58,13 @@ export const FontConverter: React.FC = () => {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="text-sm font-semibold text-blue-900 mb-2">{t('converter.font.title')}</h3>
         <p className="text-sm text-blue-800">
-          Convert between font formats for web and desktop use.
+          {t('converter.font.webInfo')}
         </p>
         <ul className="mt-2 text-sm text-blue-700 list-disc list-inside space-y-1">
-          <li><strong>TTF</strong> (TrueType): Most compatible desktop format</li>
-          <li><strong>OTF</strong> (OpenType): Advanced features, better for complex typography</li>
-          <li><strong>WOFF</strong>: Web Open Font Format, optimized for web use</li>
-          <li><strong>WOFF2</strong>: Better compression, modern browsers only</li>
+          <li><strong>TTF</strong> {t('converter.font.ttfDesc')}</li>
+          <li><strong>OTF</strong> {t('converter.font.otfDesc')}</li>
+          <li><strong>WOFF</strong>: {t('converter.font.woffDesc')}</li>
+          <li><strong>WOFF2</strong>: {t('converter.font.woff2Desc')}</li>
         </ul>
       </div>
 
@@ -79,7 +79,7 @@ export const FontConverter: React.FC = () => {
           {converter.selectedFile && (
             <>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Selected file:</p>
+                <p className="text-sm text-gray-600">{t('common.selectFile')}:</p>
                 <p className="font-medium">{converter.selectedFile.name}</p>
                 <p className="text-sm text-gray-500">
                   {(converter.selectedFile.size / 1024).toFixed(2)} KB
@@ -88,7 +88,7 @@ export const FontConverter: React.FC = () => {
 
               <div>
                 <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
-                  Output Format
+                  {t('common.outputFormat')}
                 </label>
                 <select
                   id="output-format"
@@ -106,11 +106,11 @@ export const FontConverter: React.FC = () => {
               </div>
 
               <div className="border-t pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Advanced Options</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">{t('converter.font.advancedOptions')}</h4>
 
                 <div className="mb-4">
                   <label htmlFor="subset-text" className="block text-sm font-medium text-gray-700 mb-2">
-                    Subset Text (Optional)
+                    {t('converter.font.subsetText')}
                   </label>
                   <input
                     id="subset-text"
@@ -122,7 +122,7 @@ export const FontConverter: React.FC = () => {
                     aria-describedby="subset-text-hint"
                   />
                   <p id="subset-text-hint" className="text-xs text-gray-500 mt-1">
-                    Include only these characters to reduce file size
+                    {t('converter.font.subsetTextHint')}
                   </p>
                 </div>
 
@@ -135,7 +135,7 @@ export const FontConverter: React.FC = () => {
                     className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                   />
                   <label htmlFor="optimize" className="ml-2 block text-sm text-gray-700">
-                    Optimize font (remove unnecessary data)
+                    {t('converter.font.optimize')}
                   </label>
                 </div>
               </div>
@@ -143,7 +143,7 @@ export const FontConverter: React.FC = () => {
               {window.electron?.isElectron && (
                 <div>
                   <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
-                    Custom Filename (optional)
+                    {t('common.customFilename')}
                   </label>
                   <input
                     id="custom-filename"
@@ -159,7 +159,7 @@ export const FontConverter: React.FC = () => {
               {window.electron?.isElectron && (
                 <div>
                   <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
-                    Output Directory
+                    {t('common.outputDirectory')}
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -175,7 +175,7 @@ export const FontConverter: React.FC = () => {
                       variant="secondary"
                       aria-label="Browse for output directory"
                     >
-                      Browse
+                      {t('common.browse')}
                     </Button>
                   </div>
                 </div>
@@ -186,7 +186,9 @@ export const FontConverter: React.FC = () => {
                 disabled={converter.status === 'uploading' || converter.status === 'converting'}
                 className="w-full"
               >
-                {converter.status === 'uploading' || converter.status === 'converting' ? 'Converting...' : 'Convert Font'}
+                {converter.status === 'uploading' || converter.status === 'converting'
+                  ? t('common.converting')
+                  : t('converter.font.convertFont')}
               </Button>
 
               {converter.showFeedback && (
@@ -226,13 +228,9 @@ export const FontConverter: React.FC = () => {
 
               {converter.downloadUrl && converter.status === 'completed' && !window.electron?.isElectron && (
                 <div className="text-center">
-                  <a
-                    href={converter.downloadUrl}
-                    download
-                    className="inline-block px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Download Converted Font
-                  </a>
+                  <Button onClick={converter.handleDownload} className="mx-auto">
+                    {t('converter.font.download')}
+                  </Button>
                 </div>
               )}
             </>

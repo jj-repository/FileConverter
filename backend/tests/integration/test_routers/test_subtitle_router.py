@@ -22,6 +22,7 @@ from fastapi.testclient import TestClient
 # SAMPLE SUBTITLE FIXTURES
 # ============================================================================
 
+
 @pytest.fixture
 def sample_srt_subtitle(temp_dir):
     """Create a sample SRT subtitle file"""
@@ -106,16 +107,17 @@ def client():
 # TESTS - SUBTITLE CONVERSION
 # ============================================================================
 
+
 class TestSubtitleConvert:
     """Test POST /api/subtitle/convert endpoint"""
 
     def test_convert_srt_to_vtt_success(self, client, sample_srt_subtitle):
         """Test successful SRT to VTT conversion"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"output_format": "vtt"}
+                data={"output_format": "vtt"},
             )
 
         assert response.status_code == 200
@@ -127,11 +129,11 @@ class TestSubtitleConvert:
 
     def test_convert_vtt_to_srt_success(self, client, sample_vtt_subtitle):
         """Test successful VTT to SRT conversion"""
-        with open(sample_vtt_subtitle, 'rb') as f:
+        with open(sample_vtt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.vtt", f, "text/plain")},
-                data={"output_format": "srt"}
+                data={"output_format": "srt"},
             )
 
         assert response.status_code == 200
@@ -141,11 +143,11 @@ class TestSubtitleConvert:
 
     def test_convert_ass_to_srt_success(self, client, sample_ass_subtitle):
         """Test successful ASS to SRT conversion"""
-        with open(sample_ass_subtitle, 'rb') as f:
+        with open(sample_ass_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.ass", f, "text/plain")},
-                data={"output_format": "srt"}
+                data={"output_format": "srt"},
             )
 
         assert response.status_code == 200
@@ -155,14 +157,11 @@ class TestSubtitleConvert:
 
     def test_convert_with_utf8_encoding(self, client, sample_srt_subtitle):
         """Test conversion with UTF-8 encoding parameter"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={
-                    "output_format": "vtt",
-                    "encoding": "utf-8"
-                }
+                data={"output_format": "vtt", "encoding": "utf-8"},
             )
 
         assert response.status_code == 200
@@ -171,14 +170,11 @@ class TestSubtitleConvert:
 
     def test_convert_with_latin1_encoding(self, client, sample_srt_subtitle):
         """Test conversion with latin-1 encoding parameter"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={
-                    "output_format": "vtt",
-                    "encoding": "latin-1"
-                }
+                data={"output_format": "vtt", "encoding": "latin-1"},
             )
 
         assert response.status_code == 200
@@ -187,14 +183,11 @@ class TestSubtitleConvert:
 
     def test_convert_with_fps_parameter(self, client, sample_srt_subtitle):
         """Test conversion with FPS parameter for SUB format"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={
-                    "output_format": "sub",
-                    "fps": 25.0
-                }
+                data={"output_format": "sub", "fps": 25.0},
             )
 
         # Either succeeds or fails depending on SUB format availability
@@ -202,11 +195,11 @@ class TestSubtitleConvert:
 
     def test_convert_invalid_output_format(self, client, sample_srt_subtitle):
         """Test conversion with invalid output format"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"output_format": "invalid"}
+                data={"output_format": "invalid"},
             )
 
         assert response.status_code == 400
@@ -216,11 +209,11 @@ class TestSubtitleConvert:
 
     def test_convert_malformed_subtitle(self, client, malformed_subtitle):
         """Test conversion with malformed subtitle file"""
-        with open(malformed_subtitle, 'rb') as f:
+        with open(malformed_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("malformed.srt", f, "text/plain")},
-                data={"output_format": "vtt"}
+                data={"output_format": "vtt"},
             )
 
         # May fail or succeed depending on lenient parsing
@@ -233,23 +226,25 @@ class TestSubtitleConvert:
         fake_file = temp_dir / "fake.xyz"
         fake_file.write_text("not a subtitle")
 
-        with open(fake_file, 'rb') as f:
+        with open(fake_file, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("fake.xyz", f, "text/plain")},
-                data={"output_format": "srt"}
+                data={"output_format": "srt"},
             )
 
         assert response.status_code == 400
         response_data = response.json()
         error_msg = response_data.get("detail") or response_data.get("error")
-        assert ("Invalid or unsupported file extension" in str(error_msg) or
-                "Unsupported file format" in str(error_msg))
+        assert "Invalid or unsupported file extension" in str(
+            error_msg
+        ) or "Unsupported file format" in str(error_msg)
 
 
 # ============================================================================
 # TESTS - GET FORMATS
 # ============================================================================
+
 
 class TestSubtitleFormats:
     """Test GET /api/subtitle/formats endpoint"""
@@ -289,17 +284,18 @@ class TestSubtitleFormats:
 # TESTS - DOWNLOAD
 # ============================================================================
 
+
 class TestSubtitleDownload:
     """Test GET /api/subtitle/download/{filename} endpoint"""
 
     def test_download_converted_file(self, client, sample_srt_subtitle):
         """Test downloading a converted file"""
         # First, convert a subtitle
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             convert_response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"output_format": "vtt"}
+                data={"output_format": "vtt"},
             )
 
         assert convert_response.status_code == 200
@@ -333,10 +329,13 @@ class TestSubtitleDownload:
         for malicious_name in malicious_filenames:
             response = client.get(f"/api/subtitle/download/{malicious_name}")
             # Should either be 400 (validation) or 404 (not found)
-            assert response.status_code in [400, 404], \
+            assert response.status_code in [400, 404], (
                 f"Path traversal not blocked for: {malicious_name}"
+            )
 
-    @pytest.mark.skip(reason="Null bytes are blocked by httpx before reaching our code (defense-in-depth)")
+    @pytest.mark.skip(
+        reason="Null bytes are blocked by httpx before reaching our code (defense-in-depth)"
+    )
     def test_download_with_null_bytes_blocked(self, client):
         """Test that null byte injection is blocked"""
         # Note: httpx.InvalidURL is raised before request reaches server
@@ -351,15 +350,15 @@ class TestSubtitleDownload:
 # TESTS - SUBTITLE INFO
 # ============================================================================
 
+
 class TestSubtitleInfo:
     """Test POST /api/subtitle/info endpoint"""
 
     def test_get_subtitle_info_success(self, client, sample_srt_subtitle):
         """Test successful subtitle info retrieval"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
-                "/api/subtitle/info",
-                files={"file": ("test.srt", f, "text/plain")}
+                "/api/subtitle/info", files={"file": ("test.srt", f, "text/plain")}
             )
 
         assert response.status_code == 200
@@ -371,10 +370,9 @@ class TestSubtitleInfo:
 
     def test_get_subtitle_info_includes_duration(self, client, sample_srt_subtitle):
         """Test that subtitle info includes duration"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
-                "/api/subtitle/info",
-                files={"file": ("test.srt", f, "text/plain")}
+                "/api/subtitle/info", files={"file": ("test.srt", f, "text/plain")}
             )
 
         assert response.status_code == 200
@@ -383,10 +381,9 @@ class TestSubtitleInfo:
 
     def test_get_subtitle_info_includes_entry_count(self, client, sample_srt_subtitle):
         """Test that subtitle info includes subtitle entry count"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
-                "/api/subtitle/info",
-                files={"file": ("test.srt", f, "text/plain")}
+                "/api/subtitle/info", files={"file": ("test.srt", f, "text/plain")}
             )
 
         assert response.status_code == 200
@@ -395,10 +392,9 @@ class TestSubtitleInfo:
 
     def test_get_subtitle_info_vtt_file(self, client, sample_vtt_subtitle):
         """Test subtitle info for VTT file"""
-        with open(sample_vtt_subtitle, 'rb') as f:
+        with open(sample_vtt_subtitle, "rb") as f:
             response = client.post(
-                "/api/subtitle/info",
-                files={"file": ("test.vtt", f, "text/plain")}
+                "/api/subtitle/info", files={"file": ("test.vtt", f, "text/plain")}
             )
 
         assert response.status_code == 200
@@ -407,10 +403,9 @@ class TestSubtitleInfo:
 
     def test_get_subtitle_info_ass_file(self, client, sample_ass_subtitle):
         """Test subtitle info for ASS file"""
-        with open(sample_ass_subtitle, 'rb') as f:
+        with open(sample_ass_subtitle, "rb") as f:
             response = client.post(
-                "/api/subtitle/info",
-                files={"file": ("test.ass", f, "text/plain")}
+                "/api/subtitle/info", files={"file": ("test.ass", f, "text/plain")}
             )
 
         assert response.status_code == 200
@@ -423,10 +418,9 @@ class TestSubtitleInfo:
         invalid_file = temp_dir / "invalid.txt"
         invalid_file.write_text("not a subtitle")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
-                "/api/subtitle/info",
-                files={"file": ("invalid.txt", f, "text/plain")}
+                "/api/subtitle/info", files={"file": ("invalid.txt", f, "text/plain")}
             )
 
         # Returns 400 or 500 depending on validation stage
@@ -437,16 +431,17 @@ class TestSubtitleInfo:
 # TESTS - SUBTITLE CONVERSION FORMATS
 # ============================================================================
 
+
 class TestSubtitleConversionFormats:
     """Test various subtitle format conversions"""
 
     def test_convert_to_vtt(self, client, sample_srt_subtitle):
         """Test conversion to VTT format"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"output_format": "vtt"}
+                data={"output_format": "vtt"},
             )
 
         assert response.status_code == 200
@@ -454,11 +449,11 @@ class TestSubtitleConversionFormats:
 
     def test_convert_to_srt(self, client, sample_vtt_subtitle):
         """Test conversion to SRT format"""
-        with open(sample_vtt_subtitle, 'rb') as f:
+        with open(sample_vtt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.vtt", f, "text/plain")},
-                data={"output_format": "srt"}
+                data={"output_format": "srt"},
             )
 
         assert response.status_code == 200
@@ -466,11 +461,11 @@ class TestSubtitleConversionFormats:
 
     def test_convert_to_ass(self, client, sample_srt_subtitle):
         """Test conversion to ASS format"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"output_format": "ass"}
+                data={"output_format": "ass"},
             )
 
         assert response.status_code == 200
@@ -478,11 +473,11 @@ class TestSubtitleConversionFormats:
 
     def test_convert_to_sub(self, client, sample_srt_subtitle):
         """Test conversion to SUB format"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"output_format": "sub"}
+                data={"output_format": "sub"},
             )
 
         # Either succeeds or fails depending on SUB format availability
@@ -493,11 +488,11 @@ class TestSubtitleConversionFormats:
 
     def test_convert_srt_to_srt(self, client, sample_srt_subtitle):
         """Test conversion of SRT to same format (SRT)"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"output_format": "srt"}
+                data={"output_format": "srt"},
             )
 
         assert response.status_code == 200
@@ -507,6 +502,7 @@ class TestSubtitleConversionFormats:
 # ============================================================================
 # TESTS - SECURITY VALIDATION
 # ============================================================================
+
 
 class TestSubtitleSecurityValidation:
     """Test security-critical validation in subtitle endpoints"""
@@ -520,11 +516,11 @@ class TestSubtitleSecurityValidation:
         ]
 
         for malicious_name in malicious_filenames:
-            with open(sample_srt_subtitle, 'rb') as f:
+            with open(sample_srt_subtitle, "rb") as f:
                 response = client.post(
                     "/api/subtitle/convert",
                     files={"file": (malicious_name, f, "text/plain")},
-                    data={"output_format": "vtt"}
+                    data={"output_format": "vtt"},
                 )
 
             # Should succeed (filename sanitized) or fail safely
@@ -532,24 +528,24 @@ class TestSubtitleSecurityValidation:
             if response.status_code == 200:
                 # Verify output filename doesn't contain shell metacharacters
                 output_file = response.json()["output_file"]
-                dangerous_chars = [';', '$', '`', '|', '&', '<', '>']
+                dangerous_chars = [";", "$", "`", "|", "&", "<", ">"]
                 for char in dangerous_chars:
                     assert char not in output_file
 
     def test_null_byte_injection_blocked(self, client, sample_srt_subtitle):
         """Test that null byte injection is sanitized"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test\x00.srt", f, "text/plain")},
-                data={"output_format": "vtt"}
+                data={"output_format": "vtt"},
             )
 
         # Null bytes are sanitized, so conversion succeeds
         # but output filename should not contain null bytes
         if response.status_code == 200:
             output_file = response.json()["output_file"]
-            assert '\x00' not in output_file
+            assert "\x00" not in output_file
         else:
             # Or it fails validation
             assert response.status_code in [400, 500]
@@ -566,19 +562,17 @@ class TestSubtitleSecurityValidation:
 # TESTS - ADVANCED CONVERSION OPTIONS
 # ============================================================================
 
+
 class TestSubtitleAdvancedOptions:
     """Test advanced conversion options"""
 
     def test_convert_with_html_tags_preserved(self, client, sample_srt_subtitle):
         """Test conversion preserving HTML tags"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={
-                    "output_format": "vtt",
-                    "keep_html_tags": True
-                }
+                data={"output_format": "vtt", "keep_html_tags": True},
             )
 
         assert response.status_code == 200
@@ -586,11 +580,11 @@ class TestSubtitleAdvancedOptions:
     def test_convert_srt_chain_conversion(self, client, sample_srt_subtitle):
         """Test chain conversion: SRT -> VTT -> ASS"""
         # First conversion: SRT -> VTT
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response1 = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"output_format": "vtt"}
+                data={"output_format": "vtt"},
             )
 
         assert response1.status_code == 200
@@ -601,11 +595,11 @@ class TestSubtitleAdvancedOptions:
 
     def test_convert_preserves_timing_accuracy(self, client, sample_srt_subtitle):
         """Test that timing is preserved during conversion"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"output_format": "vtt"}
+                data={"output_format": "vtt"},
             )
 
         assert response.status_code == 200
@@ -616,6 +610,7 @@ class TestSubtitleAdvancedOptions:
 # TESTS - EDGE CASES
 # ============================================================================
 
+
 class TestSubtitleEdgeCases:
     """Test edge cases and boundary conditions"""
 
@@ -624,11 +619,11 @@ class TestSubtitleEdgeCases:
         empty_path = temp_dir / "empty.srt"
         empty_path.write_text("")
 
-        with open(empty_path, 'rb') as f:
+        with open(empty_path, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("empty.srt", f, "text/plain")},
-                data={"output_format": "vtt"}
+                data={"output_format": "vtt"},
             )
 
         # Should either succeed or fail gracefully
@@ -642,17 +637,17 @@ class TestSubtitleEdgeCases:
         content = ""
         for i in range(1, 1001):
             content += f"""{i}
-00:{i//60:02d}:{i%60:02d},000 --> 00:{(i+1)//60:02d}:{(i+1)%60:02d},000
+00:{i // 60:02d}:{i % 60:02d},000 --> 00:{(i + 1) // 60:02d}:{(i + 1) % 60:02d},000
 Line {i}
 
 """
         large_path.write_text(content)
 
-        with open(large_path, 'rb') as f:
+        with open(large_path, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("large.srt", f, "text/plain")},
-                data={"output_format": "vtt"}
+                data={"output_format": "vtt"},
             )
 
         assert response.status_code in [200, 400, 500]
@@ -668,13 +663,13 @@ Special chars: é, ñ, ü, 中文, 日本語
 00:00:06,000 --> 00:00:10,000
 Symbols: © ® ™ € ¥
 """
-        special_path.write_text(special_content, encoding='utf-8')
+        special_path.write_text(special_content, encoding="utf-8")
 
-        with open(special_path, 'rb') as f:
+        with open(special_path, "rb") as f:
             response = client.post(
                 "/api/subtitle/convert",
                 files={"file": ("special.srt", f, "text/plain")},
-                data={"output_format": "vtt"}
+                data={"output_format": "vtt"},
             )
 
         assert response.status_code == 200
@@ -687,12 +682,14 @@ Symbols: © ® ™ € ¥
         def mock_conversion_response(*args, **kwargs):
             raise Exception("Simulated error after conversion")
 
-        with patch("app.routers.subtitle.ConversionResponse", side_effect=mock_conversion_response):
-            with open(sample_srt_subtitle, 'rb') as f:
+        with patch(
+            "app.routers.base_router.ConversionResponse", side_effect=mock_conversion_response
+        ):
+            with open(sample_srt_subtitle, "rb") as f:
                 response = client.post(
                     "/api/subtitle/convert",
                     files={"file": ("test.srt", f, "text/plain")},
-                    data={"output_format": "vtt"}
+                    data={"output_format": "vtt"},
                 )
 
             assert response.status_code == 500
@@ -703,11 +700,11 @@ class TestSubtitleAdjustTiming:
 
     def test_adjust_timing_delay_subtitle(self, client, sample_srt_subtitle):
         """Test adjusting subtitle timing with positive offset (delay)"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/adjust-timing",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"offset_ms": 1000}  # Delay by 1 second
+                data={"offset_ms": 1000},  # Delay by 1 second
             )
 
         assert response.status_code == 200
@@ -718,11 +715,11 @@ class TestSubtitleAdjustTiming:
 
     def test_adjust_timing_advance_subtitle(self, client, sample_srt_subtitle):
         """Test adjusting subtitle timing with negative offset (advance)"""
-        with open(sample_srt_subtitle, 'rb') as f:
+        with open(sample_srt_subtitle, "rb") as f:
             response = client.post(
                 "/api/subtitle/adjust-timing",
                 files={"file": ("test.srt", f, "text/plain")},
-                data={"offset_ms": -500}  # Advance by 0.5 seconds
+                data={"offset_ms": -500},  # Advance by 0.5 seconds
             )
 
         assert response.status_code == 200
@@ -735,11 +732,11 @@ class TestSubtitleAdjustTiming:
         invalid_file = temp_dir / "test.txt"
         invalid_file.write_text("not a subtitle file")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
                 "/api/subtitle/adjust-timing",
                 files={"file": ("test.txt", f, "text/plain")},
-                data={"offset_ms": 1000}
+                data={"offset_ms": 1000},
             )
 
         assert response.status_code == 400
@@ -749,17 +746,22 @@ class TestSubtitleAdjustTiming:
         from unittest.mock import patch
 
         # Mock adjust_timing to raise exception
-        with patch("app.services.subtitle_converter.SubtitleConverter.adjust_timing", side_effect=Exception("Timing error")):
-            with open(sample_srt_subtitle, 'rb') as f:
+        with patch(
+            "app.services.subtitle_converter.SubtitleConverter.adjust_timing",
+            side_effect=Exception("Timing error"),
+        ):
+            with open(sample_srt_subtitle, "rb") as f:
                 response = client.post(
                     "/api/subtitle/adjust-timing",
                     files={"file": ("test.srt", f, "text/plain")},
-                    data={"offset_ms": 1000}
+                    data={"offset_ms": 1000},
                 )
 
             assert response.status_code == 500
 
-    def test_adjust_timing_cleanup_output_file_on_error(self, client, sample_srt_subtitle, monkeypatch):
+    def test_adjust_timing_cleanup_output_file_on_error(
+        self, client, sample_srt_subtitle, monkeypatch
+    ):
         """Test that output file is cleaned up on error after timing adjustment (line 148)"""
         from unittest.mock import patch
 
@@ -768,11 +770,11 @@ class TestSubtitleAdjustTiming:
             raise Exception("Simulated error after conversion")
 
         with patch("app.routers.subtitle.ConversionResponse", side_effect=mock_conversion_response):
-            with open(sample_srt_subtitle, 'rb') as f:
+            with open(sample_srt_subtitle, "rb") as f:
                 response = client.post(
                     "/api/subtitle/adjust-timing",
                     files={"file": ("test.srt", f, "text/plain")},
-                    data={"offset_ms": 1000}
+                    data={"offset_ms": 1000},
                 )
 
             assert response.status_code == 500
@@ -793,11 +795,13 @@ Test subtitle
         srt_path.write_text(srt_content)
 
         # Mock get_subtitle_info to raise exception
-        with patch("app.services.subtitle_converter.SubtitleConverter.get_subtitle_info", side_effect=Exception("Simulated error")):
-            with open(srt_path, 'rb') as f:
+        with patch(
+            "app.services.subtitle_converter.SubtitleConverter.get_subtitle_info",
+            side_effect=Exception("Simulated error"),
+        ):
+            with open(srt_path, "rb") as f:
                 response = client.post(
-                    "/api/subtitle/info",
-                    files={"file": ("test.srt", f, "text/plain")}
+                    "/api/subtitle/info", files={"file": ("test.srt", f, "text/plain")}
                 )
 
             assert response.status_code == 500

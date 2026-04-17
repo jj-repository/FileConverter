@@ -36,32 +36,38 @@ def sample_docx(temp_dir):
     docx_path = temp_dir / "test_document.docx"
 
     # Create minimal DOCX structure
-    with zipfile.ZipFile(docx_path, 'w') as zf:
+    with zipfile.ZipFile(docx_path, "w") as zf:
         # Add [Content_Types].xml
-        zf.writestr('[Content_Types].xml',
+        zf.writestr(
+            "[Content_Types].xml",
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
             '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
             '<Default Extension="xml" ContentType="application/xml"/>'
             '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
-            '</Types>')
+            "</Types>",
+        )
 
         # Add _rels/.rels
-        zf.writestr('_rels/.rels',
+        zf.writestr(
+            "_rels/.rels",
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
-            '</Relationships>')
+            "</Relationships>",
+        )
 
         # Add word/document.xml
-        zf.writestr('word/document.xml',
+        zf.writestr(
+            "word/document.xml",
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-            '<w:body>'
-            '<w:p><w:r><w:t>Test DOCX Document</w:t></w:r></w:p>'
-            '<w:p><w:r><w:t>This is sample content for testing document conversion.</w:t></w:r></w:p>'
-            '</w:body>'
-            '</w:document>')
+            "<w:body>"
+            "<w:p><w:r><w:t>Test DOCX Document</w:t></w:r></w:p>"
+            "<w:p><w:r><w:t>This is sample content for testing document conversion.</w:t></w:r></w:p>"
+            "</w:body>"
+            "</w:document>",
+        )
 
     return docx_path
 
@@ -116,11 +122,17 @@ class TestDocumentConvert:
 
     def test_convert_docx_to_pdf_success(self, client, sample_docx):
         """Test successful DOCX to PDF conversion"""
-        with open(sample_docx, 'rb') as f:
+        with open(sample_docx, "rb") as f:
             response = client.post(
                 "/api/document/convert",
-                files={"file": ("test.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
-                data={"output_format": "pdf"}
+                files={
+                    "file": (
+                        "test.docx",
+                        f,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                },
+                data={"output_format": "pdf"},
             )
 
         assert response.status_code == 200
@@ -132,11 +144,11 @@ class TestDocumentConvert:
 
     def test_convert_md_to_html_success(self, client, sample_markdown):
         """Test successful Markdown to HTML conversion"""
-        with open(sample_markdown, 'rb') as f:
+        with open(sample_markdown, "rb") as f:
             response = client.post(
                 "/api/document/convert",
                 files={"file": ("test.md", f, "text/markdown")},
-                data={"output_format": "html"}
+                data={"output_format": "html"},
             )
 
         assert response.status_code == 200
@@ -147,11 +159,17 @@ class TestDocumentConvert:
 
     def test_convert_with_toc_true(self, client, sample_docx):
         """Test document conversion with table of contents enabled"""
-        with open(sample_docx, 'rb') as f:
+        with open(sample_docx, "rb") as f:
             response = client.post(
                 "/api/document/convert",
-                files={"file": ("test.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
-                data={"output_format": "pdf", "toc": "true"}
+                files={
+                    "file": (
+                        "test.docx",
+                        f,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                },
+                data={"output_format": "pdf", "toc": "true"},
             )
 
         assert response.status_code == 200
@@ -161,11 +179,17 @@ class TestDocumentConvert:
 
     def test_convert_with_toc_false(self, client, sample_docx):
         """Test document conversion with table of contents disabled"""
-        with open(sample_docx, 'rb') as f:
+        with open(sample_docx, "rb") as f:
             response = client.post(
                 "/api/document/convert",
-                files={"file": ("test.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
-                data={"output_format": "pdf", "toc": "false"}
+                files={
+                    "file": (
+                        "test.docx",
+                        f,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                },
+                data={"output_format": "pdf", "toc": "false"},
             )
 
         assert response.status_code == 200
@@ -174,11 +198,11 @@ class TestDocumentConvert:
 
     def test_convert_with_preserve_formatting_true(self, client, sample_markdown):
         """Test conversion with preserve formatting enabled"""
-        with open(sample_markdown, 'rb') as f:
+        with open(sample_markdown, "rb") as f:
             response = client.post(
                 "/api/document/convert",
                 files={"file": ("test.md", f, "text/markdown")},
-                data={"output_format": "docx", "preserve_formatting": "true"}
+                data={"output_format": "docx", "preserve_formatting": "true"},
             )
 
         assert response.status_code == 200
@@ -187,11 +211,11 @@ class TestDocumentConvert:
 
     def test_convert_with_preserve_formatting_false(self, client, sample_markdown):
         """Test conversion with preserve formatting disabled"""
-        with open(sample_markdown, 'rb') as f:
+        with open(sample_markdown, "rb") as f:
             response = client.post(
                 "/api/document/convert",
                 files={"file": ("test.md", f, "text/markdown")},
-                data={"output_format": "txt", "preserve_formatting": "false"}
+                data={"output_format": "txt", "preserve_formatting": "false"},
             )
 
         assert response.status_code == 200
@@ -200,17 +224,25 @@ class TestDocumentConvert:
 
     def test_convert_invalid_output_format(self, client, sample_docx):
         """Test conversion with invalid output format"""
-        with open(sample_docx, 'rb') as f:
+        with open(sample_docx, "rb") as f:
             response = client.post(
                 "/api/document/convert",
-                files={"file": ("test.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
-                data={"output_format": "invalid_format"}
+                files={
+                    "file": (
+                        "test.docx",
+                        f,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                },
+                data={"output_format": "invalid_format"},
             )
 
         assert response.status_code == 400
         response_data = response.json()
         error_msg = response_data.get("detail") or response_data.get("error")
-        assert "Unsupported output format" in str(error_msg) or "unsupported" in str(error_msg).lower()
+        assert (
+            "Unsupported output format" in str(error_msg) or "unsupported" in str(error_msg).lower()
+        )
 
     def test_convert_unsupported_input_format(self, client, temp_dir):
         """Test conversion with unsupported input format"""
@@ -218,26 +250,27 @@ class TestDocumentConvert:
         fake_file = temp_dir / "malware.exe"
         fake_file.write_text("not a document")
 
-        with open(fake_file, 'rb') as f:
+        with open(fake_file, "rb") as f:
             response = client.post(
                 "/api/document/convert",
                 files={"file": ("malware.exe", f, "application/octet-stream")},
-                data={"output_format": "pdf"}
+                data={"output_format": "pdf"},
             )
 
         assert response.status_code == 400
         response_data = response.json()
         error_msg = response_data.get("detail") or response_data.get("error")
-        assert ("Invalid or unsupported file extension" in str(error_msg) or
-                "Unsupported file format" in str(error_msg))
+        assert "Invalid or unsupported file extension" in str(
+            error_msg
+        ) or "Unsupported file format" in str(error_msg)
 
     def test_convert_txt_to_html(self, client, sample_txt):
         """Test TXT to HTML conversion"""
-        with open(sample_txt, 'rb') as f:
+        with open(sample_txt, "rb") as f:
             response = client.post(
                 "/api/document/convert",
                 files={"file": ("test.txt", f, "text/plain")},
-                data={"output_format": "html"}
+                data={"output_format": "html"},
             )
 
         assert response.status_code == 200
@@ -246,11 +279,11 @@ class TestDocumentConvert:
 
     def test_convert_txt_to_docx(self, client, sample_txt):
         """Test TXT to DOCX conversion"""
-        with open(sample_txt, 'rb') as f:
+        with open(sample_txt, "rb") as f:
             response = client.post(
                 "/api/document/convert",
                 files={"file": ("test.txt", f, "text/plain")},
-                data={"output_format": "docx"}
+                data={"output_format": "docx"},
             )
 
         assert response.status_code == 200
@@ -259,11 +292,11 @@ class TestDocumentConvert:
 
     def test_convert_txt_to_rtf(self, client, sample_txt):
         """Test TXT to RTF conversion"""
-        with open(sample_txt, 'rb') as f:
+        with open(sample_txt, "rb") as f:
             response = client.post(
                 "/api/document/convert",
                 files={"file": ("test.txt", f, "text/plain")},
-                data={"output_format": "rtf"}
+                data={"output_format": "rtf"},
             )
 
         assert response.status_code == 200
@@ -302,11 +335,17 @@ class TestDocumentDownload:
     def test_download_converted_file(self, client, sample_docx):
         """Test downloading a converted document file"""
         # First, convert a document
-        with open(sample_docx, 'rb') as f:
+        with open(sample_docx, "rb") as f:
             convert_response = client.post(
                 "/api/document/convert",
-                files={"file": ("test.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
-                data={"output_format": "pdf"}
+                files={
+                    "file": (
+                        "test.docx",
+                        f,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                },
+                data={"output_format": "pdf"},
             )
 
         assert convert_response.status_code == 200
@@ -338,8 +377,9 @@ class TestDocumentDownload:
         for malicious_name in malicious_filenames:
             response = client.get(f"/api/document/download/{malicious_name}")
             # Should either be 400 (validation) or 404 (not found)
-            assert response.status_code in [400, 404], \
+            assert response.status_code in [400, 404], (
                 f"Path traversal not blocked for: {malicious_name}"
+            )
 
 
 class TestDocumentInfo:
@@ -347,10 +387,16 @@ class TestDocumentInfo:
 
     def test_get_document_info_success(self, client, sample_docx):
         """Test successful document info retrieval"""
-        with open(sample_docx, 'rb') as f:
+        with open(sample_docx, "rb") as f:
             response = client.post(
                 "/api/document/info",
-                files={"file": ("test.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+                files={
+                    "file": (
+                        "test.docx",
+                        f,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                },
             )
 
         assert response.status_code == 200
@@ -362,10 +408,9 @@ class TestDocumentInfo:
 
     def test_get_markdown_document_info(self, client, sample_markdown):
         """Test getting info for markdown document"""
-        with open(sample_markdown, 'rb') as f:
+        with open(sample_markdown, "rb") as f:
             response = client.post(
-                "/api/document/info",
-                files={"file": ("test.md", f, "text/markdown")}
+                "/api/document/info", files={"file": ("test.md", f, "text/markdown")}
             )
 
         assert response.status_code == 200
@@ -375,10 +420,9 @@ class TestDocumentInfo:
 
     def test_get_text_document_info(self, client, sample_txt):
         """Test getting info for text document"""
-        with open(sample_txt, 'rb') as f:
+        with open(sample_txt, "rb") as f:
             response = client.post(
-                "/api/document/info",
-                files={"file": ("test.txt", f, "text/plain")}
+                "/api/document/info", files={"file": ("test.txt", f, "text/plain")}
             )
 
         assert response.status_code == 200
@@ -392,10 +436,9 @@ class TestDocumentInfo:
         invalid_file = temp_dir / "invalid.xyz"
         invalid_file.write_text("not a document")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
-                "/api/document/info",
-                files={"file": ("invalid.xyz", f, "application/octet-stream")}
+                "/api/document/info", files={"file": ("invalid.xyz", f, "application/octet-stream")}
             )
 
         # Returns 400 or 500 depending on validation stage
@@ -414,11 +457,17 @@ class TestDocumentSecurityValidation:
         ]
 
         for malicious_name in malicious_filenames:
-            with open(sample_docx, 'rb') as f:
+            with open(sample_docx, "rb") as f:
                 response = client.post(
                     "/api/document/convert",
-                    files={"file": (malicious_name, f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
-                    data={"output_format": "pdf"}
+                    files={
+                        "file": (
+                            malicious_name,
+                            f,
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        )
+                    },
+                    data={"output_format": "pdf"},
                 )
 
             # Should succeed (filename sanitized) or fail safely
@@ -426,24 +475,30 @@ class TestDocumentSecurityValidation:
             if response.status_code == 200:
                 # Verify output filename doesn't contain shell metacharacters
                 output_file = response.json()["output_file"]
-                dangerous_chars = [';', '$', '`', '|', '&', '<', '>']
+                dangerous_chars = [";", "$", "`", "|", "&", "<", ">"]
                 for char in dangerous_chars:
                     assert char not in output_file
 
     def test_null_byte_injection_blocked(self, client, sample_docx):
         """Test that null byte injection is sanitized"""
-        with open(sample_docx, 'rb') as f:
+        with open(sample_docx, "rb") as f:
             response = client.post(
                 "/api/document/convert",
-                files={"file": ("test\x00.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
-                data={"output_format": "pdf"}
+                files={
+                    "file": (
+                        "test\x00.docx",
+                        f,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                },
+                data={"output_format": "pdf"},
             )
 
         # Null bytes are sanitized, so conversion succeeds
         # but output filename should not contain null bytes
         if response.status_code == 200:
             output_file = response.json()["output_file"]
-            assert '\x00' not in output_file
+            assert "\x00" not in output_file
         else:
             # Or it fails validation
             assert response.status_code in [400, 500]
@@ -454,11 +509,11 @@ class TestDocumentConversionFormats:
 
     def test_convert_md_to_pdf(self, client, sample_markdown):
         """Test conversion of Markdown to PDF"""
-        with open(sample_markdown, 'rb') as f:
+        with open(sample_markdown, "rb") as f:
             response = client.post(
                 "/api/document/convert",
                 files={"file": ("test.md", f, "text/markdown")},
-                data={"output_format": "pdf"}
+                data={"output_format": "pdf"},
             )
 
         assert response.status_code == 200
@@ -466,11 +521,11 @@ class TestDocumentConversionFormats:
 
     def test_convert_md_to_docx(self, client, sample_markdown):
         """Test conversion of Markdown to DOCX"""
-        with open(sample_markdown, 'rb') as f:
+        with open(sample_markdown, "rb") as f:
             response = client.post(
                 "/api/document/convert",
                 files={"file": ("test.md", f, "text/markdown")},
-                data={"output_format": "docx"}
+                data={"output_format": "docx"},
             )
 
         assert response.status_code == 200
@@ -478,11 +533,17 @@ class TestDocumentConversionFormats:
 
     def test_convert_docx_to_txt(self, client, sample_docx):
         """Test conversion of DOCX to TXT"""
-        with open(sample_docx, 'rb') as f:
+        with open(sample_docx, "rb") as f:
             response = client.post(
                 "/api/document/convert",
-                files={"file": ("test.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
-                data={"output_format": "txt"}
+                files={
+                    "file": (
+                        "test.docx",
+                        f,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                },
+                data={"output_format": "txt"},
             )
 
         assert response.status_code == 200
@@ -490,11 +551,17 @@ class TestDocumentConversionFormats:
 
     def test_convert_docx_to_html(self, client, sample_docx):
         """Test conversion of DOCX to HTML"""
-        with open(sample_docx, 'rb') as f:
+        with open(sample_docx, "rb") as f:
             response = client.post(
                 "/api/document/convert",
-                files={"file": ("test.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
-                data={"output_format": "html"}
+                files={
+                    "file": (
+                        "test.docx",
+                        f,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    )
+                },
+                data={"output_format": "html"},
             )
 
         assert response.status_code == 200
@@ -509,12 +576,15 @@ class TestDocumentErrorHandling:
         from unittest.mock import patch
 
         # Mock convert_with_cache to raise exception after input file is saved
-        with patch("app.services.document_converter.DocumentConverter.convert_with_cache", side_effect=Exception("Conversion error")):
-            with open(sample_txt, 'rb') as f:
+        with patch(
+            "app.services.document_converter.DocumentConverter.convert_with_cache",
+            side_effect=Exception("Conversion error"),
+        ):
+            with open(sample_txt, "rb") as f:
                 response = client.post(
                     "/api/document/convert",
                     files={"file": ("test.txt", f, "text/plain")},
-                    data={"output_format": "pdf"}
+                    data={"output_format": "pdf"},
                 )
 
             # Should return 500 error
@@ -531,14 +601,20 @@ class TestDocumentErrorHandling:
         mock_output_path = MagicMock(spec=Path)
         mock_output_path.name = "test_converted.pdf"
 
-        with patch("app.services.document_converter.DocumentConverter.convert_with_cache", return_value=mock_output_path):
+        with patch(
+            "app.services.document_converter.DocumentConverter.convert_with_cache",
+            return_value=mock_output_path,
+        ):
             # Mock ConversionResponse to raise exception
-            with patch("app.routers.document.ConversionResponse", side_effect=Exception("Response error")):
-                with open(sample_txt, 'rb') as f:
+            with patch(
+                "app.routers.base_router.ConversionResponse",
+                side_effect=Exception("Response error"),
+            ):
+                with open(sample_txt, "rb") as f:
                     response = client.post(
                         "/api/document/convert",
                         files={"file": ("test.txt", f, "text/plain")},
-                        data={"output_format": "pdf"}
+                        data={"output_format": "pdf"},
                     )
 
                 # Should return 500 error
@@ -549,11 +625,13 @@ class TestDocumentErrorHandling:
         from unittest.mock import patch
 
         # Mock get_document_metadata to raise exception
-        with patch("app.services.document_converter.DocumentConverter.get_document_metadata", side_effect=Exception("Metadata error")):
-            with open(sample_txt, 'rb') as f:
+        with patch(
+            "app.services.document_converter.DocumentConverter.get_document_metadata",
+            side_effect=Exception("Metadata error"),
+        ):
+            with open(sample_txt, "rb") as f:
                 response = client.post(
-                    "/api/document/info",
-                    files={"file": ("test.txt", f, "text/plain")}
+                    "/api/document/info", files={"file": ("test.txt", f, "text/plain")}
                 )
 
             # Should return 500 error

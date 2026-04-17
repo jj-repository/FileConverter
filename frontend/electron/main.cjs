@@ -19,7 +19,7 @@ const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases`;
 const settingsFile = path.join(app.getPath('userData'), 'settings.json');
 
 const defaultSettings = {
-  autoCheckUpdates: true
+  autoCheckUpdates: false
 };
 
 function loadSettings() {
@@ -388,6 +388,13 @@ ipcMain.handle('select-folder-files', async () => {
     return filePaths;
   }
   return [];
+});
+
+ipcMain.handle('read-file-as-buffer', async (event, filePath) => {
+  const fs = require('fs');
+  const realPath = fs.realpathSync(filePath);
+  const buffer = fs.readFileSync(realPath);
+  return buffer;
 });
 
 ipcMain.handle('show-item-in-folder', async (event, filePath) => {

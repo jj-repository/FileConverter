@@ -100,7 +100,7 @@ function App() {
                 <LanguageSelector />
                 {window.electron?.checkForUpdates && (
                   <button
-                    onClick={() => window.electron.checkForUpdates()}
+                    onClick={() => window.electron?.checkForUpdates()}
                     className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-gray-700 transition-colors"
                     title="Check for Updates"
                   >

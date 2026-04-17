@@ -86,17 +86,20 @@ jobs:
         run: |
           mkdir -p resources/bin/linux
 
-          # Download FFmpeg static build (pinned to 7.1)
+          # Download FFmpeg static build (pinned to 7.1) + verify md5
           wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-7.1-amd64-static.tar.xz
-          echo "Verifying FFmpeg integrity..." && ls -la ffmpeg-*
+          wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-7.1-amd64-static.tar.xz.md5
+          md5sum -c ffmpeg-7.1-amd64-static.tar.xz.md5
           tar -xf ffmpeg-7.1-amd64-static.tar.xz
           mv ffmpeg-7.1-amd64-static/ffmpeg resources/bin/linux/
           mv ffmpeg-7.1-amd64-static/ffprobe resources/bin/linux/
           chmod +x resources/bin/linux/ffmpeg resources/bin/linux/ffprobe
           rm -rf ffmpeg-7.1-amd64-static*
 
-          # Download Pandoc
+          # Download Pandoc + verify SHA256
           wget -q https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-linux-amd64.tar.gz
+          wget -q https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-linux-amd64.tar.gz.sha256
+          sha256sum -c pandoc-3.6.1-linux-amd64.tar.gz.sha256
           tar -xzf pandoc-3.6.1-linux-amd64.tar.gz
           mv pandoc-3.6.1/bin/pandoc resources/bin/linux/
           chmod +x resources/bin/linux/pandoc
@@ -107,18 +110,26 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path resources\bin\windows
 
-          # Download FFmpeg (pinned to 7.1)
+          # Download FFmpeg (pinned to 7.1) + verify SHA256
           Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-03-31-14-18/ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1.zip" -OutFile ffmpeg.zip
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-03-31-14-18/ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1.zip.sha256" -OutFile ffmpeg.zip.sha256
+          $expectedFFmpegHash = (Get-Content ffmpeg.zip.sha256 -Raw).Trim().Split()[0].ToUpper()
+          $actualFFmpegHash = (Get-FileHash ffmpeg.zip -Algorithm SHA256).Hash
+          if ($actualFFmpegHash -ne $expectedFFmpegHash) { throw "FFmpeg SHA256 mismatch: expected $expectedFFmpegHash got $actualFFmpegHash" }
           Expand-Archive -Path ffmpeg.zip -DestinationPath .
           Copy-Item "ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1\bin\ffmpeg.exe" resources\bin\windows\
           Copy-Item "ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1\bin\ffprobe.exe" resources\bin\windows\
-          Remove-Item -Recurse -Force ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1, ffmpeg.zip
+          Remove-Item -Recurse -Force ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1, ffmpeg.zip, ffmpeg.zip.sha256
 
-          # Download Pandoc
+          # Download Pandoc + verify SHA256
           Invoke-WebRequest -Uri "https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-windows-x86_64.zip" -OutFile pandoc.zip
+          Invoke-WebRequest -Uri "https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-windows-x86_64.zip.sha256" -OutFile pandoc.zip.sha256
+          $expectedPandocHash = (Get-Content pandoc.zip.sha256 -Raw).Trim().Split()[0].ToUpper()
+          $actualPandocHash = (Get-FileHash pandoc.zip -Algorithm SHA256).Hash
+          if ($actualPandocHash -ne $expectedPandocHash) { throw "Pandoc SHA256 mismatch: expected $expectedPandocHash got $actualPandocHash" }
           Expand-Archive -Path pandoc.zip -DestinationPath .
           Copy-Item "pandoc-3.6.1\pandoc.exe" resources\bin\windows\
-          Remove-Item -Recurse -Force pandoc-3.6.1, pandoc.zip
+          Remove-Item -Recurse -Force pandoc-3.6.1, pandoc.zip, pandoc.zip.sha256
 
       - name: Build Electron app (Linux)
         if: runner.os == 'Linux'

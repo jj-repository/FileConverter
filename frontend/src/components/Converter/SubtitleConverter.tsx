@@ -36,7 +36,15 @@ export const SubtitleConverter: React.FC = () => {
 
   const handleConvert = async () => {
     if (adjustTimingMode) {
-      await converter.handleConvert(subtitleAPI.adjustTiming as any, { timingOffset });
+      const adjustTimingAdapter = {
+        convert: (file: File, options: Record<string, unknown>) =>
+          subtitleAPI.adjustTiming(
+            file,
+            (options.timingOffset as number) ?? 0,
+            options.onUploadProgress as ((p: number) => void) | undefined
+          ),
+      };
+      await converter.handleConvert(adjustTimingAdapter, { timingOffset });
     } else {
       await converter.handleConvert(subtitleAPI, { encoding, fps, keepHtmlTags });
     }
@@ -49,7 +57,7 @@ export const SubtitleConverter: React.FC = () => {
 
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>Supported formats:</strong> SRT (SubRip), VTT (WebVTT), ASS/SSA (Advanced SubStation Alpha), SUB (MicroDVD)
+            <strong>{t('common.format')}:</strong> {t('converter.subtitle.supportedFormats')}
           </p>
         </div>
 
@@ -69,17 +77,17 @@ export const SubtitleConverter: React.FC = () => {
             {converter.isDraggingOver && (
               <div className="absolute inset-0 z-10 bg-primary-500 bg-opacity-20 border-4 border-primary-500 border-dashed rounded-lg flex items-center justify-center">
                 <div className="bg-white px-6 py-4 rounded-lg shadow-lg">
-                  <p className="text-primary-600 font-semibold text-lg">Drop to replace file</p>
+                  <p className="text-primary-600 font-semibold text-lg">{t('common.dropToReplace')}</p>
                 </div>
               </div>
             )}
 
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">
-                <span className="font-medium">File:</span> {converter.selectedFile.name}
+                <span className="font-medium">{t('common.file')}:</span> {converter.selectedFile.name}
               </p>
               <p className="text-sm text-gray-600">
-                <span className="font-medium">Size:</span>{' '}
+                <span className="font-medium">{t('common.size')}:</span>{' '}
                 {(converter.selectedFile.size / 1024).toFixed(2)} KB
               </p>
               <p className="text-xs text-gray-500 mt-2">
@@ -101,7 +109,7 @@ export const SubtitleConverter: React.FC = () => {
                   }`}
                   onClick={() => setAdjustTimingMode(false)}
                 >
-                  Convert Format
+                  {t('converter.subtitle.convertFormat')}
                 </button>
                 <button
                   id="adjust-timing-tab"
@@ -115,7 +123,7 @@ export const SubtitleConverter: React.FC = () => {
                   }`}
                   onClick={() => setAdjustTimingMode(true)}
                 >
-                  Adjust Timing
+                  {t('converter.subtitle.adjustTiming')}
                 </button>
               </div>
             </div>
@@ -125,7 +133,7 @@ export const SubtitleConverter: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
-                      Output Format
+                      {t('common.outputFormat')}
                     </label>
                     <select
                       id="output-format"
@@ -145,7 +153,7 @@ export const SubtitleConverter: React.FC = () => {
 
                   <div>
                     <label htmlFor="encoding" className="block text-sm font-medium text-gray-700 mb-2">
-                      Encoding
+                      {t('common.encoding')}
                     </label>
                     <select
                       id="encoding"
@@ -166,7 +174,7 @@ export const SubtitleConverter: React.FC = () => {
                   {converter.outputFormat === 'sub' && (
                     <div>
                       <label htmlFor="fps" className="block text-sm font-medium text-gray-700 mb-2">
-                        Frame Rate (FPS)
+                        {t('converter.subtitle.fps')}
                       </label>
                       <select
                         id="fps"
@@ -184,14 +192,14 @@ export const SubtitleConverter: React.FC = () => {
                         ))}
                       </select>
                       <p id="fps-hint" className="text-xs text-gray-500 mt-1">
-                        Required for SUB format timing
+                        {t('converter.subtitle.fpsHint')}
                       </p>
                     </div>
                   )}
 
                   <div>
                     <label htmlFor="keep-html-tags" className="block text-sm font-medium text-gray-700 mb-2">
-                      HTML Tags
+                      {t('converter.subtitle.htmlTags')}
                     </label>
                     <div className="flex items-center space-x-2">
                       <input
@@ -204,11 +212,11 @@ export const SubtitleConverter: React.FC = () => {
                         aria-describedby="html-tags-hint"
                       />
                       <span className="text-sm text-gray-600">
-                        Keep HTML formatting tags
+                        {t('converter.subtitle.keepHtmlTags')}
                       </span>
                     </div>
                     <p id="html-tags-hint" className="text-xs text-gray-500 mt-1">
-                      Preserve &lt;b&gt;, &lt;i&gt;, etc.
+                      {t('converter.subtitle.htmlTagsHint')}
                     </p>
                   </div>
                 </div>
@@ -217,23 +225,23 @@ export const SubtitleConverter: React.FC = () => {
               <div id="adjust-timing-panel" role="tabpanel" aria-labelledby="adjust-timing-tab">
                 <div>
                   <label htmlFor="timing-offset" className="block text-sm font-medium text-gray-700 mb-2">
-                    Time Offset (milliseconds)
+                    {t('converter.subtitle.timingOffset')}
                   </label>
                   <input
                     id="timing-offset"
                     type="number"
                     value={timingOffset}
                     onChange={(e) => setTimingOffset(Number(e.target.value))}
-                    placeholder="e.g., 2000 (delay) or -2000 (advance)"
+                    placeholder={t('converter.subtitle.timingOffsetPlaceholder')}
                     className="input w-full"
                     disabled={converter.status === 'converting'}
                     aria-describedby="timing-offset-hint"
                   />
                   <p id="timing-offset-hint" className="text-xs text-gray-500 mt-1">
-                    Positive = delay subtitles, Negative = advance subtitles
+                    {t('converter.subtitle.timingOffsetHint')}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Example: +2000ms delays by 2 seconds, -1500ms advances by 1.5 seconds
+                    {t('converter.subtitle.timingOffsetExample')}
                   </p>
                 </div>
               </div>
@@ -241,7 +249,7 @@ export const SubtitleConverter: React.FC = () => {
 
             <div>
               <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
-                Custom Filename (Optional)
+                {t('common.customFilename')}
               </label>
               <input
                 id="custom-filename"
@@ -261,7 +269,7 @@ export const SubtitleConverter: React.FC = () => {
             {window.electron?.isElectron && (
               <div>
                 <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
-                  Output Directory (Optional)
+                  {t('common.outputDirectory')}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -280,11 +288,11 @@ export const SubtitleConverter: React.FC = () => {
                     disabled={converter.status === 'converting'}
                     aria-label="Browse for output directory"
                   >
-                    Browse
+                    {t('common.browse')}
                   </Button>
                 </div>
                 <p id="output-directory-hint" className="text-xs text-gray-500 mt-1">
-                  When set, files will be saved directly to this directory
+                  {t('common.outputDirectoryHint')}
                 </p>
               </div>
             )}
@@ -344,8 +352,8 @@ export const SubtitleConverter: React.FC = () => {
                 className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
               >
                 {adjustTimingMode
-                  ? `Subtitle timing adjusted by ${timingOffset}ms successfully!`
-                  : 'Subtitle conversion completed successfully!'}
+                  ? t('converter.subtitle.timingCompleted', { ms: timingOffset })
+                  : t('converter.subtitle.convertCompleted')}
               </div>
             )}
 
@@ -353,23 +361,23 @@ export const SubtitleConverter: React.FC = () => {
               {converter.status === 'idle' || converter.status === 'failed' ? (
                 <>
                   <Button onClick={handleConvert} className="flex-1">
-                    {adjustTimingMode ? 'Adjust Timing' : 'Convert Subtitle'}
+                    {adjustTimingMode ? t('converter.subtitle.adjustTiming') : t('converter.subtitle.convertSubtitle')}
                   </Button>
                   <Button onClick={converter.handleReset} variant="secondary">
-                    Reset
+                    {t('common.reset')}
                   </Button>
                 </>
               ) : converter.status === 'converting' ? (
                 <Button disabled loading className="flex-1">
-                  {adjustTimingMode ? 'Adjusting...' : 'Converting...'}
+                  {adjustTimingMode ? t('converter.subtitle.adjustingTiming') : t('common.converting')}
                 </Button>
               ) : converter.status === 'completed' ? (
                 <>
                   <Button onClick={converter.handleDownload} className="flex-1">
-                    Download
+                    {t('common.download')}
                   </Button>
                   <Button onClick={converter.handleReset} variant="secondary">
-                    Convert Another
+                    {t('common.convertAnother')}
                   </Button>
                 </>
               ) : null}

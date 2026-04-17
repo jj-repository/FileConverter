@@ -99,16 +99,43 @@
       "title": "Konwerter archiwów",
       "description": "Konwertuj archiwa między różnymi formatami",
       "compressionLevel": "Poziom kompresji",
-      "convertArchive": "Konwertuj archiwum"
+      "compressionLevelLabel": "Poziom kompresji ({{level}})",
+      "faster": "Szybciej",
+      "smaller": "Mniejszy",
+      "convertArchive": "Konwertuj archiwum",
+      "completed": "Konwersja archiwum zakończona pomyślnie!"
     },
     "spreadsheet": {
       "title": "Konwerter arkuszy",
       "description": "Konwertuj arkusze kalkulacyjne między różnymi formatami",
-      "convertSpreadsheet": "Konwertuj arkusz"
+      "note": "Formuły, wykresy i zaawansowane formatowanie zostaną utracone podczas konwersji. Zachowane zostaną tylko wartości danych.",
+      "xlsNotSupported": "Zapis XLS nie jest obsługiwany. Odczyt XLS jest obsługiwany.",
+      "delimiter": "Separator",
+      "delimiterHint": "Używany dla wyjścia CSV",
+      "sheetName": "Nazwa arkusza (Opcjonalnie)",
+      "sheetNamePlaceholder": "Domyślnie pierwszy arkusz",
+      "sheetNameHint": "Pozostaw puste, aby konwertować pierwszy arkusz",
+      "convertSpreadsheet": "Konwertuj arkusz",
+      "completed": "Konwersja arkusza zakończona pomyślnie!"
     },
     "subtitle": {
       "title": "Konwerter napisów",
       "description": "Konwertuj napisy między różnymi formatami",
+      "supportedFormats": "Obsługiwane formaty: SRT (SubRip), VTT (WebVTT), ASS/SSA (Advanced SubStation Alpha), SUB (MicroDVD)",
+      "convertFormat": "Konwertuj format",
+      "adjustTiming": "Dostosuj czas",
+      "adjustingTiming": "Dostosowywanie...",
+      "fps": "Liczba klatek (FPS)",
+      "fpsHint": "Wymagane dla formatu SUB",
+      "htmlTags": "Tagi HTML",
+      "keepHtmlTags": "Zachowaj tagi formatowania HTML",
+      "htmlTagsHint": "Zachowaj <b>, <i>, itp.",
+      "timingOffset": "Przesunięcie czasu (milisekundy)",
+      "timingOffsetPlaceholder": "np. 2000 (opóźnienie) lub -2000 (przyspieszenie)",
+      "timingOffsetHint": "Dodatnie = opóźnij napisy, Ujemne = przyspiesz napisy",
+      "timingOffsetExample": "Przykład: +2000ms opóźnia o 2 sekundy, -1500ms przyspiesza o 1,5 sekundy",
+      "timingCompleted": "Czas napisów dostosowany o {{ms}}ms pomyślnie!",
+      "convertCompleted": "Konwersja napisów zakończona pomyślnie!",
       "convertSubtitle": "Konwertuj napisy"
     },
     "ebook": {
@@ -119,6 +146,19 @@
     "font": {
       "title": "Konwerter czcionek",
       "description": "Konwertuj czcionki między różnymi formatami",
+      "webInfo": "Konwertuj czcionki między formatami webowymi i desktopowymi.",
+      "ttfDesc": "TTF (TrueType): Najbardziej kompatybilny format desktopowy",
+      "otfDesc": "OTF (OpenType): Zaawansowane funkcje, lepsza dla złożonej typografii",
+      "woffDesc": "WOFF: Web Open Font Format, zoptymalizowany dla stron WWW",
+      "woff2Desc": "WOFF2: Lepsza kompresja, tylko nowoczesne przeglądarki",
+      "advancedOptions": "Opcje zaawansowane",
+      "subsetText": "Podzbiór tekstu (Opcjonalnie)",
+      "subsetTextHint": "Dołącz tylko te znaki, aby zmniejszyć rozmiar pliku",
+      "optimize": "Optymalizuj czcionkę (usuń zbędne dane)",
+      "converting": "Konwertowanie czcionki...",
+      "completed": "Konwersja zakończona!",
+      "readyToConvert": "Gotowy do konwersji",
+      "download": "Pobierz skonwertowaną czcionkę",
       "convertFont": "Konwertuj czcionkę"
     },
     "data": {

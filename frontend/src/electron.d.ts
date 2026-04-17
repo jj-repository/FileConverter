@@ -6,6 +6,8 @@ export interface ElectronAPI {
   selectFolderFiles: () => Promise<string[]>;
   showItemInFolder: (filePath: string) => Promise<void>;
   downloadFile: (options: { url: string; directory: string; filename: string }) => Promise<{ success: boolean; path: string }>;
+  readFileAsBuffer: (filePath: string) => Promise<ArrayBuffer>;
+  checkForUpdates: () => Promise<void>;
   platform: string;
   isElectron: boolean;
 }

@@ -39,17 +39,17 @@ export const ArchiveConverter: React.FC = () => {
             {converter.isDraggingOver && (
               <div className="absolute inset-0 z-10 bg-primary-500 bg-opacity-20 border-4 border-primary-500 border-dashed rounded-lg flex items-center justify-center">
                 <div className="bg-white px-6 py-4 rounded-lg shadow-lg">
-                  <p className="text-primary-600 font-semibold text-lg">Drop to replace file</p>
+                  <p className="text-primary-600 font-semibold text-lg">{t('common.dropToReplace')}</p>
                 </div>
               </div>
             )}
 
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-600">
-                <span className="font-medium">File:</span> {converter.selectedFile.name}
+                <span className="font-medium">{t('common.file')}:</span> {converter.selectedFile.name}
               </p>
               <p className="text-sm text-gray-600">
-                <span className="font-medium">Size:</span>{' '}
+                <span className="font-medium">{t('common.size')}:</span>{' '}
                 {(converter.selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
               <p className="text-xs text-gray-500 mt-2">
@@ -60,7 +60,7 @@ export const ArchiveConverter: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
-                  Output Format
+                  {t('common.outputFormat')}
                 </label>
                 <select
                   id="output-format"
@@ -80,7 +80,7 @@ export const ArchiveConverter: React.FC = () => {
 
               <div>
                 <label htmlFor="compression-level" className="block text-sm font-medium text-gray-700 mb-2">
-                  Compression Level ({compressionLevel})
+                  {t('converter.archive.compressionLevelLabel', { level: compressionLevel })}
                 </label>
                 <input
                   id="compression-level"
@@ -97,15 +97,15 @@ export const ArchiveConverter: React.FC = () => {
                   aria-valuenow={compressionLevel}
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>Faster</span>
-                  <span>Smaller</span>
+                  <span>{t('converter.archive.faster')}</span>
+                  <span>{t('converter.archive.smaller')}</span>
                 </div>
               </div>
             </div>
 
             <div>
               <label htmlFor="custom-filename" className="block text-sm font-medium text-gray-700 mb-2">
-                Custom Filename (Optional)
+                {t('common.customFilename')}
               </label>
               <input
                 id="custom-filename"
@@ -125,7 +125,7 @@ export const ArchiveConverter: React.FC = () => {
             {window.electron?.isElectron && (
               <div>
                 <label htmlFor="output-directory" className="block text-sm font-medium text-gray-700 mb-2">
-                  Output Directory (Optional)
+                  {t('common.outputDirectory')}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -144,11 +144,11 @@ export const ArchiveConverter: React.FC = () => {
                     disabled={converter.status === 'converting'}
                     aria-label="Browse for output directory"
                   >
-                    Browse
+                    {t('common.browse')}
                   </Button>
                 </div>
                 <p id="output-directory-hint" className="text-xs text-gray-500 mt-1">
-                  When set, files will be saved directly to this directory
+                  {t('common.outputDirectoryHint')}
                 </p>
               </div>
             )}
@@ -207,7 +207,7 @@ export const ArchiveConverter: React.FC = () => {
                 {...converter.getStatusAriaAttributes()}
                 className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"
               >
-                Archive conversion completed successfully!
+                {t('converter.archive.completed')}
               </div>
             )}
 
@@ -215,23 +215,23 @@ export const ArchiveConverter: React.FC = () => {
               {converter.status === 'idle' || converter.status === 'failed' ? (
                 <>
                   <Button onClick={handleConvert} className="flex-1">
-                    Convert Archive
+                    {t('converter.archive.convertArchive')}
                   </Button>
                   <Button onClick={converter.handleReset} variant="secondary">
-                    Reset
+                    {t('common.reset')}
                   </Button>
                 </>
               ) : converter.status === 'converting' ? (
                 <Button disabled loading className="flex-1">
-                  Converting...
+                  {t('common.converting')}
                 </Button>
               ) : converter.status === 'completed' ? (
                 <>
                   <Button onClick={converter.handleDownload} className="flex-1">
-                    Download
+                    {t('common.download')}
                   </Button>
                   <Button onClick={converter.handleReset} variant="secondary">
-                    Convert Another
+                    {t('common.convertAnother')}
                   </Button>
                 </>
               ) : null}

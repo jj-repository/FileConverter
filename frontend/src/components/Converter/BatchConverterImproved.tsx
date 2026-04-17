@@ -54,15 +54,14 @@ export const BatchConverter: React.FC = () => {
     }
 
     try {
-      const filePaths = await window.electron.selectFolderFiles();
+      const electron = window.electron!;
+      const filePaths = await electron.selectFolderFiles();
       if (filePaths.length > 0) {
-        // Convert file paths to File objects
         const files = await Promise.all(
           filePaths.map(async (filePath) => {
-            const response = await fetch(`file://${filePath}`);
-            const blob = await response.blob();
-            const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'file';
-            return new File([blob], fileName);
+            const buffer = await electron.readFileAsBuffer(filePath);
+            const fileName = filePath.split(/[/\\]/).pop() || 'file';
+            return new File([new Uint8Array(buffer)], fileName);
           })
         );
         handleFilesSelect(files);

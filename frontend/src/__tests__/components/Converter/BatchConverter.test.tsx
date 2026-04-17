@@ -443,8 +443,9 @@ describe('BatchConverter', () => {
   describe('Download Actions', () => {
     it('should call batchAPI.createZip with sessionId and successful files', async () => {
       const mockZipResponse = {
+        zip_file: 'batch.zip',
         download_url: '/api/download/batch.zip',
-        filename: 'batch.zip',
+        file_count: 1,
       }
 
       vi.mocked(batchAPI.createZip).mockResolvedValue(mockZipResponse)
@@ -456,7 +457,9 @@ describe('BatchConverter', () => {
 
     it('should trigger window.location.href for ZIP download', async () => {
       const mockZipResponse = {
+        zip_file: 'batch.zip',
         download_url: '/api/download/batch.zip',
+        file_count: 1,
       }
 
       vi.mocked(batchAPI.createZip).mockResolvedValue(mockZipResponse)

@@ -99,16 +99,43 @@
       "title": "Archive Converter",
       "description": "Convert archives between different formats",
       "compressionLevel": "Compression Level",
-      "convertArchive": "Convert Archive"
+      "compressionLevelLabel": "Compression Level ({{level}})",
+      "faster": "Faster",
+      "smaller": "Smaller",
+      "convertArchive": "Convert Archive",
+      "completed": "Archive conversion completed successfully!"
     },
     "spreadsheet": {
       "title": "Spreadsheet Converter",
       "description": "Convert spreadsheets between different formats",
-      "convertSpreadsheet": "Convert Spreadsheet"
+      "note": "Formulas, charts, and advanced formatting will be lost during conversion. Only data values are preserved.",
+      "xlsNotSupported": "XLS output not supported. Reading XLS is supported.",
+      "delimiter": "Delimiter",
+      "delimiterHint": "Used for CSV output",
+      "sheetName": "Sheet Name (Optional)",
+      "sheetNamePlaceholder": "First sheet by default",
+      "sheetNameHint": "Leave empty to convert first sheet",
+      "convertSpreadsheet": "Convert Spreadsheet",
+      "completed": "Spreadsheet conversion completed successfully!"
     },
     "subtitle": {
       "title": "Subtitle Converter",
       "description": "Convert subtitles between different formats",
+      "supportedFormats": "Supported formats: SRT (SubRip), VTT (WebVTT), ASS/SSA (Advanced SubStation Alpha), SUB (MicroDVD)",
+      "convertFormat": "Convert Format",
+      "adjustTiming": "Adjust Timing",
+      "adjustingTiming": "Adjusting...",
+      "fps": "Frame Rate (FPS)",
+      "fpsHint": "Required for SUB format timing",
+      "htmlTags": "HTML Tags",
+      "keepHtmlTags": "Keep HTML formatting tags",
+      "htmlTagsHint": "Preserve <b>, <i>, etc.",
+      "timingOffset": "Time Offset (milliseconds)",
+      "timingOffsetPlaceholder": "e.g., 2000 (delay) or -2000 (advance)",
+      "timingOffsetHint": "Positive = delay subtitles, Negative = advance subtitles",
+      "timingOffsetExample": "Example: +2000ms delays by 2 seconds, -1500ms advances by 1.5 seconds",
+      "timingCompleted": "Subtitle timing adjusted by {{ms}}ms successfully!",
+      "convertCompleted": "Subtitle conversion completed successfully!",
       "convertSubtitle": "Convert Subtitle"
     },
     "ebook": {
@@ -119,6 +146,19 @@
     "font": {
       "title": "Font Converter",
       "description": "Convert fonts between different formats",
+      "webInfo": "Convert between font formats for web and desktop use.",
+      "ttfDesc": "TTF (TrueType): Most compatible desktop format",
+      "otfDesc": "OTF (OpenType): Advanced features, better for complex typography",
+      "woffDesc": "WOFF: Web Open Font Format, optimized for web use",
+      "woff2Desc": "WOFF2: Better compression, modern browsers only",
+      "advancedOptions": "Advanced Options",
+      "subsetText": "Subset Text (Optional)",
+      "subsetTextHint": "Include only these characters to reduce file size",
+      "optimize": "Optimize font (remove unnecessary data)",
+      "converting": "Converting font...",
+      "completed": "Conversion completed!",
+      "readyToConvert": "Ready to convert",
+      "download": "Download Converted Font",
       "convertFont": "Convert Font"
     },
     "data": {

@@ -1,125 +1,20 @@
-import uuid
-from pathlib import Path
 from typing import Annotated, Literal, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from app.config import settings
-from app.middleware.error_handler import sanitize_error_message
-from app.models.conversion import ConversionResponse, ConversionStatus, FileInfo
+from app.models.conversion import ConversionResponse, FileInfo
+from app.routers.base_router import handle_convert, handle_download, handle_formats, handle_info
 from app.services.spreadsheet_converter import SpreadsheetConverter
-from app.utils.file_handler import cleanup_file, make_content_disposition, save_upload_file
-from app.utils.validation import (
-    SPREADSHEET_MIME_TYPES,
-    validate_download_filename,
-    validate_file_extension,
-    validate_file_size,
-    validate_mime_type,
-)
-from app.utils.websocket_security import check_rate_limit, session_validator
-
-
-def _cleanup_after_download(path: str):
-    try:
-        Path(path).unlink(missing_ok=True)
-    except Exception:
-        pass
-
+from app.utils.validation import SPREADSHEET_MIME_TYPES
+from app.utils.websocket_security import check_rate_limit
 
 router = APIRouter()
-spreadsheet_converter = SpreadsheetConverter()
+converter = SpreadsheetConverter()
 
-
-# Whitelist types for spreadsheet parameters
 SpreadsheetEncoding = Literal["utf-8", "utf-16", "ascii", "latin-1", "iso-8859-1", "cp1252"]
 SpreadsheetDelimiter = Literal[",", ";", "\t", "|"]
 
-
-@router.post("/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)])
-async def convert_spreadsheet(
-    file: UploadFile = File(...),
-    output_format: str = Form(...),
-    sheet_name: Optional[str] = Form(None),
-    include_all_sheets: Optional[bool] = Form(False),
-    encoding: Annotated[Optional[SpreadsheetEncoding], Form(description="Character encoding")] = "utf-8",
-    delimiter: Annotated[Optional[SpreadsheetDelimiter], Form(description="Delimiter for CSV files")] = None,
-):
-    """
-    Convert a spreadsheet to a different format
-
-    - **file**: Spreadsheet file to convert (XLSX, XLS, ODS, CSV, TSV)
-    - **output_format**: Target format (xlsx, xls, ods, csv, tsv)
-    - **sheet_name**: Specific sheet to convert (optional, uses first sheet by default)
-    - **include_all_sheets**: Include all sheets (for supported formats)
-    - **encoding**: Character encoding (default: utf-8)
-    - **delimiter**: Delimiter for CSV files (default: auto-detect)
-    """
-    session_id = str(uuid.uuid4())
-    session_validator.register_session(session_id)
-
-    try:
-        # Validate file size
-        validate_file_size(file, "spreadsheet")
-
-        # Validate file extension
-        input_format = validate_file_extension(file.filename, settings.SPREADSHEET_FORMATS)
-
-        # Validate output format
-        if output_format.lower() not in settings.SPREADSHEET_FORMATS:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported output format: {output_format}"
-            )
-
-        # Save uploaded file
-        input_path = await save_upload_file(file, settings.TEMP_DIR)
-
-        # Validate MIME type to prevent file type spoofing
-        validate_mime_type(input_path, SPREADSHEET_MIME_TYPES)
-
-        # Convert spreadsheet
-        options = {
-            "sheet_name": sheet_name,
-            "include_all_sheets": include_all_sheets,
-            "encoding": encoding,
-            "delimiter": delimiter,
-        }
-
-        output_path = await spreadsheet_converter.convert_with_cache(
-            input_path=input_path,
-            output_format=output_format.lower(),
-            options=options,
-            session_id=session_id
-        )
-
-        # Clean up input file
-        cleanup_file(input_path)
-
-        # Generate download URL
-        download_url = f"/api/spreadsheet/download/{output_path.name}"
-
-        return ConversionResponse(
-            session_id=session_id,
-            status=ConversionStatus.COMPLETED,
-            message="Spreadsheet conversion completed successfully",
-            output_file=output_path.name,
-            download_url=download_url
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        # Clean up on error
-        if 'input_path' in locals():
-            cleanup_file(input_path)
-        if 'output_path' in locals():
-            cleanup_file(output_path)
-
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {sanitize_error_message(str(e))}")
-
-
-# MIME type mapping for spreadsheet formats (used for download responses)
 SPREADSHEET_MIME_MAP = {
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "xls": "application/vnd.ms-excel",
@@ -129,60 +24,58 @@ SPREADSHEET_MIME_MAP = {
 }
 
 
+@router.post(
+    "/convert", response_model=ConversionResponse, dependencies=[Depends(check_rate_limit)]
+)
+async def convert_spreadsheet(
+    file: UploadFile = File(...),
+    output_format: str = Form(...),
+    sheet_name: Optional[str] = Form(None),
+    include_all_sheets: Optional[bool] = Form(False),
+    encoding: Annotated[
+        Optional[SpreadsheetEncoding], Form(description="Character encoding")
+    ] = "utf-8",
+    delimiter: Annotated[
+        Optional[SpreadsheetDelimiter], Form(description="Delimiter for CSV files")
+    ] = None,
+):
+    """Convert a spreadsheet to a different format."""
+    return await handle_convert(
+        file,
+        output_format,
+        {
+            "sheet_name": sheet_name,
+            "include_all_sheets": include_all_sheets,
+            "encoding": encoding,
+            "delimiter": delimiter,
+        },
+        converter=converter,
+        formats=settings.SPREADSHEET_FORMATS,
+        category="spreadsheet",
+        mime_types=SPREADSHEET_MIME_TYPES,
+        api_prefix="spreadsheet",
+    )
+
+
 @router.get("/download/{filename}", dependencies=[Depends(check_rate_limit)])
 async def download_spreadsheet(filename: str):
-    """Download converted spreadsheet file"""
-    # Validate filename to prevent path traversal
-    file_path = validate_download_filename(filename, settings.UPLOAD_DIR)
-
-    # Determine MIME type from extension
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    media_type = SPREADSHEET_MIME_MAP.get(ext, "application/octet-stream")
-
-    return FileResponse(
-        path=str(file_path),
-        filename=filename,
-        media_type=media_type,
-        headers={"Content-Disposition": make_content_disposition(filename)}
-    )
+    """Download converted spreadsheet file."""
+    return await handle_download(filename, SPREADSHEET_MIME_MAP)
 
 
 @router.get("/formats", dependencies=[Depends(check_rate_limit)])
 async def get_supported_formats():
-    """Get list of supported spreadsheet formats"""
-    formats = await spreadsheet_converter.get_supported_formats()
-    return {
-        "input_formats": formats["input"],
-        "output_formats": formats["output"],
-    }
+    """Get list of supported spreadsheet formats."""
+    return await handle_formats(converter)
 
 
 @router.post("/info", response_model=FileInfo, dependencies=[Depends(check_rate_limit)])
 async def get_spreadsheet_info(file: UploadFile = File(...)):
-    """Get metadata about a spreadsheet file"""
-    try:
-        # Validate file
-        validate_file_size(file, "spreadsheet")
-        input_format = validate_file_extension(file.filename, settings.SPREADSHEET_FORMATS)
-
-        # Save file temporarily
-        temp_path = await save_upload_file(file, settings.TEMP_DIR)
-
-        # Get metadata and file size before cleanup
-        metadata = await spreadsheet_converter.get_spreadsheet_info(temp_path)
-        file_size = temp_path.stat().st_size
-
-        # Clean up
-        cleanup_file(temp_path)
-
-        return FileInfo(
-            filename=file.filename,
-            size=file_size,
-            format=input_format,
-            metadata=metadata
-        )
-
-    except Exception as e:
-        if 'temp_path' in locals():
-            cleanup_file(temp_path)
-        raise HTTPException(status_code=500, detail=f"Failed to get spreadsheet info: {sanitize_error_message(str(e))}")
+    """Get metadata about a spreadsheet file."""
+    return await handle_info(
+        file,
+        converter=converter,
+        formats=settings.SPREADSHEET_FORMATS,
+        category="spreadsheet",
+        metadata_getter="get_spreadsheet_info",
+    )

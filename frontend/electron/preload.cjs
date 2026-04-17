@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electron', {
 
   // File operations
   downloadFile: ({ url, directory, filename }) => ipcRenderer.invoke('download-file', { url, directory, filename }),
+  readFileAsBuffer: (filePath) => ipcRenderer.invoke('read-file-as-buffer', filePath),
 
   // Updates
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

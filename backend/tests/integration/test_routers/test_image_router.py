@@ -31,8 +31,8 @@ def client():
 def sample_image(temp_dir):
     """Create a sample JPG image for testing"""
     image_path = temp_dir / "test_image.jpg"
-    img = Image.new('RGB', (200, 200), color='blue')
-    img.save(image_path, 'JPEG')
+    img = Image.new("RGB", (200, 200), color="blue")
+    img.save(image_path, "JPEG")
     return image_path
 
 
@@ -40,8 +40,8 @@ def sample_image(temp_dir):
 def sample_png(temp_dir):
     """Create a sample PNG image for testing"""
     image_path = temp_dir / "test_image.png"
-    img = Image.new('RGBA', (150, 150), color=(255, 0, 0, 128))
-    img.save(image_path, 'PNG')
+    img = Image.new("RGBA", (150, 150), color=(255, 0, 0, 128))
+    img.save(image_path, "PNG")
     return image_path
 
 
@@ -50,11 +50,11 @@ class TestImageConvert:
 
     def test_convert_jpg_to_png_success(self, client, sample_image):
         """Test successful JPG to PNG conversion"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "png"}
+                data={"output_format": "png"},
             )
 
         assert response.status_code == 200
@@ -66,11 +66,11 @@ class TestImageConvert:
 
     def test_convert_png_to_jpg_success(self, client, sample_png):
         """Test successful PNG to JPG conversion"""
-        with open(sample_png, 'rb') as f:
+        with open(sample_png, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.png", f, "image/png")},
-                data={"output_format": "jpg", "quality": 90}
+                data={"output_format": "jpg", "quality": 90},
             )
 
         assert response.status_code == 200
@@ -80,11 +80,11 @@ class TestImageConvert:
 
     def test_convert_with_quality_parameter(self, client, sample_image):
         """Test conversion with quality parameter"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "webp", "quality": 80}
+                data={"output_format": "webp", "quality": 80},
             )
 
         assert response.status_code == 200
@@ -94,11 +94,11 @@ class TestImageConvert:
 
     def test_convert_with_resize_width(self, client, sample_image):
         """Test conversion with width resize"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "png", "width": 100}
+                data={"output_format": "png", "width": 100},
             )
 
         assert response.status_code == 200
@@ -107,11 +107,11 @@ class TestImageConvert:
 
     def test_convert_with_resize_height(self, client, sample_image):
         """Test conversion with height resize"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "png", "height": 100}
+                data={"output_format": "png", "height": 100},
             )
 
         assert response.status_code == 200
@@ -120,11 +120,11 @@ class TestImageConvert:
 
     def test_convert_with_both_dimensions(self, client, sample_image):
         """Test conversion with both width and height"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "png", "width": 100, "height": 100}
+                data={"output_format": "png", "width": 100, "height": 100},
             )
 
         assert response.status_code == 200
@@ -133,11 +133,11 @@ class TestImageConvert:
 
     def test_convert_invalid_output_format(self, client, sample_image):
         """Test conversion with invalid output format"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "invalid"}
+                data={"output_format": "invalid"},
             )
 
         assert response.status_code == 400
@@ -151,18 +151,19 @@ class TestImageConvert:
         fake_file = temp_dir / "malware.exe"
         fake_file.write_text("not an image")
 
-        with open(fake_file, 'rb') as f:
+        with open(fake_file, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("malware.exe", f, "application/octet-stream")},
-                data={"output_format": "png"}
+                data={"output_format": "png"},
             )
 
         assert response.status_code == 400
         response_data = response.json()
         error_msg = response_data.get("detail") or response_data.get("error")
-        assert ("Invalid or unsupported file extension" in str(error_msg) or
-                "Unsupported file format" in str(error_msg))
+        assert "Invalid or unsupported file extension" in str(
+            error_msg
+        ) or "Unsupported file format" in str(error_msg)
 
     def test_convert_invalid_quality(self, client, sample_image):
         """Test conversion with invalid quality value
@@ -170,11 +171,11 @@ class TestImageConvert:
         NOTE: Now validated at router level with Pydantic Field constraints.
         Invalid values return 422 Unprocessable Entity instead of 500.
         """
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "jpg", "quality": 150}  # Invalid: >100
+                data={"output_format": "jpg", "quality": 150},  # Invalid: >100
             )
 
         # Pydantic validation returns 422 for out-of-range values
@@ -189,11 +190,11 @@ class TestImageConvert:
         NOTE: Now validated at router level with Pydantic Field constraints.
         Negative values return 422 Unprocessable Entity instead of 500.
         """
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "png", "width": -100}
+                data={"output_format": "png", "width": -100},
             )
 
         # Pydantic validation returns 422 for negative values
@@ -207,11 +208,11 @@ class TestImageConvert:
         NOTE: Now validated at router level with Pydantic Field constraints.
         Values >10000 return 422 Unprocessable Entity instead of 500.
         """
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "png", "width": 20000}  # >10000
+                data={"output_format": "png", "width": 20000},  # >10000
             )
 
         # Pydantic validation returns 422 for out-of-range values
@@ -251,11 +252,11 @@ class TestImageDownload:
     def test_download_converted_file(self, client, sample_image):
         """Test downloading a converted file"""
         # First, convert an image
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             convert_response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "png"}
+                data={"output_format": "png"},
             )
 
         assert convert_response.status_code == 200
@@ -287,8 +288,9 @@ class TestImageDownload:
         for malicious_name in malicious_filenames:
             response = client.get(f"/api/image/download/{malicious_name}")
             # Should either be 400 (validation) or 404 (not found)
-            assert response.status_code in [400, 404], \
+            assert response.status_code in [400, 404], (
                 f"Path traversal not blocked for: {malicious_name}"
+            )
 
 
 class TestImageInfo:
@@ -296,11 +298,8 @@ class TestImageInfo:
 
     def test_get_image_info_success(self, client, sample_image):
         """Test successful image info retrieval"""
-        with open(sample_image, 'rb') as f:
-            response = client.post(
-                "/api/image/info",
-                files={"file": ("test.jpg", f, "image/jpeg")}
-            )
+        with open(sample_image, "rb") as f:
+            response = client.post("/api/image/info", files={"file": ("test.jpg", f, "image/jpeg")})
 
         assert response.status_code == 200
         data = response.json()
@@ -311,11 +310,8 @@ class TestImageInfo:
 
     def test_get_image_info_includes_dimensions(self, client, sample_image):
         """Test that image info includes width and height"""
-        with open(sample_image, 'rb') as f:
-            response = client.post(
-                "/api/image/info",
-                files={"file": ("test.jpg", f, "image/jpeg")}
-            )
+        with open(sample_image, "rb") as f:
+            response = client.post("/api/image/info", files={"file": ("test.jpg", f, "image/jpeg")})
 
         assert response.status_code == 200
         metadata = response.json()["metadata"]
@@ -330,10 +326,9 @@ class TestImageInfo:
         invalid_file = temp_dir / "invalid.txt"
         invalid_file.write_text("not an image")
 
-        with open(invalid_file, 'rb') as f:
+        with open(invalid_file, "rb") as f:
             response = client.post(
-                "/api/image/info",
-                files={"file": ("invalid.txt", f, "text/plain")}
+                "/api/image/info", files={"file": ("invalid.txt", f, "text/plain")}
             )
 
         # Returns 400 or 500 depending on validation stage
@@ -358,11 +353,11 @@ class TestImageSecurityValidation:
         ]
 
         for malicious_name in malicious_filenames:
-            with open(sample_image, 'rb') as f:
+            with open(sample_image, "rb") as f:
                 response = client.post(
                     "/api/image/convert",
                     files={"file": (malicious_name, f, "image/jpeg")},
-                    data={"output_format": "png"}
+                    data={"output_format": "png"},
                 )
 
             # Should succeed (filename sanitized) or fail safely
@@ -370,24 +365,24 @@ class TestImageSecurityValidation:
             if response.status_code == 200:
                 # Verify output filename doesn't contain shell metacharacters
                 output_file = response.json()["output_file"]
-                dangerous_chars = [';', '$', '`', '|', '&', '<', '>']
+                dangerous_chars = [";", "$", "`", "|", "&", "<", ">"]
                 for char in dangerous_chars:
                     assert char not in output_file
 
     def test_null_byte_injection_blocked(self, client, sample_image):
         """Test that null byte injection is sanitized"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test\x00.jpg", f, "image/jpeg")},
-                data={"output_format": "png"}
+                data={"output_format": "png"},
             )
 
         # Null bytes are sanitized, so conversion succeeds
         # but output filename should not contain null bytes
         if response.status_code == 200:
             output_file = response.json()["output_file"]
-            assert '\x00' not in output_file
+            assert "\x00" not in output_file
         else:
             # Or it fails validation
             assert response.status_code in [400, 500]
@@ -398,11 +393,11 @@ class TestImageConversionFormats:
 
     def test_convert_to_webp(self, client, sample_image):
         """Test conversion to WebP format"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "webp", "quality": 85}
+                data={"output_format": "webp", "quality": 85},
             )
 
         assert response.status_code == 200
@@ -410,11 +405,11 @@ class TestImageConversionFormats:
 
     def test_convert_to_gif(self, client, sample_image):
         """Test conversion to GIF format"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "gif"}
+                data={"output_format": "gif"},
             )
 
         assert response.status_code == 200
@@ -422,11 +417,11 @@ class TestImageConversionFormats:
 
     def test_convert_to_bmp(self, client, sample_image):
         """Test conversion to BMP format"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "bmp"}
+                data={"output_format": "bmp"},
             )
 
         assert response.status_code == 200
@@ -434,11 +429,11 @@ class TestImageConversionFormats:
 
     def test_convert_to_tiff(self, client, sample_image):
         """Test conversion to TIFF format"""
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "tiff"}
+                data={"output_format": "tiff"},
             )
 
         assert response.status_code == 200
@@ -461,7 +456,7 @@ class TestImageCleanup:
             cleanup_calls.append(str(file_path))
             return original_cleanup(file_path)
 
-        monkeypatch.setattr("app.routers.image.cleanup_file", mock_cleanup)
+        monkeypatch.setattr("app.routers.base_router.cleanup_file", mock_cleanup)
 
         # Mock converter to succeed and return output path
         output_file = settings.UPLOAD_DIR / "test_output_image.png"
@@ -477,13 +472,13 @@ class TestImageCleanup:
         def mock_conversion_response(*args, **kwargs):
             raise Exception("Simulated error after conversion")
 
-        monkeypatch.setattr("app.routers.image.ConversionResponse", mock_conversion_response)
+        monkeypatch.setattr("app.routers.base_router.ConversionResponse", mock_conversion_response)
 
-        with open(sample_image, 'rb') as f:
+        with open(sample_image, "rb") as f:
             response = client.post(
                 "/api/image/convert",
                 files={"file": ("test.jpg", f, "image/jpeg")},
-                data={"output_format": "png"}
+                data={"output_format": "png"},
             )
 
         assert response.status_code == 500
@@ -505,18 +500,15 @@ class TestImageCleanup:
             cleanup_calls.append(str(file_path))
             return original_cleanup(file_path)
 
-        monkeypatch.setattr("app.routers.image.cleanup_file", mock_cleanup)
+        monkeypatch.setattr("app.routers.base_router.cleanup_file", mock_cleanup)
 
         async def mock_get_image_metadata(self, input_path):
             raise Exception("Simulated info extraction error")
 
         monkeypatch.setattr(ImageConverter, "get_image_metadata", mock_get_image_metadata)
 
-        with open(sample_image, 'rb') as f:
-            response = client.post(
-                "/api/image/info",
-                files={"file": ("test.jpg", f, "image/jpeg")}
-            )
+        with open(sample_image, "rb") as f:
+            response = client.post("/api/image/info", files={"file": ("test.jpg", f, "image/jpeg")})
 
         assert response.status_code == 500
         response_data = response.json()

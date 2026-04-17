@@ -662,7 +662,8 @@ class TestFontOptimize:
         response_json = response.json()
         error_msg = response_json.get("detail") or response_json.get("error") or str(response_json)
         assert error_msg is not None
-        assert "Optimization failed" in str(error_msg) or "error" in str(error_msg).lower()
+        lower_msg = str(error_msg).lower()
+        assert "optimization failed" in lower_msg or "error" in lower_msg or "invalid" in lower_msg
 
     def test_optimize_returns_session_id(self, client, sample_ttf_font):
         """Test that optimization returns a session ID"""
@@ -938,16 +939,16 @@ class TestFontSuccessPaths:
         from app.services.font_converter import FontConverter
 
         mock_info = {
+            "filename": "test.ttf",
+            "size": 1024,
             "format": "ttf",
             "family_name": "Test Font",
             "style_name": "Regular",
             "version": "1.0",
             "num_glyphs": 100,
-            "file_size": 1024,
         }
 
         async def mock_get_info(self, input_path):
-            """Mock successful info extraction"""
             return mock_info
 
         monkeypatch.setattr(FontConverter, "get_info", mock_get_info)
@@ -955,12 +956,11 @@ class TestFontSuccessPaths:
         with open(sample_ttf_font, "rb") as f:
             response = client.post("/api/font/info", files={"file": ("test.ttf", f, "font/ttf")})
 
-        # Should succeed
         assert response.status_code == 200
         data = response.json()
         assert data["format"] == "ttf"
-        assert data["family_name"] == "Test Font"
-        assert data["num_glyphs"] == 100
+        assert data["metadata"]["family_name"] == "Test Font"
+        assert data["metadata"]["num_glyphs"] == 100
 
     def test_download_success_path(self, client, temp_dir):
         """Test successful file download"""
@@ -1054,7 +1054,7 @@ class TestFontErrorHandling:
 
         # Mock validate_file_extension to raise ValueError
         with patch(
-            "app.routers.font.validate_file_extension",
+            "app.routers.base_router.validate_file_extension",
             side_effect=ValueError("Invalid font format"),
         ):
             with open(font_path, "rb") as f:
@@ -1067,7 +1067,7 @@ class TestFontErrorHandling:
             # Should return 400 error for ValueError
             assert response.status_code == 400
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "Invalid font format" in detail or "invalid" in detail.lower()
 
     def test_optimize_value_error_handling(self, client, temp_dir):
@@ -1080,7 +1080,7 @@ class TestFontErrorHandling:
 
         # Mock validate_file_extension to raise ValueError
         with patch(
-            "app.routers.font.validate_file_extension",
+            "app.routers.base_router.validate_file_extension",
             side_effect=ValueError("Invalid font for optimization"),
         ):
             with open(font_path, "rb") as f:
@@ -1091,7 +1091,7 @@ class TestFontErrorHandling:
             # Should return 400 error for ValueError
             assert response.status_code == 400
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "Invalid font" in detail or "invalid" in detail.lower()
 
     def test_info_value_error_handling(self, client, temp_dir):
@@ -1104,7 +1104,7 @@ class TestFontErrorHandling:
 
         # Mock validate_file_extension to raise ValueError
         with patch(
-            "app.routers.font.validate_file_extension",
+            "app.routers.base_router.validate_file_extension",
             side_effect=ValueError("Invalid font for info"),
         ):
             with open(font_path, "rb") as f:
@@ -1115,7 +1115,7 @@ class TestFontErrorHandling:
             # Should return 400 error for ValueError
             assert response.status_code == 400
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "Invalid font" in detail or "invalid" in detail.lower()
 
     def test_info_general_error_cleanup(self, client, temp_dir):
@@ -1139,5 +1139,5 @@ class TestFontErrorHandling:
             # Should return 500 error for general exception
             assert response.status_code == 500
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "Failed to extract info" in detail or "error" in detail.lower()

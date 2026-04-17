@@ -689,7 +689,7 @@ class TestEbookErrorHandling:
             # Should return 400 error for ValueError
             assert response.status_code == 400
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "Invalid ebook format" in detail or "invalid" in detail.lower()
 
     def test_info_general_error_handling(self, client, temp_dir):
@@ -711,5 +711,5 @@ class TestEbookErrorHandling:
             # Should return 500 error for general exception
             assert response.status_code == 500
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "Failed to extract info" in detail or "error" in detail.lower()

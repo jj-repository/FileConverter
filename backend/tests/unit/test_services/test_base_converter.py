@@ -11,11 +11,13 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from app.config import settings
-from app.services.base_converter import BaseConverter, WebSocketManager, ws_manager
+from app.services.base_converter import BaseConverter
+from app.services.websocket_manager import WebSocketManager, ws_manager
 
 # ============================================================================
 # WEBSOCKET MANAGER TESTS
 # ============================================================================
+
 
 class TestWebSocketManager:
     """Test WebSocket Manager functionality"""
@@ -96,6 +98,7 @@ class TestWebSocketManager:
 # BASE CONVERTER TESTS
 # ============================================================================
 
+
 class MockConverter(BaseConverter):
     """Concrete implementation of BaseConverter for testing"""
 
@@ -135,10 +138,7 @@ class TestBaseConverterBasics:
         await converter.send_progress("session-123", 75.0, "converting", "Almost done")
 
         mock_manager.send_progress.assert_called_once_with(
-            session_id="session-123",
-            progress=75.0,
-            status="converting",
-            message="Almost done"
+            session_id="session-123", progress=75.0, status="converting", message="Almost done"
         )
 
     @pytest.mark.asyncio
@@ -184,6 +184,7 @@ class TestBaseConverterBasics:
 # CACHE INTEGRATION TESTS
 # ============================================================================
 
+
 class TestBaseConverterCacheIntegration:
     """Test BaseConverter cache integration"""
 
@@ -194,12 +195,9 @@ class TestBaseConverterCacheIntegration:
         input_file = temp_dir / "test.txt"
         input_file.write_text("test content")
 
-        with patch('app.config.settings.CACHE_ENABLED', False):
+        with patch("app.config.settings.CACHE_ENABLED", False):
             result = await converter.convert_with_cache(
-                input_path=input_file,
-                output_format="pdf",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="pdf", options={}, session_id="test-session"
             )
 
             # Should call convert directly (no cache check)
@@ -220,15 +218,17 @@ class TestBaseConverterCacheIntegration:
         mock_cache_service.get_cached_result.return_value = mock_cached_result
         mock_cache_service.generate_cache_key.return_value = "cache-key-123"
 
-        with patch('app.config.settings.CACHE_ENABLED', True):
-            with patch('app.services.cache_service.get_cache_service', return_value=mock_cache_service):
-                with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
-                    with patch.object(converter, 'convert') as mock_convert:
+        with patch("app.config.settings.CACHE_ENABLED", True):
+            with patch(
+                "app.services.cache_service.get_cache_service", return_value=mock_cache_service
+            ):
+                with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
+                    with patch.object(converter, "convert") as mock_convert:
                         await converter.convert_with_cache(
                             input_path=input_file,
                             output_format="pdf",
                             options={},
-                            session_id="test-session"
+                            session_id="test-session",
                         )
 
                         # Verify convert() was NOT called (cache hit)
@@ -253,14 +253,16 @@ class TestBaseConverterCacheIntegration:
         mock_cache_service.generate_cache_key.return_value = "cache-key-123"
         mock_cache_service.store_result = Mock()
 
-        with patch('app.config.settings.CACHE_ENABLED', True):
-            with patch('app.services.cache_service.get_cache_service', return_value=mock_cache_service):
-                with patch.object(converter, 'convert', return_value=output_file) as mock_convert:
+        with patch("app.config.settings.CACHE_ENABLED", True):
+            with patch(
+                "app.services.cache_service.get_cache_service", return_value=mock_cache_service
+            ):
+                with patch.object(converter, "convert", return_value=output_file) as mock_convert:
                     await converter.convert_with_cache(
                         input_path=input_file,
                         output_format="pdf",
                         options={"quality": 95},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     # Verify convert() WAS called (cache miss)
@@ -286,14 +288,16 @@ class TestBaseConverterCacheIntegration:
         mock_cache_service.get_cached_result.return_value = None
         mock_cache_service.generate_cache_key.return_value = "cache-key-123"
 
-        with patch('app.config.settings.CACHE_ENABLED', True):
-            with patch('app.services.cache_service.get_cache_service', return_value=mock_cache_service):
-                with patch.object(converter, 'convert', return_value=output_file):
+        with patch("app.config.settings.CACHE_ENABLED", True):
+            with patch(
+                "app.services.cache_service.get_cache_service", return_value=mock_cache_service
+            ):
+                with patch.object(converter, "convert", return_value=output_file):
                     await converter.convert_with_cache(
                         input_path=input_file,
                         output_format="pdf",
                         options={"quality": 95},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     # Verify store_result was called with correct parameters
@@ -320,15 +324,17 @@ class TestBaseConverterCacheIntegration:
         mock_cache_service.generate_cache_key.return_value = "cache-key-123"
         mock_cache_service.store_result.side_effect = Exception("Cache storage failed")
 
-        with patch('app.config.settings.CACHE_ENABLED', True):
-            with patch('app.services.cache_service.get_cache_service', return_value=mock_cache_service):
-                with patch.object(converter, 'convert', return_value=output_file):
+        with patch("app.config.settings.CACHE_ENABLED", True):
+            with patch(
+                "app.services.cache_service.get_cache_service", return_value=mock_cache_service
+            ):
+                with patch.object(converter, "convert", return_value=output_file):
                     # Should not raise error despite cache storage failure
                     result = await converter.convert_with_cache(
                         input_path=input_file,
                         output_format="pdf",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     assert result == output_file
@@ -347,14 +353,16 @@ class TestBaseConverterCacheIntegration:
         mock_cache_service = Mock()
         mock_cache_service.generate_cache_key.side_effect = Exception("Cache error")
 
-        with patch('app.config.settings.CACHE_ENABLED', True):
-            with patch('app.services.cache_service.get_cache_service', return_value=mock_cache_service):
-                with patch.object(converter, 'convert', return_value=output_file) as mock_convert:
+        with patch("app.config.settings.CACHE_ENABLED", True):
+            with patch(
+                "app.services.cache_service.get_cache_service", return_value=mock_cache_service
+            ):
+                with patch.object(converter, "convert", return_value=output_file) as mock_convert:
                     result = await converter.convert_with_cache(
                         input_path=input_file,
                         output_format="pdf",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     # Should fall back to normal conversion
@@ -370,14 +378,14 @@ class TestBaseConverterCacheIntegration:
 
         output_file = settings.UPLOAD_DIR / "test_converted.pdf"
 
-        with patch('app.config.settings.CACHE_ENABLED', True):
-            with patch('app.services.cache_service.get_cache_service', return_value=None):
-                with patch.object(converter, 'convert', return_value=output_file) as mock_convert:
+        with patch("app.config.settings.CACHE_ENABLED", True):
+            with patch("app.services.cache_service.get_cache_service", return_value=None):
+                with patch.object(converter, "convert", return_value=output_file) as mock_convert:
                     await converter.convert_with_cache(
                         input_path=input_file,
                         output_format="pdf",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     # Should call convert directly
@@ -394,13 +402,13 @@ class TestBaseConverterCacheIntegration:
 
         output_file = settings.UPLOAD_DIR / "test_converted.pdf"
 
-        with patch('app.config.settings.CACHE_ENABLED', True):
-            with patch.object(converter, 'convert', return_value=output_file) as mock_convert:
+        with patch("app.config.settings.CACHE_ENABLED", True):
+            with patch.object(converter, "convert", return_value=output_file) as mock_convert:
                 await converter.convert_with_cache(
                     input_path=input_file,
                     output_format="pdf",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
                 # Should call convert directly (cache disabled for converter)
@@ -420,9 +428,9 @@ class TestBaseConverterCacheIntegration:
         output_file = settings.UPLOAD_DIR / "test_converted.pdf"
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        with patch('app.config.settings.CACHE_ENABLED', True):
+        with patch("app.config.settings.CACHE_ENABLED", True):
             # Patch get_cache_service where it's imported (inside the method)
-            with patch('app.services.cache_service.get_cache_service') as mock_cache_func:
+            with patch("app.services.cache_service.get_cache_service") as mock_cache_func:
                 # Mock cache service
                 mock_cache_service = MagicMock()
                 mock_cache_func.return_value = mock_cache_service
@@ -437,14 +445,16 @@ class TestBaseConverterCacheIntegration:
                 mock_cache_service.get_cached_result.return_value = mock_cached_result
 
                 # Mock the file existence check to return False (simulating file deletion)
-                with patch.object(Path, 'exists', return_value=False):
-                    with patch.object(converter, 'convert', return_value=output_file) as mock_convert:
-                        with patch.object(converter, 'send_progress', new=AsyncMock()):
+                with patch.object(Path, "exists", return_value=False):
+                    with patch.object(
+                        converter, "convert", return_value=output_file
+                    ) as mock_convert:
+                        with patch.object(converter, "send_progress", new=AsyncMock()):
                             result = await converter.convert_with_cache(
                                 input_path=input_file,
                                 output_format="pdf",
                                 options={},
-                                session_id="test-session"
+                                session_id="test-session",
                             )
 
                             # Should call convert because cached file was deleted
@@ -508,10 +518,7 @@ class TestAbstractMethods:
         settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
         result = await converter.convert(
-            input_path=input_file,
-            output_format="pdf",
-            options={},
-            session_id="test-session"
+            input_path=input_file, output_format="pdf", options={}, session_id="test-session"
         )
 
         assert result.exists()

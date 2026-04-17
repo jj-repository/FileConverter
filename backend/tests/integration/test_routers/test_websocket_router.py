@@ -11,12 +11,13 @@ import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from app.services.base_converter import ws_manager
+from app.services.websocket_manager import ws_manager
 from app.utils.websocket_security import rate_limiter, session_validator
 
 # ============================================================================
 # VALID SESSION CONNECTION TESTS
 # ============================================================================
+
 
 class TestWebSocketValidConnection:
     """Test valid WebSocket connections"""
@@ -33,7 +34,7 @@ class TestWebSocketValidConnection:
 
             assert data["session_id"] == session_id
             assert data["progress"] == 0
-            assert data["status"] == "connected"
+            assert data["status"] == "pending"
             assert "connected" in data["message"].lower()
 
         # Cleanup
@@ -68,6 +69,7 @@ class TestWebSocketValidConnection:
 
             # Simulate sending progress update
             import asyncio
+
             async def send_update():
                 await ws_manager.send_progress(session_id, 50.0, "converting", "Halfway done")
 
@@ -87,6 +89,7 @@ class TestWebSocketValidConnection:
 # ============================================================================
 # SESSION VALIDATION TESTS (SECURITY CRITICAL)
 # ============================================================================
+
 
 class TestWebSocketSessionValidation:
     """Test WebSocket session validation security"""
@@ -132,6 +135,7 @@ class TestWebSocketSessionValidation:
 # RATE LIMITING TESTS (SECURITY CRITICAL)
 # ============================================================================
 
+
 class TestWebSocketRateLimiting:
     """Test WebSocket rate limiting security"""
 
@@ -150,7 +154,7 @@ class TestWebSocketRateLimiting:
             session_id = f"rate-test-{i}"
             with test_client.websocket_connect(f"/ws/progress/{session_id}") as websocket:
                 data = websocket.receive_json()
-                assert data["status"] == "connected"
+                assert data["status"] == "pending"
 
         # Cleanup
         for i in range(5):
@@ -165,6 +169,7 @@ class TestWebSocketRateLimiting:
 
         # Manually add 10 connections to rate limiter (simulate at limit)
         import time
+
         client_ip = "testclient"
         for i in range(10):
             rate_limiter.connections[client_ip].append(time.time())
@@ -209,6 +214,7 @@ class TestWebSocketRateLimiting:
 # ============================================================================
 # DISCONNECT HANDLING TESTS
 # ============================================================================
+
 
 class TestWebSocketDisconnect:
     """Test WebSocket disconnect handling"""
@@ -271,6 +277,7 @@ class TestWebSocketDisconnect:
 # ERROR HANDLING TESTS
 # ============================================================================
 
+
 class TestWebSocketErrorHandling:
     """Test WebSocket error handling"""
 
@@ -293,6 +300,7 @@ class TestWebSocketErrorHandling:
     def test_websocket_cleans_up_on_error(self, test_client):
         """Test WebSocket cleans up resources on error"""
         import time
+
         session_id = "cleanup-error-test"
         session_validator.register_session(session_id)
 
@@ -301,7 +309,9 @@ class TestWebSocketErrorHandling:
                 websocket.receive_json()
 
                 # Force an error by sending invalid JSON
-                with patch.object(websocket, 'receive_text', side_effect=Exception("Simulated error")):
+                with patch.object(
+                    websocket, "receive_text", side_effect=Exception("Simulated error")
+                ):
                     try:
                         websocket.receive_text()
                     except:
@@ -360,6 +370,7 @@ class TestWebSocketErrorHandling:
 # CONCURRENT CONNECTION TESTS
 # ============================================================================
 
+
 class TestWebSocketConcurrentConnections:
     """Test concurrent WebSocket connections"""
 
@@ -413,6 +424,7 @@ class TestWebSocketConcurrentConnections:
 # INTEGRATION WITH CONVERSION FLOW
 # ============================================================================
 
+
 class TestWebSocketConversionIntegration:
     """Test WebSocket integration with conversion flow"""
 
@@ -441,3 +453,63 @@ class TestWebSocketConversionIntegration:
             assert data["status"] == "completed"
 
         session_validator.remove_session(session_id)
+
+
+# ============================================================================
+# MID-CONVERSION DISCONNECT TESTS (T11)
+# ============================================================================
+
+
+class TestWebSocketMidConversionDisconnect:
+    """Test WebSocket disconnect during an active conversion."""
+
+    def test_disconnect_mid_conversion_cleans_up(self, test_client):
+        """Disconnecting while progress is streaming removes the session from ws_manager."""
+        session_id = "mid-convert-disconnect"
+        session_validator.register_session(session_id)
+
+        with test_client.websocket_connect(f"/ws/progress/{session_id}") as websocket:
+            websocket.receive_json()  # initial connect message
+            assert session_id in ws_manager.active_connections
+
+            asyncio.get_event_loop().run_until_complete(
+                ws_manager.send_progress(session_id, 40.0, "converting", "Halfway")
+            )
+            websocket.receive_json()
+            websocket.close()
+
+        assert session_id not in ws_manager.active_connections
+        session_validator.remove_session(session_id)
+
+    def test_send_progress_after_disconnect_does_not_raise(self, test_client):
+        """Sending progress to a disconnected session is silently ignored."""
+        session_id = "send-after-disconnect"
+        session_validator.register_session(session_id)
+
+        with test_client.websocket_connect(f"/ws/progress/{session_id}") as websocket:
+            websocket.receive_json()
+            websocket.close()
+
+        asyncio.get_event_loop().run_until_complete(
+            ws_manager.send_progress(session_id, 80.0, "converting", "should be dropped")
+        )
+        session_validator.remove_session(session_id)
+
+    def test_invalid_session_rejected_at_connect_time(self, test_client):
+        """A session that was never registered must be rejected immediately."""
+        unregistered_id = "never-registered-xyz"
+        if unregistered_id in session_validator.active_sessions:
+            session_validator.remove_session(unregistered_id)
+
+        with pytest.raises(Exception):
+            with test_client.websocket_connect(f"/ws/progress/{unregistered_id}"):
+                pass
+
+    def test_uuid_format_session_rejected_if_unregistered(self, test_client):
+        """A properly formatted UUID that was never registered is still rejected."""
+        import uuid
+
+        valid_uuid = str(uuid.uuid4())
+        with pytest.raises(Exception):
+            with test_client.websocket_connect(f"/ws/progress/{valid_uuid}"):
+                pass

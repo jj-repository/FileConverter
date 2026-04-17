@@ -13,10 +13,12 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from app.config import settings
 from app.services.audio_converter import AudioConverter
+from app.utils.subprocess_utils import parse_ffmpeg_progress
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
 # ============================================================================
+
 
 class TestAudioConverterBasics:
     """Test basic AudioConverter functionality"""
@@ -60,6 +62,7 @@ class TestAudioConverterBasics:
 # AUDIO DURATION TESTS
 # ============================================================================
 
+
 class TestAudioDuration:
     """Test audio duration detection"""
 
@@ -70,11 +73,8 @@ class TestAudioDuration:
         test_file = temp_dir / "test.mp3"
         test_file.write_text("fake audio")
 
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = Mock(
-                returncode=0,
-                stdout="123.456\n"
-            )
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=0, stdout="123.456\n")
 
             duration = await converter.get_audio_duration(test_file)
 
@@ -93,11 +93,8 @@ class TestAudioDuration:
         test_file = temp_dir / "test.mp3"
         test_file.write_text("fake audio")
 
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = Mock(
-                returncode=1,
-                stdout=""
-            )
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=1, stdout="")
 
             duration = await converter.get_audio_duration(test_file)
 
@@ -110,7 +107,7 @@ class TestAudioDuration:
         test_file = temp_dir / "test.mp3"
         test_file.write_text("fake audio")
 
-        with patch('subprocess.run', side_effect=Exception("FFprobe error")):
+        with patch("subprocess.run", side_effect=Exception("FFprobe error")):
             duration = await converter.get_audio_duration(test_file)
 
             assert duration == 0.0
@@ -120,67 +117,34 @@ class TestAudioDuration:
 # PROGRESS PARSING TESTS
 # ============================================================================
 
+
 class TestProgressParsing:
-    """Test FFmpeg progress parsing"""
+    """Spot-check FFmpeg progress parsing — canonical tests in test_subprocess_utils.py."""
 
     def test_parse_ffmpeg_progress_valid(self):
-        """Test parsing valid FFmpeg progress output"""
-        converter = AudioConverter()
-
-        # Total duration: 100 seconds
-        # Current time: 50 seconds = 50% progress
-        line = "time=00:00:50.00 bitrate=192.0kbits/s"
-        progress = converter.parse_ffmpeg_progress(line, 100.0)
-
-        assert progress is not None
-        assert progress == pytest.approx(50.0, abs=0.1)
+        assert parse_ffmpeg_progress(
+            "time=00:00:50.00 bitrate=192.0kbits/s", 100.0
+        ) == pytest.approx(50.0, abs=0.1)
 
     def test_parse_ffmpeg_progress_hours(self):
-        """Test parsing progress with hours"""
-        converter = AudioConverter()
-
-        # Total duration: 7200 seconds (2 hours)
-        # Current time: 1 hour = 3600 seconds = 50% progress
-        line = "time=01:00:00.00 bitrate=192.0kbits/s"
-        progress = converter.parse_ffmpeg_progress(line, 7200.0)
-
-        assert progress is not None
-        assert progress == pytest.approx(50.0, abs=0.1)
+        assert parse_ffmpeg_progress(
+            "time=01:00:00.00 bitrate=192.0kbits/s", 7200.0
+        ) == pytest.approx(50.0, abs=0.1)
 
     def test_parse_ffmpeg_progress_99_cap(self):
-        """Test progress is capped at 99.9%"""
-        converter = AudioConverter()
-
-        # Total duration: 100 seconds
-        # Current time: 200 seconds (over 100%) - should cap at 99.9%
-        line = "time=00:03:20.00 bitrate=192.0kbits/s"
-        progress = converter.parse_ffmpeg_progress(line, 100.0)
-
-        assert progress is not None
-        assert progress == 99.9
+        assert parse_ffmpeg_progress("time=00:03:20.00 bitrate=192.0kbits/s", 100.0) == 99.9
 
     def test_parse_ffmpeg_progress_no_match(self):
-        """Test parsing returns None when no time pattern found"""
-        converter = AudioConverter()
-
-        line = "Invalid output without time"
-        progress = converter.parse_ffmpeg_progress(line, 100.0)
-
-        assert progress is None
+        assert parse_ffmpeg_progress("Invalid output without time", 100.0) is None
 
     def test_parse_ffmpeg_progress_zero_duration(self):
-        """Test parsing returns None when total duration is 0"""
-        converter = AudioConverter()
-
-        line = "time=00:00:50.00 bitrate=192.0kbits/s"
-        progress = converter.parse_ffmpeg_progress(line, 0.0)
-
-        assert progress is None
+        assert parse_ffmpeg_progress("time=00:00:50.00 bitrate=192.0kbits/s", 0.0) is None
 
 
 # ============================================================================
 # CODEC SELECTION TESTS
 # ============================================================================
+
 
 class TestCodecSelection:
     """Test audio codec selection"""
@@ -246,6 +210,7 @@ class TestCodecSelection:
 # VALIDATION TESTS
 # ============================================================================
 
+
 class TestParameterValidation:
     """Test parameter validation for audio conversion"""
 
@@ -262,7 +227,7 @@ class TestParameterValidation:
                 input_path=input_file,
                 output_format="mp3",
                 options={"bitrate": "999999k"},  # Invalid bitrate
-                session_id="test-session"
+                session_id="test-session",
             )
 
     @pytest.mark.asyncio
@@ -278,7 +243,7 @@ class TestParameterValidation:
                 input_path=input_file,
                 output_format="mp3",
                 options={"sample_rate": 99999},  # Invalid sample rate
-                session_id="test-session"
+                session_id="test-session",
             )
 
     @pytest.mark.asyncio
@@ -294,7 +259,7 @@ class TestParameterValidation:
                 input_path=input_file,
                 output_format="mp3",
                 options={"channels": 99},  # Invalid channel count
-                session_id="test-session"
+                session_id="test-session",
             )
 
     @pytest.mark.asyncio
@@ -307,16 +272,16 @@ class TestParameterValidation:
 
         output_file = settings.UPLOAD_DIR / "test_converted.mp3"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     mock_process = AsyncMock()
                     mock_process.returncode = 0
                     mock_process.stdout = AsyncMock()
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                    mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -327,7 +292,7 @@ class TestParameterValidation:
                         input_path=input_file,
                         output_format="mp3",
                         options={"bitrate": "128k"},  # Valid bitrate
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     assert result == output_file
@@ -342,16 +307,16 @@ class TestParameterValidation:
 
         output_file = settings.UPLOAD_DIR / "test_converted.mp3"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     mock_process = AsyncMock()
                     mock_process.returncode = 0
                     mock_process.stdout = AsyncMock()
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                    mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -362,7 +327,7 @@ class TestParameterValidation:
                         input_path=input_file,
                         output_format="mp3",
                         options={"sample_rate": 44100},  # Valid sample rate
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     assert result == output_file
@@ -377,16 +342,16 @@ class TestParameterValidation:
 
         output_file = settings.UPLOAD_DIR / "test_converted.mp3"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     mock_process = AsyncMock()
                     mock_process.returncode = 0
                     mock_process.stdout = AsyncMock()
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                    mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -397,7 +362,7 @@ class TestParameterValidation:
                         input_path=input_file,
                         output_format="mp3",
                         options={"channels": 2},  # Valid stereo
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     assert result == output_file
@@ -406,6 +371,7 @@ class TestParameterValidation:
 # ============================================================================
 # CONVERSION TESTS
 # ============================================================================
+
 
 class TestAudioConversion:
     """Test audio conversion functionality"""
@@ -420,19 +386,19 @@ class TestAudioConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.wav"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     # Mock FFmpeg process
                     mock_process = AsyncMock()
                     mock_process.returncode = 0
                     mock_process.stdout = AsyncMock()
-                    mock_process.stdout.__aiter__.return_value = iter([
-                        b"time=00:00:50.00 bitrate=192.0kbits/s\n"
-                    ])
+                    mock_process.stdout.__aiter__.return_value = iter(
+                        [b"time=00:00:50.00 bitrate=192.0kbits/s\n"]
+                    )
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                    mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
                     # Create fake output file
@@ -443,7 +409,7 @@ class TestAudioConversion:
                         input_path=input_file,
                         output_format="wav",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     assert result == output_file
@@ -469,16 +435,16 @@ class TestAudioConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.mp3"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     mock_process = AsyncMock()
                     mock_process.returncode = 0
                     mock_process.stdout = AsyncMock()
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                    mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -488,7 +454,7 @@ class TestAudioConversion:
                         input_path=input_file,
                         output_format="mp3",
                         options={"bitrate": "320k"},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     # Verify bitrate in FFmpeg command
@@ -506,16 +472,16 @@ class TestAudioConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.flac"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     mock_process = AsyncMock()
                     mock_process.returncode = 0
                     mock_process.stdout = AsyncMock()
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                    mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -525,7 +491,7 @@ class TestAudioConversion:
                         input_path=input_file,
                         output_format="flac",
                         options={"bitrate": "320k"},  # Should be ignored
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     # Verify bitrate NOT in FFmpeg command for FLAC
@@ -545,16 +511,16 @@ class TestAudioConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.mp3"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     mock_process = AsyncMock()
                     mock_process.returncode = 0
                     mock_process.stdout = AsyncMock()
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                    mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -564,7 +530,7 @@ class TestAudioConversion:
                         input_path=input_file,
                         output_format="mp3",
                         options={"sample_rate": 44100},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     # Verify sample rate in FFmpeg command
@@ -582,16 +548,16 @@ class TestAudioConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.mp3"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     mock_process = AsyncMock()
                     mock_process.returncode = 0
                     mock_process.stdout = AsyncMock()
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                    mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -601,7 +567,7 @@ class TestAudioConversion:
                         input_path=input_file,
                         output_format="mp3",
                         options={"channels": 1},  # Mono
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     # Verify channels in FFmpeg command
@@ -619,10 +585,7 @@ class TestAudioConversion:
 
         with pytest.raises(ValueError, match="Unsupported conversion"):
             await converter.convert(
-                input_path=input_file,
-                output_format="mp3",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="mp3", options={}, session_id="test-session"
             )
 
     @pytest.mark.asyncio
@@ -633,18 +596,22 @@ class TestAudioConversion:
         input_file = temp_dir / "test.mp3"
         input_file.write_text("fake audio")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     # Mock failed FFmpeg process
                     mock_process = AsyncMock()
                     mock_process.returncode = 1
                     mock_process.stdout = AsyncMock()
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
-                    mock_process.stderr.read = AsyncMock(return_value=b"FFmpeg error: invalid codec")
+                    mock_process.stderr.read = AsyncMock(
+                        return_value=b"FFmpeg error: invalid codec"
+                    )
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b'FFmpeg error: invalid codec'))
+                    mock_process.communicate = AsyncMock(
+                        return_value=(b"", b"FFmpeg error: invalid codec")
+                    )
                     mock_subprocess.return_value = mock_process
 
                     with pytest.raises(Exception, match="FFmpeg conversion failed"):
@@ -652,7 +619,7 @@ class TestAudioConversion:
                             input_path=input_file,
                             output_format="mp3",
                             options={},
-                            session_id="test-session"
+                            session_id="test-session",
                         )
 
                     # Verify failure progress was sent
@@ -667,16 +634,16 @@ class TestAudioConversion:
         input_file = temp_dir / "test.mp3"
         input_file.write_text("fake audio")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     mock_process = AsyncMock()
                     mock_process.returncode = 0
                     mock_process.stdout = AsyncMock()
                     mock_process.stdout.__aiter__.return_value = iter([])
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                    mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
                     # Don't create output file
@@ -686,7 +653,7 @@ class TestAudioConversion:
                             input_path=input_file,
                             output_format="mp3",
                             options={},
-                            session_id="test-session"
+                            session_id="test-session",
                         )
 
     @pytest.mark.asyncio
@@ -697,9 +664,9 @@ class TestAudioConversion:
         input_file = temp_dir / "test.mp3"
         input_file.write_text("fake audio")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch.object(converter, 'get_audio_duration', return_value=100.0):
-                with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch.object(converter, "get_audio_duration", return_value=100.0):
+                with patch("asyncio.create_subprocess_exec") as mock_subprocess:
                     # Mock process that times out
                     mock_process = AsyncMock()
                     mock_process.returncode = 0
@@ -714,15 +681,16 @@ class TestAudioConversion:
                     mock_process.stderr = AsyncMock()
                     mock_process.kill = Mock()
                     mock_process.wait = AsyncMock()
-                    mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                    mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
                     # Patch asyncio.timeout to raise TimeoutError immediately
-                    with patch('asyncio.timeout') as mock_timeout:
+                    with patch("asyncio.timeout") as mock_timeout:
                         # Create a context manager that raises TimeoutError
                         class TimeoutContext:
                             async def __aenter__(self):
                                 raise asyncio.TimeoutError()
+
                             async def __aexit__(self, exc_type, exc_val, exc_tb):
                                 pass
 
@@ -733,7 +701,7 @@ class TestAudioConversion:
                                 input_path=input_file,
                                 output_format="mp3",
                                 options={},
-                                session_id="test-session"
+                                session_id="test-session",
                             )
 
                         # Verify process was killed
@@ -743,6 +711,7 @@ class TestAudioConversion:
 # ============================================================================
 # METADATA EXTRACTION TESTS
 # ============================================================================
+
 
 class TestAudioMetadata:
     """Test audio metadata extraction"""
@@ -760,7 +729,7 @@ class TestAudioMetadata:
                 "duration": "245.67",
                 "size": "1234567",
                 "format_name": "mp3",
-                "bit_rate": "192000"
+                "bit_rate": "192000",
             },
             "streams": [
                 {
@@ -768,16 +737,13 @@ class TestAudioMetadata:
                     "codec_name": "mp3",
                     "sample_rate": "44100",
                     "channels": 2,
-                    "channel_layout": "stereo"
+                    "channel_layout": "stereo",
                 }
-            ]
+            ],
         }
 
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = Mock(
-                returncode=0,
-                stdout=json.dumps(mock_metadata)
-            )
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=0, stdout=json.dumps(mock_metadata))
 
             metadata = await converter.get_audio_metadata(test_file)
 
@@ -798,11 +764,8 @@ class TestAudioMetadata:
         test_file = temp_dir / "test.mp3"
         test_file.write_text("fake audio")
 
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = Mock(
-                returncode=1,
-                stdout=""
-            )
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=1, stdout="")
 
             metadata = await converter.get_audio_metadata(test_file)
 
@@ -817,7 +780,7 @@ class TestAudioMetadata:
         test_file = temp_dir / "test.mp3"
         test_file.write_text("fake audio")
 
-        with patch('subprocess.run', side_effect=Exception("FFprobe crashed")):
+        with patch("subprocess.run", side_effect=Exception("FFprobe crashed")):
             metadata = await converter.get_audio_metadata(test_file)
 
             assert "error" in metadata
@@ -832,24 +795,17 @@ class TestAudioMetadata:
         test_file.write_text("fake video")
 
         mock_metadata = {
-            "format": {
-                "duration": "100.0",
-                "size": "1000000",
-                "format_name": "mp4"
-            },
+            "format": {"duration": "100.0", "size": "1000000", "format_name": "mp4"},
             "streams": [
                 {
                     "codec_type": "video",  # No audio stream
-                    "codec_name": "h264"
+                    "codec_name": "h264",
                 }
-            ]
+            ],
         }
 
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = Mock(
-                returncode=0,
-                stdout=json.dumps(mock_metadata)
-            )
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=0, stdout=json.dumps(mock_metadata))
 
             metadata = await converter.get_audio_metadata(test_file)
 

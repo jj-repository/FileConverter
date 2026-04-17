@@ -115,10 +115,11 @@ def validate_file_size(file: UploadFile, file_type: str) -> None:
 
     max_size = size_limits.get(file_type, settings.MAX_UPLOAD_SIZE)
     if file_size > max_size:
-        label = file_type.capitalize() if file_type in size_limits else "File"
+        label = file_type.capitalize() if file_type in size_limits else None
+        prefix = f"{label} file" if label else "File"
         raise HTTPException(
             status_code=413,
-            detail=f"{label} file too large. Maximum size: {max_size / 1024 / 1024}MB",
+            detail=f"{prefix} too large. Maximum size: {max_size / 1024 / 1024}MB",
         )
 
 

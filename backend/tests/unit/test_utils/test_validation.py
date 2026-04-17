@@ -27,6 +27,7 @@ from fastapi import HTTPException
 # PATH TRAVERSAL PREVENTION TESTS (CRITICAL SECURITY)
 # ============================================================================
 
+
 class TestValidateDownloadFilename:
     """Test validate_download_filename() - Path traversal prevention"""
 
@@ -67,7 +68,7 @@ class TestValidateDownloadFilename:
             "../secret.txt",
             "..\\secret.txt",
             "../../etc/passwd",
-            "./../../../root/.ssh/id_rsa"
+            "./../../../root/.ssh/id_rsa",
         ]
 
         for name in malicious_names:
@@ -111,6 +112,7 @@ class TestValidateDownloadFilename:
         """Test that symlinks pointing outside base_dir are blocked"""
         # Create a file outside temp_dir
         import tempfile
+
         outside_dir = Path(tempfile.mkdtemp(prefix="outside_"))
         outside_file = outside_dir / "secret.txt"
         outside_file.write_text("secret content")
@@ -180,7 +182,7 @@ class TestValidateDownloadFilename:
         test_file.write_text("content")
 
         # Mock resolve() to raise OSError
-        with patch('pathlib.Path.resolve', side_effect=OSError("Permission denied")):
+        with patch("pathlib.Path.resolve", side_effect=OSError("Permission denied")):
             with pytest.raises(HTTPException) as exc_info:
                 validate_download_filename("testfile.txt", temp_dir)
 
@@ -194,7 +196,7 @@ class TestValidateDownloadFilename:
         test_file.write_text("content")
 
         # Mock resolve() to raise RuntimeError
-        with patch('pathlib.Path.resolve', side_effect=RuntimeError("Symlink loop")):
+        with patch("pathlib.Path.resolve", side_effect=RuntimeError("Symlink loop")):
             with pytest.raises(HTTPException) as exc_info:
                 validate_download_filename("testfile.txt", temp_dir)
 
@@ -205,6 +207,7 @@ class TestValidateDownloadFilename:
 # ============================================================================
 # FILE SIZE VALIDATION TESTS (SECURITY)
 # ============================================================================
+
 
 class TestValidateFileSize:
     """Test validate_file_size() - File size limit enforcement"""
@@ -328,7 +331,7 @@ class TestValidateFileSize:
             validate_file_size(mock_file, "ebook")
 
         assert exc_info.value.status_code == 413
-        assert "eBook file too large" in exc_info.value.detail
+        assert "Ebook file too large" in exc_info.value.detail
 
     @pytest.mark.security
     def test_font_exceeds_limit(self):
@@ -397,6 +400,7 @@ class TestValidateFileSize:
 # ============================================================================
 # FILE EXTENSION VALIDATION TESTS
 # ============================================================================
+
 
 class TestValidateFileExtension:
     """Test validate_file_extension() - Extension validation"""
@@ -501,6 +505,7 @@ class TestValidateFileExtension:
 # MIME TYPE VALIDATION TESTS
 # ============================================================================
 
+
 class TestValidateMimeType:
     """Test validate_mime_type() - MIME type validation
 
@@ -518,6 +523,7 @@ class TestValidateMimeType:
         # MAGIC_AVAILABLE should be True if magic is installed, False otherwise
         try:
             import magic
+
             assert validation.MAGIC_AVAILABLE is True
         except ImportError:
             assert validation.MAGIC_AVAILABLE is False
@@ -535,15 +541,17 @@ class TestValidateMimeType:
         mock_mime_instance.from_file.return_value = "image/jpeg"
         mock_magic_module.Magic.return_value = mock_mime_instance
 
-        with patch.object(validation_module, 'MAGIC_AVAILABLE', True), \
-             patch.object(validation_module, 'magic', mock_magic_module, create=True):
+        with (
+            patch.object(validation_module, "MAGIC_AVAILABLE", True),
+            patch.object(validation_module, "magic", mock_magic_module, create=True),
+        ):
             validate_mime_type(sample_image_jpg, expected_types)
 
     @pytest.mark.security
     def test_mime_validation_without_magic_always_raises_503(self, sample_image_jpg):
         """Test that validation ALWAYS raises 503 if python-magic unavailable (security: no DEBUG bypass)"""
         # SECURITY: MIME validation is always enforced, regardless of DEBUG mode
-        with patch('app.utils.validation.MAGIC_AVAILABLE', False):
+        with patch("app.utils.validation.MAGIC_AVAILABLE", False):
             with pytest.raises(HTTPException) as exc_info:
                 validate_mime_type(sample_image_jpg, {"video/mp4"})
 
@@ -553,8 +561,10 @@ class TestValidateMimeType:
     @pytest.mark.security
     def test_mime_validation_without_magic_production_mode(self, sample_image_jpg):
         """Test that validation raises 503 if python-magic unavailable (production mode)"""
-        with patch('app.utils.validation.MAGIC_AVAILABLE', False), \
-             patch('app.utils.validation.settings.DEBUG', False):
+        with (
+            patch("app.utils.validation.MAGIC_AVAILABLE", False),
+            patch("app.utils.validation.settings.DEBUG", False),
+        ):
             # In production mode, should raise 503 (service unavailable)
             with pytest.raises(HTTPException) as exc_info:
                 validate_mime_type(sample_image_jpg, {"video/mp4"})
@@ -563,8 +573,10 @@ class TestValidateMimeType:
             assert "validation unavailable" in exc_info.value.detail.lower()
 
     @pytest.mark.security
-    @pytest.mark.skipif(not hasattr(__import__('app.utils.validation', fromlist=['MAGIC_AVAILABLE']), 'magic'),
-                        reason="python-magic not installed")
+    @pytest.mark.skipif(
+        not hasattr(__import__("app.utils.validation", fromlist=["MAGIC_AVAILABLE"]), "magic"),
+        reason="python-magic not installed",
+    )
     def test_mime_mismatch_blocked(self, sample_image_jpg):
         """Test that MIME type mismatch is detected (if python-magic available)"""
         try:
@@ -572,9 +584,10 @@ class TestValidateMimeType:
         except ImportError:
             pytest.skip("python-magic not installed")
 
-        with patch('app.utils.validation.MAGIC_AVAILABLE', True), \
-             patch('magic.Magic') as mock_magic:
-
+        with (
+            patch("app.utils.validation.MAGIC_AVAILABLE", True),
+            patch("magic.Magic") as mock_magic,
+        ):
             # Mock magic to return image/jpeg
             mock_mime_instance = Mock()
             mock_mime_instance.from_file.return_value = "image/jpeg"
@@ -587,8 +600,10 @@ class TestValidateMimeType:
             assert exc_info.value.status_code == 400
             assert "Invalid file type" in exc_info.value.detail
 
-    @pytest.mark.skipif(not hasattr(__import__('app.utils.validation', fromlist=['MAGIC_AVAILABLE']), 'magic'),
-                        reason="python-magic not installed")
+    @pytest.mark.skipif(
+        not hasattr(__import__("app.utils.validation", fromlist=["MAGIC_AVAILABLE"]), "magic"),
+        reason="python-magic not installed",
+    )
     def test_mime_validation_with_partial_match(self, sample_image_jpg):
         """Test that partial MIME type matching works (e.g., 'image/')"""
         try:
@@ -596,9 +611,10 @@ class TestValidateMimeType:
         except ImportError:
             pytest.skip("python-magic not installed")
 
-        with patch('app.utils.validation.MAGIC_AVAILABLE', True), \
-             patch('magic.Magic') as mock_magic:
-
+        with (
+            patch("app.utils.validation.MAGIC_AVAILABLE", True),
+            patch("magic.Magic") as mock_magic,
+        ):
             mock_mime_instance = Mock()
             mock_mime_instance.from_file.return_value = "image/jpeg"
             mock_magic.return_value = mock_mime_instance
@@ -618,9 +634,10 @@ class TestValidateMimeType:
         mock_magic_module.Magic = mock_magic_class
 
         # SECURITY: Exceptions during MIME validation always fail closed (return 400)
-        with patch.object(validation_module, 'MAGIC_AVAILABLE', True), \
-             patch.object(validation_module, 'magic', mock_magic_module, create=True):
-
+        with (
+            patch.object(validation_module, "MAGIC_AVAILABLE", True),
+            patch.object(validation_module, "magic", mock_magic_module, create=True),
+        ):
             with pytest.raises(HTTPException) as exc_info:
                 validate_mime_type(sample_image_jpg, {"video/mp4"})
 
@@ -638,9 +655,10 @@ class TestValidateMimeType:
         mock_magic_class.side_effect = Exception("magic library error")
         mock_magic_module.Magic = mock_magic_class
 
-        with patch.object(validation_module, 'MAGIC_AVAILABLE', True), \
-             patch.object(validation_module, 'magic', mock_magic_module, create=True):
-
+        with (
+            patch.object(validation_module, "MAGIC_AVAILABLE", True),
+            patch.object(validation_module, "magic", mock_magic_module, create=True),
+        ):
             # Should raise 400 on validation errors
             with pytest.raises(HTTPException) as exc_info:
                 validate_mime_type(sample_image_jpg, {"video/mp4"})
@@ -661,9 +679,10 @@ class TestValidateMimeType:
         mock_magic_module.Magic.return_value = mock_mime_instance
 
         # SECURITY: from_file() exceptions always fail closed (return 400)
-        with patch.object(validation_module, 'MAGIC_AVAILABLE', True), \
-             patch.object(validation_module, 'magic', mock_magic_module, create=True):
-
+        with (
+            patch.object(validation_module, "MAGIC_AVAILABLE", True),
+            patch.object(validation_module, "magic", mock_magic_module, create=True),
+        ):
             with pytest.raises(HTTPException) as exc_info:
                 validate_mime_type(sample_image_jpg, {"video/mp4"})
 
@@ -674,6 +693,7 @@ class TestValidateMimeType:
 # ============================================================================
 # FILE TYPE CATEGORIZATION TESTS
 # ============================================================================
+
 
 class TestGetFileTypeFromFormat:
     """Test get_file_type_from_format() - File type categorization"""
@@ -735,6 +755,7 @@ class TestGetFileTypeFromFormat:
 # ADDITIONAL COVERAGE TESTS
 # ============================================================================
 
+
 class TestMagicImportSuccess:
     """Test magic import success to cover line 8"""
 
@@ -746,11 +767,12 @@ class TestMagicImportSuccess:
         mock_magic = MagicMock()
 
         # Inject mock magic into sys.modules
-        with patch.dict(sys.modules, {'magic': mock_magic}):
+        with patch.dict(sys.modules, {"magic": mock_magic}):
             # Force module reload to trigger import
             import importlib
 
             import app.utils.validation
+
             importlib.reload(app.utils.validation)
 
             # Verify MAGIC_AVAILABLE is True
@@ -774,6 +796,7 @@ class TestMimeTypeMismatchWithMagic:
 
         # Skip test if magic is not available (can't test the feature)
         from app.utils import validation
+
         if not validation.MAGIC_AVAILABLE:
             pytest.skip("python-magic not available, can't test MIME validation")
 
@@ -782,7 +805,7 @@ class TestMimeTypeMismatchWithMagic:
         mock_mime_instance.from_file.return_value = "image/jpeg"
 
         # Patch the magic.Magic class in the validation module
-        with patch('app.utils.validation.magic.Magic', return_value=mock_mime_instance):
+        with patch("app.utils.validation.magic.Magic", return_value=mock_mime_instance):
             # MIME mismatch should raise 400
             with pytest.raises(HTTPException) as exc_info:
                 validate_mime_type(sample_image_jpg, {"video/mp4", "video/mpeg"})

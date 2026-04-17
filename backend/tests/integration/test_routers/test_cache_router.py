@@ -419,7 +419,7 @@ class TestCacheErrorHandling:
 
             assert response.status_code == 503
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "not initialized" in detail.lower()
 
     def test_cleanup_when_cache_disabled(self, client, admin_headers, monkeypatch):
@@ -431,7 +431,7 @@ class TestCacheErrorHandling:
 
         assert response.status_code == 400
         data = response.json()
-        detail = data.get("detail", str(data))
+        detail = data.get("detail") or str(data)
         assert "disabled" in detail.lower()
 
     def test_cleanup_when_cache_service_none(self, client, admin_headers, monkeypatch):
@@ -444,7 +444,7 @@ class TestCacheErrorHandling:
 
             assert response.status_code == 503
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "not initialized" in detail.lower()
 
     def test_clear_when_cache_disabled(self, client, admin_headers, monkeypatch):
@@ -456,7 +456,7 @@ class TestCacheErrorHandling:
 
         assert response.status_code == 400
         data = response.json()
-        detail = data.get("detail", str(data))
+        detail = data.get("detail") or str(data)
         assert "disabled" in detail.lower()
 
     def test_clear_when_cache_service_none(self, client, admin_headers, monkeypatch):
@@ -469,5 +469,5 @@ class TestCacheErrorHandling:
 
             assert response.status_code == 503
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "not initialized" in detail.lower()

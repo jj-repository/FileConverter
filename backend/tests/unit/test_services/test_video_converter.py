@@ -10,12 +10,14 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from app.config import settings
 from app.services.video_converter import VideoConverter
+from app.utils.subprocess_utils import parse_ffmpeg_progress, parse_fps
 
 from tests.mocks.ffmpeg_mock import FFmpegMock, FFprobeMock
 
 # ============================================================================
 # BASIC FUNCTIONALITY TESTS
 # ============================================================================
+
 
 class TestVideoConverterBasics:
     """Test basic VideoConverter functionality"""
@@ -49,6 +51,7 @@ class TestVideoConverterBasics:
 # SECURITY-CRITICAL TESTS (COMMAND INJECTION PREVENTION)
 # ============================================================================
 
+
 class TestVideoConverterSecurity:
     """Test security-critical validation"""
 
@@ -64,7 +67,7 @@ class TestVideoConverterSecurity:
         options = {
             "codec": "rm -rf /",  # Malicious codec
             "resolution": "720p",
-            "bitrate": "2M"
+            "bitrate": "2M",
         }
 
         with pytest.raises(ValueError) as exc_info:
@@ -85,7 +88,7 @@ class TestVideoConverterSecurity:
         options = {
             "codec": "libx264",
             "resolution": "9999p",  # Invalid resolution
-            "bitrate": "2M"
+            "bitrate": "2M",
         }
 
         with pytest.raises(ValueError) as exc_info:
@@ -105,7 +108,7 @@ class TestVideoConverterSecurity:
         options = {
             "codec": "libx264",
             "resolution": "720p",
-            "bitrate": "999999M"  # Invalid bitrate
+            "bitrate": "999999M",  # Invalid bitrate
         }
 
         with pytest.raises(ValueError) as exc_info:
@@ -127,7 +130,7 @@ class TestVideoConverterSecurity:
             "| cat /etc/passwd",
             "&& malicious_command",
             "`whoami`",
-            "$(cat /etc/passwd)"
+            "$(cat /etc/passwd)",
         ]
 
         for codec in malicious_codecs:
@@ -159,6 +162,7 @@ class TestVideoConverterSecurity:
 # CONVERSION TESTS
 # ============================================================================
 
+
 class TestVideoConversion:
     """Test video conversion logic"""
 
@@ -172,20 +176,12 @@ class TestVideoConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.webm"
 
-        options = {
-            "codec": "libvpx-vp9",
-            "resolution": "720p",
-            "bitrate": "2M"
-        }
+        options = {"codec": "libvpx-vp9", "resolution": "720p", "bitrate": "2M"}
 
         # Mock FFprobe for duration
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             # First call: ffprobe (duration)
-            mock_run.return_value = Mock(
-                returncode=0,
-                stdout="120.5",
-                stderr=""
-            )
+            mock_run.return_value = Mock(returncode=0, stdout="120.5", stderr="")
 
             # Mock FFmpeg conversion
             with FFmpegMock.mock_successful_conversion(output_file):
@@ -230,13 +226,9 @@ class TestVideoConversion:
             # Output path matches what converter actually generates
             output_file = settings.UPLOAD_DIR / f"test_{resolution}_converted.mp4"
 
-            options = {
-                "codec": "libx264",
-                "resolution": resolution,
-                "bitrate": "2M"
-            }
+            options = {"codec": "libx264", "resolution": resolution, "bitrate": "2M"}
 
-            with patch('subprocess.run') as mock_run:
+            with patch("subprocess.run") as mock_run:
                 mock_run.return_value = Mock(returncode=0, stdout="120.0", stderr="")
 
                 with FFmpegMock.mock_successful_conversion(output_file):
@@ -257,7 +249,7 @@ class TestVideoConversion:
 
         options = {"codec": "libx264", "resolution": "720p", "bitrate": "2M"}
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout="120.0", stderr="")
 
             with FFmpegMock.mock_timeout_conversion():
@@ -276,7 +268,7 @@ class TestVideoConversion:
 
         options = {"codec": "libx264", "resolution": "720p", "bitrate": "2M"}
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout="120.0", stderr="")
 
             with FFmpegMock.mock_failed_conversion("FFmpeg error: Invalid codec"):
@@ -290,6 +282,7 @@ class TestVideoConversion:
 # DURATION EXTRACTION TESTS
 # ============================================================================
 
+
 class TestVideoDuration:
     """Test video duration extraction"""
 
@@ -301,12 +294,8 @@ class TestVideoDuration:
         video_file = temp_dir / "test.mp4"
         video_file.write_text("mock video")
 
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = Mock(
-                returncode=0,
-                stdout="120.5",
-                stderr=""
-            )
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=0, stdout="120.5", stderr="")
 
             duration = await converter.get_video_duration(video_file)
 
@@ -326,12 +315,8 @@ class TestVideoDuration:
         video_file = temp_dir / "test.mp4"
         video_file.write_text("mock video")
 
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = Mock(
-                returncode=1,
-                stdout="",
-                stderr="Error: Invalid file"
-            )
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=1, stdout="", stderr="Error: Invalid file")
 
             duration = await converter.get_video_duration(video_file)
 
@@ -345,12 +330,8 @@ class TestVideoDuration:
         video_file = temp_dir / "test.mp4"
         video_file.write_text("mock video")
 
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = Mock(
-                returncode=0,
-                stdout="not_a_number",
-                stderr=""
-            )
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = Mock(returncode=0, stdout="not_a_number", stderr="")
 
             duration = await converter.get_video_duration(video_file)
 
@@ -361,57 +342,37 @@ class TestVideoDuration:
 # PROGRESS PARSING TESTS
 # ============================================================================
 
+
 class TestProgressParsing:
     """Test FFmpeg progress parsing"""
 
     def test_parse_ffmpeg_progress_valid(self):
-        """Test parsing valid FFmpeg progress output"""
-        converter = VideoConverter()
-
-        # Test various progress lines
+        """Test parsing valid FFmpeg progress output (delegates to subprocess_utils)."""
         test_cases = [
-            ("time=00:00:30.50", 120.0, 25.4),  # 30.5 / 120 * 100 = 25.4%
-            ("time=00:01:00.00", 120.0, 50.0),  # 60 / 120 * 100 = 50%
-            ("time=00:02:00.00", 120.0, 99.9),  # 120 / 120 * 100 = 100%, but capped at 99.9
+            ("time=00:00:30.50", 120.0, 25.4),
+            ("time=00:01:00.00", 120.0, 50.0),
+            ("time=00:02:00.00", 120.0, 99.9),
         ]
-
         for line, total_duration, expected_progress in test_cases:
-            progress = converter.parse_ffmpeg_progress(line, total_duration)
+            progress = parse_ffmpeg_progress(line, total_duration)
             assert progress is not None
-            assert abs(progress - expected_progress) < 0.1  # Allow small floating point diff
+            assert abs(progress - expected_progress) < 0.1
 
     def test_parse_ffmpeg_progress_no_match(self):
-        """Test parsing line without time pattern"""
-        converter = VideoConverter()
-
         line = "frame=100 fps=30 bitrate=2000kbits/s"
-        progress = converter.parse_ffmpeg_progress(line, 120.0)
-
-        assert progress is None
+        assert parse_ffmpeg_progress(line, 120.0) is None
 
     def test_parse_ffmpeg_progress_zero_duration(self):
-        """Test parsing with zero duration"""
-        converter = VideoConverter()
-
-        line = "time=00:01:00.00"
-        progress = converter.parse_ffmpeg_progress(line, 0.0)
-
-        assert progress is None
+        assert parse_ffmpeg_progress("time=00:01:00.00", 0.0) is None
 
     def test_parse_ffmpeg_progress_capped_at_99_9(self):
-        """Test that progress is capped at 99.9%"""
-        converter = VideoConverter()
-
-        # Progress beyond 100%
-        line = "time=00:03:00.00"  # 180 seconds
-        progress = converter.parse_ffmpeg_progress(line, 120.0)  # Total 120 seconds
-
-        assert progress == 99.9
+        assert parse_ffmpeg_progress("time=00:03:00.00", 120.0) == 99.9
 
 
 # ============================================================================
 # METADATA EXTRACTION TESTS
 # ============================================================================
+
 
 class TestVideoMetadata:
     """Test video metadata extraction"""
@@ -472,7 +433,7 @@ class TestVideoMetadata:
         video_file.write_text("mock video")
 
         # Mock subprocess.run to raise an exception
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.side_effect = Exception("Subprocess error")
 
             metadata = await converter.get_video_metadata(video_file)
@@ -481,41 +442,19 @@ class TestVideoMetadata:
             assert "Subprocess error" in metadata["error"]
 
     def test_parse_fps_from_fraction(self):
-        """Test FPS parsing from fraction string"""
-        converter = VideoConverter()
-
-        test_cases = [
-            ("30/1", 30.0),
-            ("30000/1001", 29.97),
-            ("60/1", 60.0),
-            ("0/1", 0.0),
-        ]
-
-        for fps_str, expected_fps in test_cases:
-            fps = converter._parse_fps(fps_str)
-            assert abs(fps - expected_fps) < 0.1
-
-    def test_parse_fps_from_plain_number(self):
-        """Test FPS parsing from plain number"""
-        converter = VideoConverter()
-
-        fps = converter._parse_fps("30.0")
-        assert fps == 30.0
+        """FPS parsing tested via subprocess_utils.parse_fps; spot-check here."""
+        assert abs(parse_fps("30000/1001") - 29.97) < 0.1
+        assert parse_fps("30/1") == 30.0
 
     def test_parse_fps_invalid_input(self):
-        """Test FPS parsing with invalid input"""
-        converter = VideoConverter()
-
-        invalid_inputs = ["invalid", "30/0", "abc/def", ""]
-
-        for fps_str in invalid_inputs:
-            fps = converter._parse_fps(fps_str)
-            assert fps == 0.0
+        for fps_str in ["invalid", "30/0", ""]:
+            assert parse_fps(fps_str) == 0.0
 
 
 # ============================================================================
 # FORMAT VALIDATION TESTS
 # ============================================================================
+
 
 class TestFormatValidation:
     """Test format validation"""
@@ -543,6 +482,7 @@ class TestFormatValidation:
 # PROGRESS TRACKING TESTS
 # ============================================================================
 
+
 class TestProgressTracking:
     """Test WebSocket progress tracking"""
 
@@ -558,7 +498,7 @@ class TestProgressTracking:
 
         options = {"codec": "libx264", "resolution": "720p", "bitrate": "2M"}
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout="120.0", stderr="")
 
             with FFmpegMock.mock_successful_conversion(output_file):
@@ -593,7 +533,7 @@ class TestProgressTracking:
 
         options = {"codec": "libx264", "resolution": "720p", "bitrate": "2M"}
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout="120.0", stderr="")
 
             with FFmpegMock.mock_failed_conversion("Test error"):
@@ -611,6 +551,7 @@ class TestProgressTracking:
 # EDGE CASES
 # ============================================================================
 
+
 class TestEdgeCases:
     """Test edge cases and error conditions"""
 
@@ -624,7 +565,7 @@ class TestEdgeCases:
 
         options = {"codec": "libx264", "resolution": "720p", "bitrate": "2M"}
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout="120.0", stderr="")
 
             # Mock FFmpeg success but don't create output file
@@ -641,14 +582,14 @@ class TestEdgeCases:
 
                 mock_process.stdout = stdout_iterator()
                 mock_process.stderr = AsyncMock()
-                mock_process.stderr.read = AsyncMock(return_value=b'')
+                mock_process.stderr.read = AsyncMock(return_value=b"")
 
                 # Mock communicate() to return (stdout, stderr) tuple
-                mock_process.communicate = AsyncMock(return_value=(b'', b''))
+                mock_process.communicate = AsyncMock(return_value=(b"", b""))
 
                 return mock_process
 
-            with patch('asyncio.create_subprocess_exec', side_effect=mock_proc_side_effect):
+            with patch("asyncio.create_subprocess_exec", side_effect=mock_proc_side_effect):
                 with pytest.raises(Exception) as exc_info:
                     await converter.convert(input_file, "mp4", options, "test-session")
 
@@ -667,7 +608,7 @@ class TestEdgeCases:
         # Empty options - should use defaults
         options = {}
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = Mock(returncode=0, stdout="120.0", stderr="")
 
             with FFmpegMock.mock_successful_conversion(output_file):

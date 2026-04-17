@@ -201,6 +201,14 @@ class Settings(BaseSettings):
                     origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()
                 ]
 
+            # Wildcard CORS with credentials is forbidden by the CORS spec and
+            # rejected by browsers — raise early rather than silently misconfigure.
+            if "*" in origins:
+                raise ValueError(
+                    "ALLOWED_ORIGINS cannot contain '*' when allow_credentials=True. "
+                    "Specify explicit origins instead."
+                )
+
             # In production, warn if localhost origins are configured
             if not self.DEBUG:
                 localhost_origins = [o for o in origins if "localhost" in o or "127.0.0.1" in o]

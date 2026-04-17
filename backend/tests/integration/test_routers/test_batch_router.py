@@ -35,8 +35,8 @@ def sample_images(temp_dir):
     images = []
     for i in range(3):
         image_path = temp_dir / f"test_image_{i}.jpg"
-        img = Image.new('RGB', (200, 200), color=f"rgb({i*80}, {i*70}, {i*60})")
-        img.save(image_path, 'JPEG')
+        img = Image.new("RGB", (200, 200), color=f"rgb({i * 80}, {i * 70}, {i * 60})")
+        img.save(image_path, "JPEG")
         images.append(image_path)
     return images
 
@@ -52,8 +52,8 @@ def sample_mixed_files(temp_dir, sample_image_png):
     # Add JPGs
     for i in range(2):
         jpg_path = temp_dir / f"test_mixed_{i}.jpg"
-        img = Image.new('RGB', (300, 300), color=(255, 100, i*50))
-        img.save(jpg_path, 'JPEG', quality=90)
+        img = Image.new("RGB", (300, 300), color=(255, 100, i * 50))
+        img.save(jpg_path, "JPEG", quality=90)
         files.append(jpg_path)
 
     return files
@@ -66,14 +66,10 @@ class TestBatchConvert:
         """Test successful conversion of multiple images in batch"""
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -95,13 +91,11 @@ class TestBatchConvert:
         files = []
         for file_path in sample_mixed_files:
             mime_type = "image/png" if file_path.suffix.lower() == ".png" else "image/jpeg"
-            files.append(("files", (file_path.name, open(file_path, 'rb'), mime_type)))
+            files.append(("files", (file_path.name, open(file_path, "rb"), mime_type)))
 
         try:
             response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "webp"}
+                "/api/batch/convert", files=files, data={"output_format": "webp"}
             )
         finally:
             for _, (_, f, _) in files:
@@ -120,13 +114,11 @@ class TestBatchConvert:
         """Test batch conversion with parallel processing enabled"""
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
             response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "bmp", "parallel": "true"}
+                "/api/batch/convert", files=files, data={"output_format": "bmp", "parallel": "true"}
             )
         finally:
             for _, (_, f, _) in files:
@@ -141,13 +133,13 @@ class TestBatchConvert:
         """Test batch conversion with sequential processing (parallel=false)"""
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
             response = client.post(
                 "/api/batch/convert",
                 files=files,
-                data={"output_format": "gif", "parallel": "false"}
+                data={"output_format": "gif", "parallel": "false"},
             )
         finally:
             for _, (_, f, _) in files:
@@ -162,13 +154,11 @@ class TestBatchConvert:
         """Test batch conversion with quality parameter"""
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
             response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "jpg", "quality": 75}
+                "/api/batch/convert", files=files, data={"output_format": "jpg", "quality": 75}
             )
         finally:
             for _, (_, f, _) in files:
@@ -182,17 +172,13 @@ class TestBatchConvert:
         """Test batch conversion with resize dimensions"""
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
             response = client.post(
                 "/api/batch/convert",
                 files=files,
-                data={
-                    "output_format": "png",
-                    "width": 100,
-                    "height": 100
-                }
+                data={"output_format": "png", "width": 100, "height": 100},
             )
         finally:
             for _, (_, f, _) in files:
@@ -213,7 +199,7 @@ class TestBatchConvert:
         with pytest.raises(HTTPException) as exc_info:
             await batch_endpoint(
                 files=[],  # Empty list triggers line 54
-                output_format="png"
+                output_format="png",
             )
 
         # Verify it raises 400 with correct message
@@ -226,19 +212,15 @@ class TestBatchConvert:
 
         # Add valid images
         for img_path in sample_images[:2]:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         # Add invalid file (corrupted)
         invalid_path = temp_dir / "corrupted.jpg"
-        invalid_path.write_bytes(b'\x00\x01\x02\x03INVALID_DATA')
-        files.append(("files", ("corrupted.jpg", open(invalid_path, 'rb'), "image/jpeg")))
+        invalid_path.write_bytes(b"\x00\x01\x02\x03INVALID_DATA")
+        files.append(("files", ("corrupted.jpg", open(invalid_path, "rb"), "image/jpeg")))
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -255,13 +237,11 @@ class TestBatchConvert:
         """Test batch conversion with invalid output format"""
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
             response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "invalid_format"}
+                "/api/batch/convert", files=files, data={"output_format": "invalid_format"}
             )
         finally:
             for _, (_, f, _) in files:
@@ -283,13 +263,11 @@ class TestBatchZip:
         # First convert files
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
             convert_response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
+                "/api/batch/convert", files=files, data={"output_format": "png"}
             )
         finally:
             for _, (_, f, _) in files:
@@ -301,17 +279,12 @@ class TestBatchZip:
 
         # Extract output filenames from successful results
         output_files = [
-            result["output_file"] for result in convert_data["results"]
-            if result["success"]
+            result["output_file"] for result in convert_data["results"] if result["success"]
         ]
 
         # Create ZIP from converted files
         zip_response = client.post(
-            "/api/batch/download-zip",
-            data={
-                "session_id": session_id,
-                "filenames": output_files
-            }
+            "/api/batch/download-zip", data={"session_id": session_id, "filenames": output_files}
         )
 
         assert zip_response.status_code == 200
@@ -327,13 +300,11 @@ class TestBatchZip:
         # Convert to different formats
         files1 = []
         for img_path in sample_images[:2]:
-            files1.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files1.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
             response1 = client.post(
-                "/api/batch/convert",
-                files=files1,
-                data={"output_format": "png"}
+                "/api/batch/convert", files=files1, data={"output_format": "png"}
             )
         finally:
             for _, (_, f, _) in files1:
@@ -346,11 +317,7 @@ class TestBatchZip:
 
         # Create ZIP with PNG files
         zip_response = client.post(
-            "/api/batch/download-zip",
-            data={
-                "session_id": session_id,
-                "filenames": png_files
-            }
+            "/api/batch/download-zip", data={"session_id": session_id, "filenames": png_files}
         )
 
         assert zip_response.status_code == 200
@@ -366,13 +333,11 @@ class TestBatchDownload:
         # Convert files
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
             convert_response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
+                "/api/batch/convert", files=files, data={"output_format": "png"}
             )
         finally:
             for _, (_, f, _) in files:
@@ -394,13 +359,11 @@ class TestBatchDownload:
         # Convert files
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
             convert_response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
+                "/api/batch/convert", files=files, data={"output_format": "png"}
             )
         finally:
             for _, (_, f, _) in files:
@@ -409,17 +372,12 @@ class TestBatchDownload:
         convert_data = convert_response.json()
         session_id = convert_data["session_id"]
         output_files = [
-            result["output_file"] for result in convert_data["results"]
-            if result["success"]
+            result["output_file"] for result in convert_data["results"] if result["success"]
         ]
 
         # Create ZIP
         zip_response = client.post(
-            "/api/batch/download-zip",
-            data={
-                "session_id": session_id,
-                "filenames": output_files
-            }
+            "/api/batch/download-zip", data={"session_id": session_id, "filenames": output_files}
         )
 
         assert zip_response.status_code == 200
@@ -434,7 +392,7 @@ class TestBatchDownload:
 
         # Verify it's a valid ZIP file
         zip_buffer = io.BytesIO(download_response.content)
-        with zipfile.ZipFile(zip_buffer, 'r') as zf:
+        with zipfile.ZipFile(zip_buffer, "r") as zf:
             assert len(zf.namelist()) == len(output_files)
 
     def test_batch_download_nonexistent_file(self, client):
@@ -455,8 +413,9 @@ class TestBatchDownload:
         for malicious_name in malicious_filenames:
             response = client.get(f"/api/batch/download/{malicious_name}")
             # Should either be 400 (validation) or 404 (not found)
-            assert response.status_code in [400, 404], \
+            assert response.status_code in [400, 404], (
                 f"Path traversal not blocked for: {malicious_name}"
+            )
 
 
 class TestBatchFormats:
@@ -495,13 +454,11 @@ class TestBatchSecurityValidation:
             files = []
             # Use first sample image with malicious name
             img_path = sample_images[0]
-            files.append(("files", (malicious_name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (malicious_name, open(img_path, "rb"), "image/jpeg")))
 
             try:
                 response = client.post(
-                    "/api/batch/convert",
-                    files=files,
-                    data={"output_format": "png"}
+                    "/api/batch/convert", files=files, data={"output_format": "png"}
                 )
             finally:
                 for _, (_, f, _) in files:
@@ -516,24 +473,21 @@ class TestBatchSecurityValidation:
                 for result in data["results"]:
                     if result["success"]:
                         output_file = result["output_file"]
-                        dangerous_chars = [';', '$', '`', '|', '&', '<', '>']
+                        dangerous_chars = [";", "$", "`", "|", "&", "<", ">"]
                         for char in dangerous_chars:
-                            assert char not in output_file, \
+                            assert char not in output_file, (
                                 f"Dangerous character '{char}' in output: {output_file}"
+                            )
 
     def test_null_byte_injection_in_batch_filenames(self, client, sample_images):
         """Test that null byte injection is sanitized in batch filenames"""
         files = []
         img_path = sample_images[0]
         # Null byte in filename
-        files.append(("files", ("test\x00.jpg", open(img_path, 'rb'), "image/jpeg")))
+        files.append(("files", ("test\x00.jpg", open(img_path, "rb"), "image/jpeg")))
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -544,8 +498,7 @@ class TestBatchSecurityValidation:
             for result in data["results"]:
                 if result["success"]:
                     output_file = result["output_file"]
-                    assert '\x00' not in output_file, \
-                        "Null byte present in output filename"
+                    assert "\x00" not in output_file, "Null byte present in output filename"
 
 
 class TestBatchProgressTracking:
@@ -555,14 +508,10 @@ class TestBatchProgressTracking:
         """Test that batch conversion returns a session ID for progress tracking"""
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -576,14 +525,10 @@ class TestBatchProgressTracking:
         """Test that batch results include file index for progress tracking"""
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -594,7 +539,9 @@ class TestBatchProgressTracking:
             # Results should include filename (may have UUID prefix from upload)
             assert "filename" in result
             # Check that original filename is contained (may be UUID-prefixed)
-            assert sample_images[i].stem in result["filename"] or result["filename"].endswith('.jpg')
+            assert sample_images[i].stem in result["filename"] or result["filename"].endswith(
+                ".jpg"
+            )
 
 
 class TestBatchConversionStatistics:
@@ -604,14 +551,10 @@ class TestBatchConversionStatistics:
         """Test that batch statistics (successful/failed counts) are accurate"""
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -631,14 +574,10 @@ class TestBatchConversionStatistics:
         """Test that batch response includes informative message"""
         files = []
         for img_path in sample_images:
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -657,14 +596,10 @@ class TestBatchEdgeCases:
     def test_batch_single_file(self, client, sample_images):
         """Test batch conversion with just one file"""
         files = []
-        files.append(("files", (sample_images[0].name, open(sample_images[0], 'rb'), "image/jpeg")))
+        files.append(("files", (sample_images[0].name, open(sample_images[0], "rb"), "image/jpeg")))
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -677,11 +612,7 @@ class TestBatchEdgeCases:
     def test_batch_zip_empty_filenames_list(self, client):
         """Test ZIP creation with empty filenames list"""
         response = client.post(
-            "/api/batch/download-zip",
-            data={
-                "session_id": "test_session_123",
-                "filenames": []
-            }
+            "/api/batch/download-zip", data={"session_id": "test_session_123", "filenames": []}
         )
 
         # Should fail with 404 (no files found) or 422 (validation error)
@@ -694,16 +625,12 @@ class TestBatchEdgeCases:
         # Create 10 test images
         for i in range(10):
             img_path = temp_dir / f"large_batch_{i}.jpg"
-            img = Image.new('RGB', (100, 100), color=(i*20, i*20, i*20))
-            img.save(img_path, 'JPEG')
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            img = Image.new("RGB", (100, 100), color=(i * 20, i * 20, i * 20))
+            img.save(img_path, "JPEG")
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -724,16 +651,12 @@ class TestBatchSizeLimits:
         # Create 101 test images to exceed limit
         for i in range(101):
             img_path = temp_dir / f"exceed_batch_{i}.jpg"
-            img = Image.new('RGB', (50, 50), color=(i % 256, i % 256, i % 256))
-            img.save(img_path, 'JPEG')
-            files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+            img = Image.new("RGB", (50, 50), color=(i % 256, i % 256, i % 256))
+            img.save(img_path, "JPEG")
+            files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -741,7 +664,7 @@ class TestBatchSizeLimits:
         # Should reject with 400 status
         assert response.status_code == 400
         data = response.json()
-        detail = data.get("detail", "")
+        detail = data.get("detail") or ""
         assert "exceeds maximum" in detail.lower() or "maximum" in str(data).lower()
 
 
@@ -750,13 +673,11 @@ class TestBatchFileTypeValidation:
 
     def test_batch_convert_video_files(self, client, sample_video):
         """Test batch conversion with video files (lines 72-73)"""
-        files = [("files", (sample_video.name, open(sample_video, 'rb'), "video/mp4"))]
+        files = [("files", (sample_video.name, open(sample_video, "rb"), "video/mp4"))]
 
         try:
             response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "webm"}
+                "/api/batch/convert", files=files, data={"output_format": "webm"}
             )
         finally:
             for _, (_, f, _) in files:
@@ -766,14 +687,10 @@ class TestBatchFileTypeValidation:
 
     def test_batch_convert_audio_files(self, client, sample_audio_mp3):
         """Test batch conversion with audio files (lines 74-75)"""
-        files = [("files", (sample_audio_mp3.name, open(sample_audio_mp3, 'rb'), "audio/mpeg"))]
+        files = [("files", (sample_audio_mp3.name, open(sample_audio_mp3, "rb"), "audio/mpeg"))]
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "wav"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "wav"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -782,14 +699,15 @@ class TestBatchFileTypeValidation:
 
     def test_batch_convert_document_files(self, client, sample_markdown_file):
         """Test batch conversion with document files (lines 76-77)"""
-        files = [("files", (sample_markdown_file.name, open(sample_markdown_file, 'rb'), "text/markdown"))]
+        files = [
+            (
+                "files",
+                (sample_markdown_file.name, open(sample_markdown_file, "rb"), "text/markdown"),
+            )
+        ]
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "pdf"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "pdf"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -802,14 +720,15 @@ class TestBatchFileTypeValidation:
         unsupported_path = temp_dir / "test.xyz"
         unsupported_path.write_text("unsupported content")
 
-        files = [("files", (unsupported_path.name, open(unsupported_path, 'rb'), "application/octet-stream"))]
+        files = [
+            (
+                "files",
+                (unsupported_path.name, open(unsupported_path, "rb"), "application/octet-stream"),
+            )
+        ]
 
         try:
-            response = client.post(
-                "/api/batch/convert",
-                files=files,
-                data={"output_format": "png"}
-            )
+            response = client.post("/api/batch/convert", files=files, data={"output_format": "png"})
         finally:
             for _, (_, f, _) in files:
                 f.close()
@@ -832,7 +751,7 @@ class TestBatchAdvancedOptions:
 
     def test_batch_convert_with_video_options(self, client, sample_video):
         """Test batch conversion with video-specific options (lines 103, 105, 107)"""
-        files = [("files", (sample_video.name, open(sample_video, 'rb'), "video/mp4"))]
+        files = [("files", (sample_video.name, open(sample_video, "rb"), "video/mp4"))]
 
         try:
             response = client.post(
@@ -842,8 +761,8 @@ class TestBatchAdvancedOptions:
                     "output_format": "webm",
                     "codec": "libvpx-vp9",  # Must use whitelisted codec value
                     "resolution": "720p",
-                    "bitrate": "2M"
-                }
+                    "bitrate": "2M",
+                },
             )
         finally:
             for _, (_, f, _) in files:
@@ -853,17 +772,13 @@ class TestBatchAdvancedOptions:
 
     def test_batch_convert_with_audio_options(self, client, sample_audio_mp3):
         """Test batch conversion with audio-specific options (lines 111, 113)"""
-        files = [("files", (sample_audio_mp3.name, open(sample_audio_mp3, 'rb'), "audio/mpeg"))]
+        files = [("files", (sample_audio_mp3.name, open(sample_audio_mp3, "rb"), "audio/mpeg"))]
 
         try:
             response = client.post(
                 "/api/batch/convert",
                 files=files,
-                data={
-                    "output_format": "wav",
-                    "sample_rate": 44100,
-                    "channels": 2
-                }
+                data={"output_format": "wav", "sample_rate": 44100, "channels": 2},
             )
         finally:
             for _, (_, f, _) in files:
@@ -873,17 +788,18 @@ class TestBatchAdvancedOptions:
 
     def test_batch_convert_with_document_options(self, client, sample_markdown_file):
         """Test batch conversion with document-specific options (lines 117, 119)"""
-        files = [("files", (sample_markdown_file.name, open(sample_markdown_file, 'rb'), "text/markdown"))]
+        files = [
+            (
+                "files",
+                (sample_markdown_file.name, open(sample_markdown_file, "rb"), "text/markdown"),
+            )
+        ]
 
         try:
             response = client.post(
                 "/api/batch/convert",
                 files=files,
-                data={
-                    "output_format": "pdf",
-                    "preserve_formatting": True,
-                    "toc": True
-                }
+                data={"output_format": "pdf", "preserve_formatting": True, "toc": True},
             )
         finally:
             for _, (_, f, _) in files:
@@ -900,16 +816,17 @@ class TestBatchErrorHandling:
         from unittest.mock import patch
 
         # Mock batch_converter.convert_batch to raise exception
-        with patch("app.services.batch_converter.BatchConverter.convert_batch", side_effect=Exception("Simulated batch error")):
+        with patch(
+            "app.services.batch_converter.BatchConverter.convert_batch",
+            side_effect=Exception("Simulated batch error"),
+        ):
             files = []
             for img_path in sample_images:
-                files.append(("files", (img_path.name, open(img_path, 'rb'), "image/jpeg")))
+                files.append(("files", (img_path.name, open(img_path, "rb"), "image/jpeg")))
 
             try:
                 response = client.post(
-                    "/api/batch/convert",
-                    files=files,
-                    data={"output_format": "png"}
+                    "/api/batch/convert", files=files, data={"output_format": "png"}
                 )
             finally:
                 for _, (_, f, _) in files:
@@ -918,8 +835,12 @@ class TestBatchErrorHandling:
             # Should return 500 error
             assert response.status_code == 500
             data = response.json()
-            detail = str(data.get("detail", str(data)))
-            assert "Batch conversion failed" in detail or "batch" in detail.lower() or "error" in detail.lower()
+            detail = str(data.get("detail") or data)
+            assert (
+                "Batch conversion failed" in detail
+                or "batch" in detail.lower()
+                or "error" in detail.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_batch_convert_cleanup_output_files_on_exception(self, temp_dir):
@@ -949,25 +870,22 @@ class TestBatchErrorHandling:
 
         # Mock cleanup_file to track calls
         cleanup_calls = []
+
         def mock_cleanup(path):
             cleanup_calls.append(path)
             if path.exists():
                 path.unlink()
 
-        with patch("app.routers.batch.batch_converter.convert_batch", side_effect=mock_failing_convert):
+        with patch(
+            "app.routers.batch.batch_converter.convert_batch", side_effect=mock_failing_convert
+        ):
             with patch("app.routers.batch.cleanup_file", side_effect=mock_cleanup):
-                # Also mock the file saving to add files to output_paths
-                MagicMock()
+                with patch("app.routers.batch.validate_mime_type"):
+                    with pytest.raises(HTTPException) as exc_info:
+                        await batch_endpoint(files=fake_files, output_format="png")
 
-                with pytest.raises(HTTPException) as exc_info:
-                    await batch_endpoint(
-                        files=fake_files,
-                        output_format="png"
-                    )
-
-                # Verify exception was raised
-                assert exc_info.value.status_code == 500
-                assert "Batch conversion failed" in exc_info.value.detail
+                    assert exc_info.value.status_code == 500
+                    assert "Batch conversion failed" in exc_info.value.detail
 
         # The important part: cleanup was called (line 160)
         # Even though we mocked it, the code path was executed
@@ -983,38 +901,43 @@ class TestBatchErrorHandling:
 
         # Also need to patch the HTTPException at line 186 to ensure it's raised
 
+        valid_uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
         with patch("app.routers.batch.validate_download_filename", side_effect=mock_validate):
             response = client.post(
                 "/api/batch/download-zip",
                 data={
-                    "session_id": "test_session_999",
-                    "filenames": ["file1.png", "file2.png", "file3.jpg"]
-                }
+                    "session_id": valid_uuid,
+                    "filenames": ["file1.png", "file2.png", "file3.jpg"],
+                },
             )
 
-            # Line 186 raises HTTPException with 404, but it gets caught by line 198
-            # So we'll get 500 with message about the 404
             assert response.status_code in [404, 500]
             data = response.json()
             # Either direct 404 or 500 with 404 message wrapped
-            assert "No files found" in str(data) or "404" in str(data) or response.status_code == 404
+            assert (
+                "No files found" in str(data) or "404" in str(data) or response.status_code == 404
+            )
 
     def test_batch_zip_creation_error(self, client, monkeypatch):
         """Test error handling during ZIP creation (lines 198-199)"""
         from unittest.mock import patch
 
         # Mock create_zip_archive to raise exception
-        with patch("app.services.batch_converter.BatchConverter.create_zip_archive", side_effect=Exception("ZIP creation failed")):
+        with patch(
+            "app.services.batch_converter.BatchConverter.create_zip_archive",
+            side_effect=Exception("ZIP creation failed"),
+        ):
+            valid_uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
             response = client.post(
                 "/api/batch/download-zip",
-                data={
-                    "session_id": "test_session",
-                    "filenames": ["file1.png", "file2.png"]
-                }
+                data={"session_id": valid_uuid, "filenames": ["file1.png", "file2.png"]},
             )
 
-            # Should return 500 error
             assert response.status_code == 500
             data = response.json()
-            detail = str(data.get("detail", str(data)))
-            assert "Failed to create ZIP" in detail or "zip" in detail.lower() or "error" in detail.lower()
+            detail = str(data.get("detail") or data)
+            assert (
+                "Failed to create ZIP" in detail
+                or "zip" in detail.lower()
+                or "error" in detail.lower()
+            )

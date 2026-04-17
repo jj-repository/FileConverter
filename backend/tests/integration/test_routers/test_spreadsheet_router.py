@@ -702,10 +702,9 @@ class TestSpreadsheetErrorHandling:
                     data={"output_format": "xlsx"},
                 )
 
-            # Should return 500 error
             assert response.status_code == 500
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "Conversion failed" in detail or "error" in detail.lower()
 
     def test_convert_cleanup_output_path_on_error(self, client, sample_csv, monkeypatch):
@@ -752,5 +751,5 @@ class TestSpreadsheetErrorHandling:
             # Should return 500 error
             assert response.status_code == 500
             data = response.json()
-            detail = data.get("detail", str(data))
+            detail = data.get("detail") or str(data)
             assert "Failed to get spreadsheet info" in detail or "error" in detail.lower()

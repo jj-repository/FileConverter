@@ -38,9 +38,10 @@ async def websocket_progress(websocket: WebSocket, session_id: str):
         rate_limiter.remove_connection(client_ip)
         return
 
-    # Validate origin to prevent cross-site WebSocket hijacking
+    # Validate origin to prevent cross-site WebSocket hijacking.
+    # Empty/absent origin is allowed for Electron (file: scheme renderer sends no origin).
     origin = websocket.headers.get("origin", "")
-    if origin and not origin.startswith(("http://localhost", "http://127.0.0.1", "file://")):
+    if origin and not origin.startswith(("http://localhost", "http://127.0.0.1")):
         await websocket.close(code=1008, reason="Invalid origin")
         return
     await websocket.accept()

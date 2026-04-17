@@ -227,17 +227,15 @@ function createWindow() {
   });
 
   // Set Content Security Policy
-  // In production, remove unsafe-inline from script-src to prevent XSS.
-  // In dev, Vite HMR requires unsafe-inline for scripts.
-  const scriptSrc = isDev
-    ? "script-src 'self' 'unsafe-inline'"
-    : "script-src 'self'";
+  // unsafe-inline required for Vite HMR in dev; removed in production builds.
+  const scriptSrc = isDev ? "script-src 'self' 'unsafe-inline'" : "script-src 'self'";
+  const styleSrc = isDev ? "style-src 'self' 'unsafe-inline'" : "style-src 'self'";
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          `default-src 'self'; ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http://localhost:* ws://localhost:*;`
+          `default-src 'self'; ${scriptSrc}; ${styleSrc}; img-src 'self' data: blob:; connect-src 'self' http://localhost:* ws://localhost:*;`
         ]
       }
     });
@@ -454,9 +452,9 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
       hostname === '0.0.0.0' ||
       hostname === '::1' ||                 // IPv6 loopback
       hostname === '[::1]' ||
-      hostname.startsWith('fc') ||          // IPv6 unique local (fc00::/7)
-      hostname.startsWith('fd') ||
-      hostname.startsWith('fe80');           // IPv6 link-local
+      /^fc[0-9a-f]{2}:/i.test(hostname) ||  // IPv6 unique local fc00::/7
+      /^fd[0-9a-f]{2}:/i.test(hostname) ||
+      hostname.startsWith('fe80:');          // IPv6 link-local
 
     // Allow localhost for internal API, but block other private IPs
     if (isPrivateNetwork) {

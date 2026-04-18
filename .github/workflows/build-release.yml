@@ -83,16 +83,17 @@ jobs:
 
       - name: Download FFmpeg and Pandoc (Linux)
         if: runner.os == 'Linux'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p resources/bin/linux
 
-          # Download FFmpeg from BtbN pinned autobuild + verify SHA256
-          # Pin avoids 504s from the rolling "latest" tag; bump tag periodically.
+          # Download FFmpeg from BtbN pinned autobuild via gh CLI + verify SHA256
+          # gh uses the API + signed download URL; avoids anonymous 404/504 on the download path.
           BTBN_TAG="autobuild-2026-04-18-13-04"
           FFMPEG_BASE="ffmpeg-n7.1.3-45-g2d6ee37238-linux64-gpl-7.1"
           FFMPEG_TAR="${FFMPEG_BASE}.tar.xz"
-          wget -q "https://github.com/BtbN/FFmpeg-Builds/releases/download/${BTBN_TAG}/${FFMPEG_TAR}"
-          wget -q -O checksums.sha256 "https://github.com/BtbN/FFmpeg-Builds/releases/download/${BTBN_TAG}/checksums.sha256"
+          gh release download "${BTBN_TAG}" --repo BtbN/FFmpeg-Builds -p "${FFMPEG_TAR}" -p "checksums.sha256"
           grep "${FFMPEG_TAR}" checksums.sha256 | sha256sum -c -
           tar -xf "${FFMPEG_TAR}"
           mv "${FFMPEG_BASE}/bin/ffmpeg" resources/bin/linux/
@@ -101,8 +102,7 @@ jobs:
           rm -rf "${FFMPEG_BASE}" "${FFMPEG_TAR}" checksums.sha256
 
           # Download Pandoc + verify SHA256
-          wget -q https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-linux-amd64.tar.gz
-          wget -q https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-linux-amd64.tar.gz.sha256
+          gh release download 3.6.1 --repo jgm/pandoc -p "pandoc-3.6.1-linux-amd64.tar.gz" -p "pandoc-3.6.1-linux-amd64.tar.gz.sha256"
           sha256sum -c pandoc-3.6.1-linux-amd64.tar.gz.sha256
           tar -xzf pandoc-3.6.1-linux-amd64.tar.gz
           mv pandoc-3.6.1/bin/pandoc resources/bin/linux/
@@ -111,16 +111,17 @@ jobs:
 
       - name: Download FFmpeg and Pandoc (Windows)
         if: runner.os == 'Windows'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           New-Item -ItemType Directory -Force -Path resources\bin\windows
 
-          # Download FFmpeg from BtbN pinned autobuild + verify SHA256
-          # Pin avoids 504s from the rolling "latest" tag; bump tag periodically.
+          # Download FFmpeg from BtbN pinned autobuild via gh CLI + verify SHA256
           $btbnTag = "autobuild-2026-04-18-13-04"
           $ffmpegBase = "ffmpeg-n7.1.3-45-g2d6ee37238-win64-gpl-7.1"
           $ffmpegZip = "$ffmpegBase.zip"
-          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/$btbnTag/$ffmpegZip" -OutFile ffmpeg.zip
-          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/$btbnTag/checksums.sha256" -OutFile checksums.sha256
+          gh release download $btbnTag --repo BtbN/FFmpeg-Builds -p $ffmpegZip -p "checksums.sha256"
+          Rename-Item $ffmpegZip ffmpeg.zip
           $expectedLine = Select-String -Path checksums.sha256 -Pattern ([regex]::Escape($ffmpegZip)) | Select-Object -First 1
           if (-not $expectedLine) { throw "FFmpeg checksum not found in checksums.sha256" }
           $expectedFFmpegHash = $expectedLine.Line.Split()[0].ToUpper()
@@ -132,8 +133,9 @@ jobs:
           Remove-Item -Recurse -Force $ffmpegBase, ffmpeg.zip, checksums.sha256
 
           # Download Pandoc + verify SHA256
-          Invoke-WebRequest -Uri "https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-windows-x86_64.zip" -OutFile pandoc.zip
-          Invoke-WebRequest -Uri "https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-windows-x86_64.zip.sha256" -OutFile pandoc.zip.sha256
+          gh release download 3.6.1 --repo jgm/pandoc -p "pandoc-3.6.1-windows-x86_64.zip" -p "pandoc-3.6.1-windows-x86_64.zip.sha256"
+          Rename-Item "pandoc-3.6.1-windows-x86_64.zip" pandoc.zip
+          Rename-Item "pandoc-3.6.1-windows-x86_64.zip.sha256" pandoc.zip.sha256
           $expectedPandocHash = (Get-Content pandoc.zip.sha256 -Raw).Trim().Split()[0].ToUpper()
           $actualPandocHash = (Get-FileHash pandoc.zip -Algorithm SHA256).Hash
           if ($actualPandocHash -ne $expectedPandocHash) { throw "Pandoc SHA256 mismatch: expected $expectedPandocHash got $actualPandocHash" }

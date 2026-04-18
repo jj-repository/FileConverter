@@ -2,7 +2,7 @@
 
 import os
 
-from PyInstaller.utils.hooks import collect_all, collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 # Collect all app files
 app_datas = []
@@ -21,63 +21,60 @@ static_dirs = [
     ('app/static', 'app/static'),
 ]
 
-# Runtime third-party packages used by the backend. collect_all pulls
-# submodules + data files + binaries for each, which is necessary because
-# PyInstaller's static analysis misses re-exports and dynamic imports.
-RUNTIME_PACKAGES = [
-    # Web stack
-    'fastapi', 'starlette', 'slowapi', 'uvicorn', 'websockets',
+# Third-party packages whose submodules must be included (PyInstaller's
+# static analyzer misses re-exports and dynamic imports).
+SUBMODULE_PACKAGES = [
+    'fastapi', 'starlette', 'slowapi', 'uvicorn',
     'pydantic', 'pydantic_settings', 'pydantic_core',
-    # File IO / async
-    'aiofiles', 'multipart',
-    # Image
-    'PIL', 'pillow_heif', 'cairosvg',
-    # Data / spreadsheets
-    'pandas', 'openpyxl', 'odf',
-    # Archive
-    'py7zr',
-    # Subtitles / media
-    'pysubs2', 'ffmpeg',
-    # Document / PDF / ebook / markdown
-    'pypandoc', 'docx', 'pypdf', 'markdown', 'ebooklib', 'bs4', 'bleach',
-    'lxml', 'reportlab',
-    # Fonts
-    'fontTools', 'brotli',
-    # Serialization / security
-    'yaml', 'toml', 'defusedxml', 'magic',
+    'websockets',
 ]
 
-collected_datas = []
-collected_binaries = []
-collected_hidden = []
+# Packages that ship data files (templates, fonts, schemas) that must be
+# shipped alongside their code.
+DATA_PACKAGES = [
+    'openpyxl', 'reportlab', 'ebooklib', 'odf',
+]
 
-for pkg in RUNTIME_PACKAGES:
+collected_hidden = []
+for pkg in SUBMODULE_PACKAGES:
     try:
-        d, b, h = collect_all(pkg)
-        collected_datas += d
-        collected_binaries += b
-        collected_hidden += h
+        collected_hidden += collect_submodules(pkg)
     except Exception as e:
-        # Some modules may not be importable during spec build; fall back to submodules
-        print(f"[spec] collect_all({pkg!r}) failed: {e}; falling back to collect_submodules")
-        try:
-            collected_hidden += collect_submodules(pkg)
-        except Exception as e2:
-            print(f"[spec] collect_submodules({pkg!r}) also failed: {e2}; skipping")
+        print(f"[spec] collect_submodules({pkg!r}) failed: {e}")
+
+collected_datas = []
+for pkg in DATA_PACKAGES:
+    try:
+        collected_datas += collect_data_files(pkg)
+    except Exception as e:
+        print(f"[spec] collect_data_files({pkg!r}) failed: {e}")
 
 a = Analysis(
     ['run_server.py'],
     pathex=[os.getcwd()],
-    binaries=collected_binaries,
+    binaries=[],
     datas=app_datas + static_dirs + collected_datas,
     hiddenimports=[
+        # Explicit for packages where submodules are known minimal
+        'aiofiles', 'multipart', 'python_multipart',
+        'bleach', 'bs4', 'markdown',
+        'py7zr', 'pypdf', 'pypandoc',
+        'docx', 'ebooklib',
+        'pysubs2', 'ffmpeg',
+        'PIL', 'pillow_heif',
+        'pandas', 'openpyxl', 'odf',
+        'reportlab', 'fontTools', 'brotli',
+        'yaml', 'toml', 'defusedxml', 'magic', 'lxml',
         *collected_hidden,
         *collect_submodules('app'),
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['tkinter', 'matplotlib', 'scipy', 'IPython', 'jupyter'],
+    excludes=[
+        'tkinter', 'matplotlib', 'scipy', 'IPython', 'jupyter',
+        'pytest', 'pandas.tests', 'pandas.io.formats.style',
+    ],
     noarchive=False,
     optimize=0,
 )

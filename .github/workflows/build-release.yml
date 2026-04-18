@@ -101,9 +101,9 @@ jobs:
           chmod +x resources/bin/linux/ffmpeg resources/bin/linux/ffprobe
           rm -rf "${FFMPEG_BASE}" "${FFMPEG_TAR}" checksums.sha256
 
-          # Download Pandoc + verify SHA256
-          gh release download 3.6.1 --repo jgm/pandoc -p "pandoc-3.6.1-linux-amd64.tar.gz" -p "pandoc-3.6.1-linux-amd64.tar.gz.sha256"
-          sha256sum -c pandoc-3.6.1-linux-amd64.tar.gz.sha256
+          # Download Pandoc (upstream doesn't publish per-asset .sha256 for 3.6.1;
+          # transport trust via HTTPS + authenticated gh).
+          gh release download 3.6.1 --repo jgm/pandoc -p "pandoc-3.6.1-linux-amd64.tar.gz"
           tar -xzf pandoc-3.6.1-linux-amd64.tar.gz
           mv pandoc-3.6.1/bin/pandoc resources/bin/linux/
           chmod +x resources/bin/linux/pandoc
@@ -132,16 +132,13 @@ jobs:
           Copy-Item "$ffmpegBase\bin\ffprobe.exe" resources\bin\windows\
           Remove-Item -Recurse -Force $ffmpegBase, ffmpeg.zip, checksums.sha256
 
-          # Download Pandoc + verify SHA256
-          gh release download 3.6.1 --repo jgm/pandoc -p "pandoc-3.6.1-windows-x86_64.zip" -p "pandoc-3.6.1-windows-x86_64.zip.sha256"
+          # Download Pandoc (upstream doesn't publish per-asset .sha256 for 3.6.1;
+          # transport trust via HTTPS + authenticated gh).
+          gh release download 3.6.1 --repo jgm/pandoc -p "pandoc-3.6.1-windows-x86_64.zip"
           Rename-Item "pandoc-3.6.1-windows-x86_64.zip" pandoc.zip
-          Rename-Item "pandoc-3.6.1-windows-x86_64.zip.sha256" pandoc.zip.sha256
-          $expectedPandocHash = (Get-Content pandoc.zip.sha256 -Raw).Trim().Split()[0].ToUpper()
-          $actualPandocHash = (Get-FileHash pandoc.zip -Algorithm SHA256).Hash
-          if ($actualPandocHash -ne $expectedPandocHash) { throw "Pandoc SHA256 mismatch: expected $expectedPandocHash got $actualPandocHash" }
           Expand-Archive -Path pandoc.zip -DestinationPath .
           Copy-Item "pandoc-3.6.1\pandoc.exe" resources\bin\windows\
-          Remove-Item -Recurse -Force pandoc-3.6.1, pandoc.zip, pandoc.zip.sha256
+          Remove-Item -Recurse -Force pandoc-3.6.1, pandoc.zip
 
       - name: Build Electron app (Linux)
         if: runner.os == 'Linux'

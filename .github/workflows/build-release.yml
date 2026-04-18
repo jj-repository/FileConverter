@@ -86,15 +86,17 @@ jobs:
         run: |
           mkdir -p resources/bin/linux
 
-          # Download FFmpeg static build (pinned to 7.1) + verify md5
-          wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-7.1-amd64-static.tar.xz
-          wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-7.1-amd64-static.tar.xz.md5
-          md5sum -c ffmpeg-7.1-amd64-static.tar.xz.md5
-          tar -xf ffmpeg-7.1-amd64-static.tar.xz
-          mv ffmpeg-7.1-amd64-static/ffmpeg resources/bin/linux/
-          mv ffmpeg-7.1-amd64-static/ffprobe resources/bin/linux/
+          # Download FFmpeg from BtbN (rolling n7.1-latest) + verify SHA256
+          FFMPEG_ZIP="ffmpeg-n7.1-latest-linux64-gpl-7.1.tar.xz"
+          wget -q "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/${FFMPEG_ZIP}"
+          wget -q -O checksums.sha256 "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/checksums.sha256"
+          grep "${FFMPEG_ZIP}" checksums.sha256 | sha256sum -c -
+          tar -xf "${FFMPEG_ZIP}"
+          EXTRACT_DIR=$(tar -tf "${FFMPEG_ZIP}" | head -1 | cut -d/ -f1)
+          mv "${EXTRACT_DIR}/bin/ffmpeg" resources/bin/linux/
+          mv "${EXTRACT_DIR}/bin/ffprobe" resources/bin/linux/
           chmod +x resources/bin/linux/ffmpeg resources/bin/linux/ffprobe
-          rm -rf ffmpeg-7.1-amd64-static*
+          rm -rf "${EXTRACT_DIR}" "${FFMPEG_ZIP}" checksums.sha256
 
           # Download Pandoc + verify SHA256
           wget -q https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-linux-amd64.tar.gz
@@ -110,16 +112,20 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path resources\bin\windows
 
-          # Download FFmpeg (pinned to 7.1) + verify SHA256
-          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-03-31-14-18/ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1.zip" -OutFile ffmpeg.zip
-          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-03-31-14-18/ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1.zip.sha256" -OutFile ffmpeg.zip.sha256
-          $expectedFFmpegHash = (Get-Content ffmpeg.zip.sha256 -Raw).Trim().Split()[0].ToUpper()
+          # Download FFmpeg from BtbN (rolling n7.1-latest) + verify SHA256
+          $ffmpegZip = "ffmpeg-n7.1-latest-win64-gpl-7.1.zip"
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/$ffmpegZip" -OutFile ffmpeg.zip
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/checksums.sha256" -OutFile checksums.sha256
+          $expectedLine = Select-String -Path checksums.sha256 -Pattern ([regex]::Escape($ffmpegZip)) | Select-Object -First 1
+          if (-not $expectedLine) { throw "FFmpeg checksum not found in checksums.sha256" }
+          $expectedFFmpegHash = $expectedLine.Line.Split()[0].ToUpper()
           $actualFFmpegHash = (Get-FileHash ffmpeg.zip -Algorithm SHA256).Hash
           if ($actualFFmpegHash -ne $expectedFFmpegHash) { throw "FFmpeg SHA256 mismatch: expected $expectedFFmpegHash got $actualFFmpegHash" }
           Expand-Archive -Path ffmpeg.zip -DestinationPath .
-          Copy-Item "ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1\bin\ffmpeg.exe" resources\bin\windows\
-          Copy-Item "ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1\bin\ffprobe.exe" resources\bin\windows\
-          Remove-Item -Recurse -Force ffmpeg-n7.1-31-g0acb1cd0dc-win64-gpl-7.1, ffmpeg.zip, ffmpeg.zip.sha256
+          $extractDir = "ffmpeg-n7.1-latest-win64-gpl-7.1"
+          Copy-Item "$extractDir\bin\ffmpeg.exe" resources\bin\windows\
+          Copy-Item "$extractDir\bin\ffprobe.exe" resources\bin\windows\
+          Remove-Item -Recurse -Force $extractDir, ffmpeg.zip, checksums.sha256
 
           # Download Pandoc + verify SHA256
           Invoke-WebRequest -Uri "https://github.com/jgm/pandoc/releases/download/3.6.1/pandoc-3.6.1-windows-x86_64.zip" -OutFile pandoc.zip

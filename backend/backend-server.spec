@@ -2,7 +2,7 @@
 
 import os
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 # Collect all app files
 app_datas = []
@@ -21,25 +21,57 @@ static_dirs = [
     ('app/static', 'app/static'),
 ]
 
+# Runtime third-party packages used by the backend. collect_all pulls
+# submodules + data files + binaries for each, which is necessary because
+# PyInstaller's static analysis misses re-exports and dynamic imports.
+RUNTIME_PACKAGES = [
+    # Web stack
+    'fastapi', 'starlette', 'slowapi', 'uvicorn', 'websockets',
+    'pydantic', 'pydantic_settings', 'pydantic_core',
+    # File IO / async
+    'aiofiles', 'multipart',
+    # Image
+    'PIL', 'pillow_heif', 'cairosvg',
+    # Data / spreadsheets
+    'pandas', 'openpyxl', 'odf',
+    # Archive
+    'py7zr',
+    # Subtitles / media
+    'pysubs2', 'ffmpeg',
+    # Document / PDF / ebook / markdown
+    'pypandoc', 'docx', 'pypdf', 'markdown', 'ebooklib', 'bs4', 'bleach',
+    'lxml', 'reportlab',
+    # Fonts
+    'fontTools', 'brotli',
+    # Serialization / security
+    'yaml', 'toml', 'defusedxml', 'magic',
+]
+
+collected_datas = []
+collected_binaries = []
+collected_hidden = []
+
+for pkg in RUNTIME_PACKAGES:
+    try:
+        d, b, h = collect_all(pkg)
+        collected_datas += d
+        collected_binaries += b
+        collected_hidden += h
+    except Exception as e:
+        # Some modules may not be importable during spec build; fall back to submodules
+        print(f"[spec] collect_all({pkg!r}) failed: {e}; falling back to collect_submodules")
+        try:
+            collected_hidden += collect_submodules(pkg)
+        except Exception as e2:
+            print(f"[spec] collect_submodules({pkg!r}) also failed: {e2}; skipping")
+
 a = Analysis(
     ['run_server.py'],
     pathex=[os.getcwd()],
-    binaries=[],
-    datas=app_datas + static_dirs,
+    binaries=collected_binaries,
+    datas=app_datas + static_dirs + collected_datas,
     hiddenimports=[
-        'uvicorn', 'uvicorn.logging', 'uvicorn.loops', 'uvicorn.loops.auto',
-        'uvicorn.protocols', 'uvicorn.protocols.http', 'uvicorn.protocols.http.auto',
-        'uvicorn.protocols.http.h11_impl', 'uvicorn.protocols.http.httptools_impl',
-        'uvicorn.protocols.websockets', 'uvicorn.protocols.websockets.auto',
-        'uvicorn.protocols.websockets.websockets_impl',
-        'uvicorn.lifespan', 'uvicorn.lifespan.on', 'uvicorn.lifespan.off',
-        'uvicorn.main', 'uvicorn.config', 'uvicorn.server',
-        'multipart', 'python_multipart',
-        'pydantic', 'pydantic_settings', 'pydantic_core',
-        'pydantic.deprecated', 'pydantic.deprecated.decorator',
-        'fastapi', 'starlette',
-        *collect_submodules('fastapi'),
-        *collect_submodules('starlette'),
+        *collected_hidden,
         *collect_submodules('app'),
     ],
     hookspath=[],

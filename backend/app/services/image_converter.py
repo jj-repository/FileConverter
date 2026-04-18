@@ -69,7 +69,7 @@ class ImageConverter(BaseConverter):
             raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
+        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
 
         await self.send_progress(session_id, 20, "converting", "Loading image")
 

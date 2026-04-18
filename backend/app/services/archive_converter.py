@@ -90,7 +90,7 @@ class ArchiveConverter(BaseConverter):
             raise ValueError(f"Unsupported output format: {output_format}")
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
+        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
 
         # Get options
         compression_level = options.get("compression_level", 6)

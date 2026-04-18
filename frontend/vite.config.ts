@@ -7,6 +7,14 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'i18n-vendor': ['i18next', 'react-i18next'],
+        },
+      },
+    },
   },
   server: {
     port: 5173,

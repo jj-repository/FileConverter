@@ -23,11 +23,26 @@ class FFmpegMock:
         Args:
             output_file_path: Optional path where output file should be created
         """
+
         async def async_proc_mock(*args, **kwargs):
-            # Create output file if path provided
-            if output_file_path:
-                output_file_path.parent.mkdir(parents=True, exist_ok=True)
-                output_file_path.write_bytes(b"MOCK_CONVERTED_VIDEO_DATA")
+            # Create the real output file converter is waiting for. The output
+            # path is always the last FFmpeg positional arg. Fall back to the
+            # caller-provided path (legacy behaviour) only if the last arg is
+            # not a usable path.
+            real_out = None
+            if args:
+                try:
+                    candidate = Path(str(args[-1]))
+                    # heuristic: treat as output path if it has an extension
+                    if candidate.suffix:
+                        real_out = candidate
+                except (TypeError, ValueError):
+                    real_out = None
+            if real_out is None:
+                real_out = output_file_path
+            if real_out is not None:
+                real_out.parent.mkdir(parents=True, exist_ok=True)
+                real_out.write_bytes(b"MOCK_CONVERTED_VIDEO_DATA")
 
             mock_proc = AsyncMock()
             mock_proc.returncode = 0
@@ -49,14 +64,14 @@ class FFmpegMock:
 
             # Mock stderr
             mock_proc.stderr = AsyncMock()
-            mock_proc.stderr.read = AsyncMock(return_value=b'')
+            mock_proc.stderr.read = AsyncMock(return_value=b"")
 
             # Mock communicate() to return (stdout, stderr) tuple
-            mock_proc.communicate = AsyncMock(return_value=(b'', b''))
+            mock_proc.communicate = AsyncMock(return_value=(b"", b""))
 
             return mock_proc
 
-        return patch('asyncio.create_subprocess_exec', side_effect=async_proc_mock)
+        return patch("asyncio.create_subprocess_exec", side_effect=async_proc_mock)
 
     @staticmethod
     def mock_failed_conversion(error_message="FFmpeg error: Conversion failed"):
@@ -66,6 +81,7 @@ class FFmpegMock:
         Args:
             error_message: Error message to return
         """
+
         async def async_proc_mock(*args, **kwargs):
             mock_proc = AsyncMock()
             mock_proc.returncode = 1
@@ -83,15 +99,16 @@ class FFmpegMock:
             mock_proc.stderr.read = AsyncMock(return_value=error_message.encode())
 
             # Mock communicate() to return (stdout, stderr) tuple with error
-            mock_proc.communicate = AsyncMock(return_value=(b'', error_message.encode()))
+            mock_proc.communicate = AsyncMock(return_value=(b"", error_message.encode()))
 
             return mock_proc
 
-        return patch('asyncio.create_subprocess_exec', side_effect=async_proc_mock)
+        return patch("asyncio.create_subprocess_exec", side_effect=async_proc_mock)
 
     @staticmethod
     def mock_timeout_conversion():
         """Mock FFmpeg conversion that times out"""
+
         async def async_proc_mock(*args, **kwargs):
             mock_proc = AsyncMock()
             mock_proc.returncode = None
@@ -108,11 +125,11 @@ class FFmpegMock:
             mock_proc.stderr = AsyncMock()
 
             # Mock communicate() for cleanup after kill
-            mock_proc.communicate = AsyncMock(return_value=(b'', b''))
+            mock_proc.communicate = AsyncMock(return_value=(b"", b""))
 
             return mock_proc
 
-        return patch('asyncio.create_subprocess_exec', side_effect=async_proc_mock)
+        return patch("asyncio.create_subprocess_exec", side_effect=async_proc_mock)
 
     @staticmethod
     def mock_progress_output(total_duration_seconds=120, num_updates=10):
@@ -132,7 +149,7 @@ class FFmpegMock:
             milliseconds = int((time_seconds - int(time_seconds)) * 100)
 
             progress_line = (
-                f"frame={i*100} fps=30 time={hours:02d}:{minutes:02d}:{seconds:02d}.{milliseconds:02d} "
+                f"frame={i * 100} fps=30 time={hours:02d}:{minutes:02d}:{seconds:02d}.{milliseconds:02d} "
                 f"bitrate=2000.0kbits/s speed=1.0x\n"
             )
             progress_lines.append(progress_line.encode())
@@ -145,12 +162,7 @@ class FFprobeMock:
 
     @staticmethod
     def mock_video_metadata(
-        duration=120.5,
-        width=1920,
-        height=1080,
-        codec="h264",
-        fps="30/1",
-        bit_rate="2000000"
+        duration=120.5, width=1920, height=1080, codec="h264", fps="30/1", bit_rate="2000000"
     ):
         """
         Mock FFprobe video metadata response
@@ -168,7 +180,7 @@ class FFprobeMock:
                 "duration": str(duration),
                 "size": "10485760",
                 "format_name": "mp4",
-                "bit_rate": bit_rate
+                "bit_rate": bit_rate,
             },
             "streams": [
                 {
@@ -178,26 +190,18 @@ class FFprobeMock:
                     "width": width,
                     "height": height,
                     "r_frame_rate": fps,
-                    "avg_frame_rate": fps
+                    "avg_frame_rate": fps,
                 }
-            ]
+            ],
         }
 
-        mock_run = Mock(
-            returncode=0,
-            stdout=json.dumps(metadata),
-            stderr=''
-        )
+        mock_run = Mock(returncode=0, stdout=json.dumps(metadata), stderr="")
 
-        return patch('subprocess.run', return_value=mock_run)
+        return patch("subprocess.run", return_value=mock_run)
 
     @staticmethod
     def mock_audio_metadata(
-        duration=180.25,
-        sample_rate="44100",
-        channels=2,
-        codec="mp3",
-        bit_rate="192000"
+        duration=180.25, sample_rate="44100", channels=2, codec="mp3", bit_rate="192000"
     ):
         """
         Mock FFprobe audio metadata response
@@ -214,7 +218,7 @@ class FFprobeMock:
                 "duration": str(duration),
                 "size": "5242880",
                 "format_name": codec,
-                "bit_rate": bit_rate
+                "bit_rate": bit_rate,
             },
             "streams": [
                 {
@@ -224,18 +228,14 @@ class FFprobeMock:
                     "sample_rate": str(sample_rate),
                     "channels": channels,
                     "channel_layout": "stereo" if channels == 2 else "mono",
-                    "bit_rate": bit_rate
+                    "bit_rate": bit_rate,
                 }
-            ]
+            ],
         }
 
-        mock_run = Mock(
-            returncode=0,
-            stdout=json.dumps(metadata),
-            stderr=''
-        )
+        mock_run = Mock(returncode=0, stdout=json.dumps(metadata), stderr="")
 
-        return patch('subprocess.run', return_value=mock_run)
+        return patch("subprocess.run", return_value=mock_run)
 
     @staticmethod
     def mock_video_with_audio_metadata(
@@ -243,7 +243,7 @@ class FFprobeMock:
         video_width=1920,
         video_height=1080,
         audio_sample_rate="48000",
-        audio_channels=2
+        audio_channels=2,
     ):
         """
         Mock FFprobe metadata for video with audio track
@@ -260,7 +260,7 @@ class FFprobeMock:
                 "duration": str(video_duration),
                 "size": "15728640",
                 "format_name": "mp4",
-                "bit_rate": "3000000"
+                "bit_rate": "3000000",
             },
             "streams": [
                 {
@@ -270,7 +270,7 @@ class FFprobeMock:
                     "width": video_width,
                     "height": video_height,
                     "r_frame_rate": "30/1",
-                    "avg_frame_rate": "30/1"
+                    "avg_frame_rate": "30/1",
                 },
                 {
                     "index": 1,
@@ -279,18 +279,14 @@ class FFprobeMock:
                     "sample_rate": str(audio_sample_rate),
                     "channels": audio_channels,
                     "channel_layout": "stereo" if audio_channels == 2 else "mono",
-                    "bit_rate": "192000"
-                }
-            ]
+                    "bit_rate": "192000",
+                },
+            ],
         }
 
-        mock_run = Mock(
-            returncode=0,
-            stdout=json.dumps(metadata),
-            stderr=''
-        )
+        mock_run = Mock(returncode=0, stdout=json.dumps(metadata), stderr="")
 
-        return patch('subprocess.run', return_value=mock_run)
+        return patch("subprocess.run", return_value=mock_run)
 
     @staticmethod
     def mock_failure(error_message="FFprobe error: Invalid file"):
@@ -300,13 +296,9 @@ class FFprobeMock:
         Args:
             error_message: Error message to return
         """
-        mock_run = Mock(
-            returncode=1,
-            stdout='',
-            stderr=error_message
-        )
+        mock_run = Mock(returncode=1, stdout="", stderr=error_message)
 
-        return patch('subprocess.run', return_value=mock_run)
+        return patch("subprocess.run", return_value=mock_run)
 
 
 class FFmpegCommandValidator:
@@ -323,7 +315,7 @@ class FFmpegCommandValidator:
         Returns:
             True if command is safe (no shell characters)
         """
-        shell_chars = [';', '|', '&', '`', '$', '>', '<', '\n', '\r']
+        shell_chars = [";", "|", "&", "`", "$", ">", "<", "\n", "\r"]
 
         for arg in command_args:
             arg_str = str(arg)

@@ -69,7 +69,7 @@ class SubtitleConverter(BaseConverter):
         # Generate output path
         output_path = (
             settings.UPLOAD_DIR
-            / f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
+            / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
         )
 
         # Get options

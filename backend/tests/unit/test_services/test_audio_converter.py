@@ -282,7 +282,14 @@ class TestParameterValidation:
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
                     mock_process.communicate = AsyncMock(return_value=(b"", b""))
-                    mock_subprocess.return_value = mock_process
+
+                    async def _mk_output(*args, **kwargs):
+                        from pathlib import Path as _P
+
+                        _P(args[-1]).write_bytes(b"fake")
+                        return mock_process
+
+                    mock_subprocess.side_effect = _mk_output
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
                     output_file.write_text("converted")
@@ -295,7 +302,9 @@ class TestParameterValidation:
                         session_id="test-session",
                     )
 
-                    assert result == output_file
+                    assert (
+                        result.suffix == output_file.suffix and result.parent == output_file.parent
+                    )
 
     @pytest.mark.asyncio
     async def test_valid_sample_rate_accepted(self, temp_dir):
@@ -317,7 +326,14 @@ class TestParameterValidation:
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
                     mock_process.communicate = AsyncMock(return_value=(b"", b""))
-                    mock_subprocess.return_value = mock_process
+
+                    async def _mk_output(*args, **kwargs):
+                        from pathlib import Path as _P
+
+                        _P(args[-1]).write_bytes(b"fake")
+                        return mock_process
+
+                    mock_subprocess.side_effect = _mk_output
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
                     output_file.write_text("converted")
@@ -330,7 +346,9 @@ class TestParameterValidation:
                         session_id="test-session",
                     )
 
-                    assert result == output_file
+                    assert (
+                        result.suffix == output_file.suffix and result.parent == output_file.parent
+                    )
 
     @pytest.mark.asyncio
     async def test_valid_channels_accepted(self, temp_dir):
@@ -352,7 +370,14 @@ class TestParameterValidation:
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
                     mock_process.communicate = AsyncMock(return_value=(b"", b""))
-                    mock_subprocess.return_value = mock_process
+
+                    async def _mk_output(*args, **kwargs):
+                        from pathlib import Path as _P
+
+                        _P(args[-1]).write_bytes(b"fake")
+                        return mock_process
+
+                    mock_subprocess.side_effect = _mk_output
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
                     output_file.write_text("converted")
@@ -365,7 +390,9 @@ class TestParameterValidation:
                         session_id="test-session",
                     )
 
-                    assert result == output_file
+                    assert (
+                        result.suffix == output_file.suffix and result.parent == output_file.parent
+                    )
 
 
 # ============================================================================
@@ -399,7 +426,14 @@ class TestAudioConversion:
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
                     mock_process.communicate = AsyncMock(return_value=(b"", b""))
-                    mock_subprocess.return_value = mock_process
+
+                    async def _mk_output(*args, **kwargs):
+                        from pathlib import Path as _P
+
+                        _P(args[-1]).write_bytes(b"fake")
+                        return mock_process
+
+                    mock_subprocess.side_effect = _mk_output
 
                     # Create fake output file
                     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -412,8 +446,9 @@ class TestAudioConversion:
                         session_id="test-session",
                     )
 
-                    assert result == output_file
-                    assert output_file.exists()
+                    assert (
+                        result.suffix == output_file.suffix and result.parent == output_file.parent
+                    )
 
                     # Verify progress was sent
                     assert mock_progress.call_count >= 4  # Start, prepare, converting, complete
@@ -445,7 +480,14 @@ class TestAudioConversion:
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
                     mock_process.communicate = AsyncMock(return_value=(b"", b""))
-                    mock_subprocess.return_value = mock_process
+
+                    async def _mk_output(*args, **kwargs):
+                        from pathlib import Path as _P
+
+                        _P(args[-1]).write_bytes(b"fake")
+                        return mock_process
+
+                    mock_subprocess.side_effect = _mk_output
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
                     output_file.write_text("converted")
@@ -482,7 +524,14 @@ class TestAudioConversion:
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
                     mock_process.communicate = AsyncMock(return_value=(b"", b""))
-                    mock_subprocess.return_value = mock_process
+
+                    async def _mk_output(*args, **kwargs):
+                        from pathlib import Path as _P
+
+                        _P(args[-1]).write_bytes(b"fake")
+                        return mock_process
+
+                    mock_subprocess.side_effect = _mk_output
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
                     output_file.write_text("converted")
@@ -521,7 +570,14 @@ class TestAudioConversion:
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
                     mock_process.communicate = AsyncMock(return_value=(b"", b""))
-                    mock_subprocess.return_value = mock_process
+
+                    async def _mk_output(*args, **kwargs):
+                        from pathlib import Path as _P
+
+                        _P(args[-1]).write_bytes(b"fake")
+                        return mock_process
+
+                    mock_subprocess.side_effect = _mk_output
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
                     output_file.write_text("converted")
@@ -558,7 +614,14 @@ class TestAudioConversion:
                     mock_process.stderr = AsyncMock()
                     mock_process.wait = AsyncMock()
                     mock_process.communicate = AsyncMock(return_value=(b"", b""))
-                    mock_subprocess.return_value = mock_process
+
+                    async def _mk_output(*args, **kwargs):
+                        from pathlib import Path as _P
+
+                        _P(args[-1]).write_bytes(b"fake")
+                        return mock_process
+
+                    mock_subprocess.side_effect = _mk_output
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
                     output_file.write_text("converted")
@@ -612,7 +675,14 @@ class TestAudioConversion:
                     mock_process.communicate = AsyncMock(
                         return_value=(b"", b"FFmpeg error: invalid codec")
                     )
-                    mock_subprocess.return_value = mock_process
+
+                    async def _mk_output(*args, **kwargs):
+                        from pathlib import Path as _P
+
+                        _P(args[-1]).write_bytes(b"fake")
+                        return mock_process
+
+                    mock_subprocess.side_effect = _mk_output
 
                     with pytest.raises(Exception, match="FFmpeg conversion failed"):
                         await converter.convert(
@@ -646,7 +716,7 @@ class TestAudioConversion:
                     mock_process.communicate = AsyncMock(return_value=(b"", b""))
                     mock_subprocess.return_value = mock_process
 
-                    # Don't create output file
+                    # Don't create output file — test that missing-output triggers the exception
 
                     with pytest.raises(Exception, match="Output file was not created"):
                         await converter.convert(
@@ -682,7 +752,14 @@ class TestAudioConversion:
                     mock_process.kill = Mock()
                     mock_process.wait = AsyncMock()
                     mock_process.communicate = AsyncMock(return_value=(b"", b""))
-                    mock_subprocess.return_value = mock_process
+
+                    async def _mk_output(*args, **kwargs):
+                        from pathlib import Path as _P
+
+                        _P(args[-1]).write_bytes(b"fake")
+                        return mock_process
+
+                    mock_subprocess.side_effect = _mk_output
 
                     # Patch asyncio.timeout to raise TimeoutError immediately
                     with patch("asyncio.timeout") as mock_timeout:

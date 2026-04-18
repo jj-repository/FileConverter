@@ -55,7 +55,7 @@ class FontConverter(BaseConverter):
         await self.send_progress(session_id, 10, "converting", "Starting font conversion")
 
         # Generate output filename
-        output_filename = f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
+        output_filename = f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
         output_path = settings.UPLOAD_DIR / output_filename
 
         _OPTIMIZE_DROP_TABLES = ["DSIG", "hdmx", "VDMX", "LTSH", "PCLT"]
@@ -65,20 +65,23 @@ class FontConverter(BaseConverter):
 
             def _sync_font_convert():
                 font = TTFont(str(input_path))
-                subset_text = options.get("subset_text")
-                if subset_text:
-                    subsetter = Subsetter()
-                    subsetter.populate(text=subset_text)
-                    subsetter.subset(font)
-                if options.get("optimize", True):
-                    for table in _OPTIMIZE_DROP_TABLES:
-                        if table in font:
-                            del font[table]
-                flavor = self._get_output_flavor(output_format)
-                if flavor:
-                    font.flavor = flavor
-                font.save(str(output_path))
-                return output_path
+                try:
+                    subset_text = options.get("subset_text")
+                    if subset_text:
+                        subsetter = Subsetter()
+                        subsetter.populate(text=subset_text)
+                        subsetter.subset(font)
+                    if options.get("optimize", True):
+                        for table in _OPTIMIZE_DROP_TABLES:
+                            if table in font:
+                                del font[table]
+                    flavor = self._get_output_flavor(output_format)
+                    if flavor:
+                        font.flavor = flavor
+                    font.save(str(output_path))
+                    return output_path
+                finally:
+                    font.close()
 
             await self.send_progress(
                 session_id, 50, "converting", f"Converting to {output_format.upper()}"

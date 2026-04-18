@@ -14,11 +14,17 @@ Security tests:
 - Malicious filename sanitization
 """
 
+import shutil
 from pathlib import Path
 
 import pytest
 from app.main import app
 from fastapi.testclient import TestClient
+
+pdflatex_required = pytest.mark.skipif(
+    shutil.which("pdflatex") is None,
+    reason="pdflatex not installed (install texlive-latex-base for PDF conversion tests)",
+)
 
 
 @pytest.fixture
@@ -120,6 +126,7 @@ Paragraph 3: Document router endpoints.
 class TestDocumentConvert:
     """Test POST /api/document/convert endpoint"""
 
+    @pdflatex_required
     def test_convert_docx_to_pdf_success(self, client, sample_docx):
         """Test successful DOCX to PDF conversion"""
         with open(sample_docx, "rb") as f:
@@ -157,6 +164,7 @@ class TestDocumentConvert:
         assert data["output_file"].endswith(".html")
         assert "download_url" in data
 
+    @pdflatex_required
     def test_convert_with_toc_true(self, client, sample_docx):
         """Test document conversion with table of contents enabled"""
         with open(sample_docx, "rb") as f:
@@ -177,6 +185,7 @@ class TestDocumentConvert:
         assert data["status"] == "completed"
         assert data["output_file"].endswith(".pdf")
 
+    @pdflatex_required
     def test_convert_with_toc_false(self, client, sample_docx):
         """Test document conversion with table of contents disabled"""
         with open(sample_docx, "rb") as f:
@@ -332,6 +341,7 @@ class TestDocumentFormats:
 class TestDocumentDownload:
     """Test GET /api/document/download/{filename} endpoint"""
 
+    @pdflatex_required
     def test_download_converted_file(self, client, sample_docx):
         """Test downloading a converted document file"""
         # First, convert a document
@@ -507,6 +517,7 @@ class TestDocumentSecurityValidation:
 class TestDocumentConversionFormats:
     """Test various document format conversions"""
 
+    @pdflatex_required
     def test_convert_md_to_pdf(self, client, sample_markdown):
         """Test conversion of Markdown to PDF"""
         with open(sample_markdown, "rb") as f:

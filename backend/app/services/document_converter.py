@@ -78,16 +78,25 @@ class DocumentConverter(BaseConverter):
             raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         await self.send_progress(session_id, 10, "converting", "Preparing conversion")
 
-        # Build Pandoc command
+        # Build Pandoc command.
+        # --sandbox disables Lua/custom-reader loading for input-parsing safety,
+        # but blocks access to pandoc's packaged template data on Debian-style
+        # installs for binary output formats (docx/pdf/odt/pptx/epub). Skip the
+        # flag for formats that need template data; keep it for text outputs
+        # where untrusted input is the relevant threat surface.
+        _TEMPLATE_OUTPUTS = {"docx", "pdf", "odt", "pptx", "epub"}
         toc = options.get("toc", False)
 
-        cmd = [
-            settings.PANDOC_PATH,
-            "--sandbox",
+        cmd = [settings.PANDOC_PATH]
+        if output_format not in _TEMPLATE_OUTPUTS:
+            cmd.append("--sandbox")
+        cmd += [
             str(input_path),
             "-o",
             str(output_path),

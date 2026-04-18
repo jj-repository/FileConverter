@@ -18,6 +18,7 @@ from app.services.batch_converter import BatchConverter
 # BASIC FUNCTIONALITY TESTS
 # ============================================================================
 
+
 class TestBatchConverterBasics:
     """Test basic BatchConverter initialization and setup"""
 
@@ -55,6 +56,7 @@ class TestBatchConverterBasics:
 # ============================================================================
 # FORMAT ROUTING TESTS
 # ============================================================================
+
 
 class TestFormatRouting:
     """Test correct converter selection based on file format"""
@@ -108,16 +110,16 @@ class TestFormatRouting:
         assert file_type == "document"
 
     def test_get_converter_for_unsupported_format(self):
-        """Test router returns None for unsupported formats"""
+        """Test router returns None converter for unsupported formats; file_type carries a descriptive message"""
         converter = BatchConverter()
 
         result_converter, file_type = converter.get_converter_for_format("xyz")
         assert result_converter is None
-        assert file_type is None
+        assert "unsupported" in file_type.lower()
 
         result_converter, file_type = converter.get_converter_for_format("exe")
         assert result_converter is None
-        assert file_type is None
+        assert "unsupported" in file_type.lower()
 
     def test_get_converter_requires_lowercase_format(self):
         """Test format routing requires lowercase format strings"""
@@ -135,12 +137,13 @@ class TestFormatRouting:
         # Uppercase formats won't match (responsibility of caller to lowercase)
         result_converter, file_type = converter.get_converter_for_format("JPG")
         assert result_converter is None
-        assert file_type is None
+        assert "unsupported" in file_type.lower()
 
 
 # ============================================================================
 # SINGLE FILE CONVERSION TESTS
 # ============================================================================
+
 
 class TestConvertSingleFile:
     """Test single file conversion within batch context"""
@@ -154,7 +157,7 @@ class TestConvertSingleFile:
 
         output_file = settings.UPLOAD_DIR / "test_converted.wav"
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             mock_convert.return_value = output_file
 
             result = await converter.convert_single_file(
@@ -163,7 +166,7 @@ class TestConvertSingleFile:
                 options={},
                 session_id="test-session",
                 file_index=0,
-                total_files=3
+                total_files=3,
             )
 
             assert result["success"] is True
@@ -186,7 +189,7 @@ class TestConvertSingleFile:
             options={},
             session_id="test-session",
             file_index=0,
-            total_files=1
+            total_files=1,
         )
 
         assert result["success"] is False
@@ -201,7 +204,7 @@ class TestConvertSingleFile:
         input_file = temp_dir / "test.mp3"
         input_file.write_text("fake audio")
 
-        with patch.object(converter.audio_converter, 'convert') as mock_convert:
+        with patch.object(converter.audio_converter, "convert") as mock_convert:
             mock_convert.side_effect = Exception("Conversion error")
 
             result = await converter.convert_single_file(
@@ -210,7 +213,7 @@ class TestConvertSingleFile:
                 options={},
                 session_id="test-session",
                 file_index=1,
-                total_files=2
+                total_files=2,
             )
 
             assert result["success"] is False
@@ -228,7 +231,7 @@ class TestConvertSingleFile:
 
         output_file = settings.UPLOAD_DIR / "test_converted.png"
 
-        with patch.object(converter.image_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.image_converter, "convert", new=AsyncMock()) as mock_convert:
             mock_convert.return_value = output_file
 
             await converter.convert_single_file(
@@ -237,7 +240,7 @@ class TestConvertSingleFile:
                 options={},
                 session_id="test-session",
                 file_index=0,
-                total_files=2
+                total_files=2,
             )
 
             # Verify progress was sent
@@ -255,7 +258,7 @@ class TestConvertSingleFile:
 
         output_file = settings.UPLOAD_DIR / "test_converted.wav"
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             mock_convert.return_value = output_file
 
             await converter.convert_single_file(
@@ -264,7 +267,7 @@ class TestConvertSingleFile:
                 options={},
                 session_id="batch-123",
                 file_index=2,
-                total_files=5
+                total_files=5,
             )
 
             # Session ID should be appended with file index
@@ -275,6 +278,7 @@ class TestConvertSingleFile:
 # ============================================================================
 # BATCH CONVERSION - PARALLEL TESTS
 # ============================================================================
+
 
 class TestBatchConversionParallel:
     """Test parallel batch conversion (default behavior)"""
@@ -292,12 +296,9 @@ class TestBatchConversionParallel:
         for f in input_files:
             f.write_text("fake audio")
 
-        output_files = [
-            settings.UPLOAD_DIR / f"test{i}_converted.wav"
-            for i in range(1, 4)
-        ]
+        output_files = [settings.UPLOAD_DIR / f"test{i}_converted.wav" for i in range(1, 4)]
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             # Each call returns corresponding output file
             mock_convert.side_effect = output_files
 
@@ -306,7 +307,7 @@ class TestBatchConversionParallel:
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=True
+                parallel=True,
             )
 
             assert len(results) == 3
@@ -329,7 +330,7 @@ class TestBatchConversionParallel:
 
         output_file = settings.UPLOAD_DIR / "test_converted.wav"
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             mock_convert.side_effect = [output_file, output_file]
 
             results = await converter.convert_batch(
@@ -337,7 +338,7 @@ class TestBatchConversionParallel:
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=True
+                parallel=True,
             )
 
             assert len(results) == 3
@@ -359,7 +360,7 @@ class TestBatchConversionParallel:
         for f in input_files:
             f.write_text("fake audio")
 
-        with patch.object(converter.audio_converter, 'convert') as mock_convert:
+        with patch.object(converter.audio_converter, "convert") as mock_convert:
             # Simulate an exception from one of the parallel tasks
             mock_convert.side_effect = [
                 settings.UPLOAD_DIR / "test1_converted.wav",
@@ -371,7 +372,7 @@ class TestBatchConversionParallel:
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=True
+                parallel=True,
             )
 
             assert len(results) == 2
@@ -392,7 +393,7 @@ class TestBatchConversionParallel:
         for f in input_files:
             f.write_text("fake audio")
 
-        with patch.object(converter.audio_converter, 'convert') as mock_convert:
+        with patch.object(converter.audio_converter, "convert") as mock_convert:
             # All tasks fail with exceptions
             mock_convert.side_effect = [
                 Exception("Error 1"),
@@ -405,7 +406,7 @@ class TestBatchConversionParallel:
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=True
+                parallel=True,
             )
 
             assert len(results) == 3
@@ -427,16 +428,28 @@ class TestBatchConversionParallel:
             f.write_text("fake audio")
 
         # Mock convert_single_file itself to raise an exception (bypassing its internal exception handling)
-        with patch.object(converter, 'convert_single_file', side_effect=[
-            {"filename": "test1.mp3", "success": True, "output_file": "output.wav", "output_path": "/path/output.wav", "download_url": "/download/output.wav", "session_id": "test", "index": 0},
-            Exception("Direct exception from task")
-        ]):
+        with patch.object(
+            converter,
+            "convert_single_file",
+            side_effect=[
+                {
+                    "filename": "test1.mp3",
+                    "success": True,
+                    "output_file": "output.wav",
+                    "output_path": "/path/output.wav",
+                    "download_url": "/download/output.wav",
+                    "session_id": "test",
+                    "index": 0,
+                },
+                Exception("Direct exception from task"),
+            ],
+        ):
             results = await converter.convert_batch(
                 input_paths=input_files,
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=True
+                parallel=True,
             )
 
             assert len(results) == 2
@@ -454,13 +467,13 @@ class TestBatchConversionParallel:
         for f in input_files:
             f.write_text("fake audio")
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()):
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()):
             await converter.convert_batch(
                 input_paths=input_files,
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=True
+                parallel=True,
             )
 
             # First call should be initial progress with 0%
@@ -482,7 +495,7 @@ class TestBatchConversionParallel:
         for f in input_files:
             f.write_text("fake data")
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             output_file = settings.UPLOAD_DIR / "test_converted.wav"
             mock_convert.side_effect = [output_file, output_file]
 
@@ -491,7 +504,7 @@ class TestBatchConversionParallel:
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=True
+                parallel=True,
             )
 
             # Last call should be completion progress with 100%
@@ -505,6 +518,7 @@ class TestBatchConversionParallel:
 # ============================================================================
 # BATCH CONVERSION - SEQUENTIAL TESTS
 # ============================================================================
+
 
 class TestBatchConversionSequential:
     """Test sequential batch conversion"""
@@ -522,12 +536,9 @@ class TestBatchConversionSequential:
         for f in input_files:
             f.write_text("fake audio")
 
-        output_files = [
-            settings.UPLOAD_DIR / f"test{i}_converted.wav"
-            for i in range(1, 4)
-        ]
+        output_files = [settings.UPLOAD_DIR / f"test{i}_converted.wav" for i in range(1, 4)]
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             mock_convert.side_effect = output_files
 
             results = await converter.convert_batch(
@@ -535,7 +546,7 @@ class TestBatchConversionSequential:
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=False
+                parallel=False,
             )
 
             assert len(results) == 3
@@ -555,7 +566,7 @@ class TestBatchConversionSequential:
         for f in input_files:
             f.write_text("fake audio")
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             output_file = settings.UPLOAD_DIR / "test_converted.wav"
             # First succeeds, second fails, third succeeds
             mock_convert.side_effect = [
@@ -569,7 +580,7 @@ class TestBatchConversionSequential:
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=False
+                parallel=False,
             )
 
             assert len(results) == 3
@@ -596,13 +607,15 @@ class TestBatchConversionSequential:
             call_order.append(kwargs.get("session_id"))
             return settings.UPLOAD_DIR / "test_converted.wav"
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock(side_effect=mock_convert_tracking)):
+        with patch.object(
+            converter.audio_converter, "convert", new=AsyncMock(side_effect=mock_convert_tracking)
+        ):
             await converter.convert_batch(
                 input_paths=input_files,
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=False
+                parallel=False,
             )
 
             # Verify order: session_0, session_1
@@ -614,6 +627,7 @@ class TestBatchConversionSequential:
 # ============================================================================
 # BATCH CONVERSION - EMPTY AND EDGE CASES
 # ============================================================================
+
 
 class TestBatchConversionEdgeCases:
     """Test batch conversion edge cases"""
@@ -629,7 +643,7 @@ class TestBatchConversionEdgeCases:
             output_format="wav",
             options={},
             session_id="batch-session",
-            parallel=True
+            parallel=True,
         )
 
         assert results == []
@@ -644,7 +658,7 @@ class TestBatchConversionEdgeCases:
 
         output_file = settings.UPLOAD_DIR / "test_converted.wav"
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             mock_convert.return_value = output_file
 
             results = await converter.convert_batch(
@@ -652,7 +666,7 @@ class TestBatchConversionEdgeCases:
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=True
+                parallel=True,
             )
 
             assert len(results) == 1
@@ -676,7 +690,7 @@ class TestBatchConversionEdgeCases:
             output_format="wav",
             options={},
             session_id="batch-session",
-            parallel=True
+            parallel=True,
         )
 
         assert len(results) == 3
@@ -686,6 +700,7 @@ class TestBatchConversionEdgeCases:
 # ============================================================================
 # ZIP CREATION TESTS
 # ============================================================================
+
 
 class TestZipCreation:
     """Test ZIP archive creation"""
@@ -702,15 +717,14 @@ class TestZipCreation:
         file2.write_text("Content 2")
 
         zip_path = await converter.create_zip_archive(
-            file_paths=[file1, file2],
-            archive_name="test_archive.zip"
+            file_paths=[file1, file2], archive_name="test_archive.zip"
         )
 
         assert zip_path.exists()
         assert zip_path.name == "test_archive.zip"
 
         # Verify ZIP contents
-        with zipfile.ZipFile(zip_path, 'r') as zipf:
+        with zipfile.ZipFile(zip_path, "r") as zipf:
             names = zipf.namelist()
             assert "file1.txt" in names
             assert "file2.txt" in names
@@ -726,12 +740,11 @@ class TestZipCreation:
         test_file.write_text("Single file")
 
         zip_path = await converter.create_zip_archive(
-            file_paths=[test_file],
-            archive_name="single_archive.zip"
+            file_paths=[test_file], archive_name="single_archive.zip"
         )
 
         assert zip_path.exists()
-        with zipfile.ZipFile(zip_path, 'r') as zipf:
+        with zipfile.ZipFile(zip_path, "r") as zipf:
             assert "single.txt" in zipf.namelist()
 
     @pytest.mark.asyncio
@@ -745,12 +758,11 @@ class TestZipCreation:
         missing_file = temp_dir / "missing.txt"
 
         zip_path = await converter.create_zip_archive(
-            file_paths=[existing_file, missing_file],
-            archive_name="partial_archive.zip"
+            file_paths=[existing_file, missing_file], archive_name="partial_archive.zip"
         )
 
         assert zip_path.exists()
-        with zipfile.ZipFile(zip_path, 'r') as zipf:
+        with zipfile.ZipFile(zip_path, "r") as zipf:
             names = zipf.namelist()
             assert "exists.txt" in names
             assert "missing.txt" not in names
@@ -761,12 +773,11 @@ class TestZipCreation:
         converter = BatchConverter()
 
         zip_path = await converter.create_zip_archive(
-            file_paths=[],
-            archive_name="empty_archive.zip"
+            file_paths=[], archive_name="empty_archive.zip"
         )
 
         assert zip_path.exists()
-        with zipfile.ZipFile(zip_path, 'r') as zipf:
+        with zipfile.ZipFile(zip_path, "r") as zipf:
             assert len(zipf.namelist()) == 0
 
     @pytest.mark.asyncio
@@ -783,12 +794,11 @@ class TestZipCreation:
         jpg_file.write_bytes(b"fake jpg data")
 
         zip_path = await converter.create_zip_archive(
-            file_paths=[txt_file, wav_file, jpg_file],
-            archive_name="mixed_archive.zip"
+            file_paths=[txt_file, wav_file, jpg_file], archive_name="mixed_archive.zip"
         )
 
         assert zip_path.exists()
-        with zipfile.ZipFile(zip_path, 'r') as zipf:
+        with zipfile.ZipFile(zip_path, "r") as zipf:
             names = zipf.namelist()
             assert len(names) == 3
             assert "document.txt" in names
@@ -805,8 +815,7 @@ class TestZipCreation:
 
         custom_name = "my_custom_archive.zip"
         zip_path = await converter.create_zip_archive(
-            file_paths=[test_file],
-            archive_name=custom_name
+            file_paths=[test_file], archive_name=custom_name
         )
 
         assert zip_path.name == custom_name
@@ -820,9 +829,7 @@ class TestZipCreation:
         test_file = temp_dir / "content.txt"
         test_file.write_text("Content")
 
-        zip_path = await converter.create_zip_archive(
-            file_paths=[test_file]
-        )
+        zip_path = await converter.create_zip_archive(file_paths=[test_file])
 
         assert zip_path.name == "converted_files.zip"
         assert zip_path.exists()
@@ -831,6 +838,7 @@ class TestZipCreation:
 # ============================================================================
 # PROGRESS TRACKING TESTS
 # ============================================================================
+
 
 class TestProgressTracking:
     """Test progress tracking during batch conversion"""
@@ -849,7 +857,7 @@ class TestProgressTracking:
         for f in input_files:
             f.write_text("fake audio")
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             output_file = settings.UPLOAD_DIR / "test_converted.wav"
             mock_convert.return_value = output_file
 
@@ -858,7 +866,7 @@ class TestProgressTracking:
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=False
+                parallel=False,
             )
 
             # Each file should trigger a progress update
@@ -875,12 +883,12 @@ class TestProgressTracking:
         input_file = temp_dir / "test.mp3"
         input_file.write_text("fake audio")
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()):
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()):
             await converter.convert_batch(
                 input_paths=[input_file],
                 output_format="wav",
                 options={},
-                session_id="batch-session"
+                session_id="batch-session",
             )
 
             # Check progress calls contain filename
@@ -906,15 +914,12 @@ class TestProgressTracking:
         for f in input_files:
             f.write_text("fake")
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             output_file = settings.UPLOAD_DIR / "test_converted.wav"
             mock_convert.side_effect = [output_file, output_file]
 
             await converter.convert_batch(
-                input_paths=input_files,
-                output_format="wav",
-                options={},
-                session_id="batch-session"
+                input_paths=input_files, output_format="wav", options={}, session_id="batch-session"
             )
 
             # Last call is completion
@@ -927,6 +932,7 @@ class TestProgressTracking:
 # ============================================================================
 # ERROR HANDLING TESTS
 # ============================================================================
+
 
 class TestErrorHandling:
     """Test error handling in batch conversion"""
@@ -944,7 +950,7 @@ class TestErrorHandling:
         for f in input_files:
             f.write_text("fake audio")
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             output_file = settings.UPLOAD_DIR / "test_converted.wav"
             # Fail, succeed, succeed
             mock_convert.side_effect = [
@@ -958,7 +964,7 @@ class TestErrorHandling:
                 output_format="wav",
                 options={},
                 session_id="batch-session",
-                parallel=False
+                parallel=False,
             )
 
             # All files should be processed
@@ -981,7 +987,7 @@ class TestErrorHandling:
             options={},
             session_id="test-session",
             file_index=0,
-            total_files=1
+            total_files=1,
         )
 
         assert result["success"] is False
@@ -995,7 +1001,7 @@ class TestErrorHandling:
         input_file = temp_dir / "my_audio_file.mp3"
         input_file.write_text("fake audio")
 
-        with patch.object(converter.audio_converter, 'convert') as mock_convert:
+        with patch.object(converter.audio_converter, "convert") as mock_convert:
             mock_convert.side_effect = Exception("Codec not supported")
 
             result = await converter.convert_single_file(
@@ -1004,7 +1010,7 @@ class TestErrorHandling:
                 options={},
                 session_id="test-session",
                 file_index=0,
-                total_files=1
+                total_files=1,
             )
 
             assert result["filename"] == "my_audio_file.mp3"
@@ -1021,7 +1027,7 @@ class TestErrorHandling:
 
         error_message = "FFmpeg process terminated unexpectedly"
 
-        with patch.object(converter.audio_converter, 'convert') as mock_convert:
+        with patch.object(converter.audio_converter, "convert") as mock_convert:
             mock_convert.side_effect = RuntimeError(error_message)
 
             result = await converter.convert_single_file(
@@ -1030,7 +1036,7 @@ class TestErrorHandling:
                 options={},
                 session_id="test-session",
                 file_index=0,
-                total_files=1
+                total_files=1,
             )
 
             assert result["success"] is False
@@ -1046,7 +1052,7 @@ class TestErrorHandling:
 
         output_file = settings.UPLOAD_DIR / "test_converted.wav"
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_convert:
             mock_convert.return_value = output_file
 
             # Should not raise exception
@@ -1054,7 +1060,7 @@ class TestErrorHandling:
                 input_paths=[input_file],
                 output_format="wav",
                 options={},
-                session_id="batch-session"
+                session_id="batch-session",
             )
 
             assert len(results) == 1
@@ -1064,6 +1070,7 @@ class TestErrorHandling:
 # ============================================================================
 # INTEGRATION TESTS
 # ============================================================================
+
 
 class TestBatchConversionIntegration:
     """Integration tests for complete batch conversion workflows"""
@@ -1086,15 +1093,12 @@ class TestBatchConversionIntegration:
             settings.UPLOAD_DIR / "image2_converted.png",
         ]
 
-        with patch.object(converter.image_converter, 'convert', new=AsyncMock()) as mock_convert:
+        with patch.object(converter.image_converter, "convert", new=AsyncMock()) as mock_convert:
             mock_convert.side_effect = output_files
 
             # Convert batch
             results = await converter.convert_batch(
-                input_paths=input_files,
-                output_format="png",
-                options={},
-                session_id="batch-session"
+                input_paths=input_files, output_format="png", options={}, session_id="batch-session"
             )
 
             assert len(results) == 2
@@ -1109,12 +1113,11 @@ class TestBatchConversionIntegration:
                 output_file.write_bytes(b"fake png data")
 
             zip_path = await converter.create_zip_archive(
-                file_paths=output_paths,
-                archive_name="converted_images.zip"
+                file_paths=output_paths, archive_name="converted_images.zip"
             )
 
             assert zip_path.exists()
-            with zipfile.ZipFile(zip_path, 'r') as zipf:
+            with zipfile.ZipFile(zip_path, "r") as zipf:
                 assert len(zipf.namelist()) == 2
 
     @pytest.mark.asyncio
@@ -1130,9 +1133,11 @@ class TestBatchConversionIntegration:
         for f in input_files:
             f.write_bytes(b"fake data")
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_audio:
-            with patch.object(converter.image_converter, 'convert', new=AsyncMock()) as mock_image:
-                with patch.object(converter.document_converter, 'convert', new=AsyncMock()) as mock_doc:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_audio:
+            with patch.object(converter.image_converter, "convert", new=AsyncMock()) as mock_image:
+                with patch.object(
+                    converter.document_converter, "convert", new=AsyncMock()
+                ) as mock_doc:
                     audio_output = settings.UPLOAD_DIR / "audio_converted.wav"
                     image_output = settings.UPLOAD_DIR / "image_converted.png"
                     doc_output = settings.UPLOAD_DIR / "document_converted.pdf"
@@ -1145,7 +1150,7 @@ class TestBatchConversionIntegration:
                         input_paths=input_files,
                         output_format="wav",  # Won't apply to all, just routing
                         options={},
-                        session_id="batch-session"
+                        session_id="batch-session",
                     )
 
                     assert len(results) == 3
@@ -1161,8 +1166,8 @@ class TestBatchConversionIntegration:
         input_files1[0].write_bytes(b"fake audio")
         input_files2[0].write_bytes(b"fake image")
 
-        with patch.object(converter.audio_converter, 'convert', new=AsyncMock()) as mock_audio:
-            with patch.object(converter.image_converter, 'convert', new=AsyncMock()) as mock_image:
+        with patch.object(converter.audio_converter, "convert", new=AsyncMock()) as mock_audio:
+            with patch.object(converter.image_converter, "convert", new=AsyncMock()) as mock_image:
                 audio_output = settings.UPLOAD_DIR / "audio_converted.wav"
                 image_output = settings.UPLOAD_DIR / "image_converted.png"
 
@@ -1175,14 +1180,14 @@ class TestBatchConversionIntegration:
                         input_paths=input_files1,
                         output_format="wav",
                         options={},
-                        session_id="batch-session-1"
+                        session_id="batch-session-1",
                     ),
                     converter.convert_batch(
                         input_paths=input_files2,
                         output_format="png",
                         options={},
-                        session_id="batch-session-2"
-                    )
+                        session_id="batch-session-2",
+                    ),
                 )
 
                 assert len(results1) == 1

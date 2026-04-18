@@ -229,7 +229,11 @@ class BackendManager {
 
       // Send SIGTERM on Unix, kill on Windows
       if (process.platform === 'win32') {
-        spawn('taskkill', ['/pid', this.process.pid, '/f', '/t']);
+        const killer = spawn('taskkill', ['/pid', this.process.pid, '/f', '/t']);
+        killer.on('error', (err) => {
+          console.error('taskkill failed; falling back to process.kill:', err.message);
+          if (this.process) this.process.kill();
+        });
       } else {
         this.process.kill('SIGTERM');
       }

@@ -17,16 +17,13 @@ from app.services.cache_service import CacheMetadata, CacheService
 # BASIC FUNCTIONALITY TESTS
 # ============================================================================
 
+
 class TestCacheServiceBasics:
     """Test basic CacheService functionality"""
 
     def test_initialization(self, temp_cache_dir):
         """Test CacheService initializes correctly"""
-        cache = CacheService(
-            cache_dir=temp_cache_dir,
-            expiration_hours=24,
-            max_size_mb=500
-        )
+        cache = CacheService(cache_dir=temp_cache_dir, expiration_hours=24, max_size_mb=500)
 
         assert cache.cache_dir == temp_cache_dir
         assert cache.expiration_hours == 24
@@ -52,24 +49,27 @@ class TestCacheServiceBasics:
 # CACHE KEY GENERATION TESTS
 # ============================================================================
 
+
 class TestCacheKeyGeneration:
     """Test cache key generation"""
 
-    def test_generate_file_hash(self, temp_dir, temp_cache_dir):
+    @pytest.mark.asyncio
+    async def test_generate_file_hash(self, temp_dir, temp_cache_dir):
         """Test file hash generation is consistent"""
         cache = CacheService(cache_dir=temp_cache_dir)
 
         test_file = temp_dir / "test.txt"
         test_file.write_text("Test content")
 
-        hash1 = cache.generate_file_hash(test_file)
-        hash2 = cache.generate_file_hash(test_file)
+        hash1 = await cache.generate_file_hash(test_file)
+        hash2 = await cache.generate_file_hash(test_file)
 
         # Same file should produce same hash
         assert hash1 == hash2
         assert len(hash1) == 64  # SHA-256 hash length
 
-    def test_different_files_different_hash(self, temp_dir, temp_cache_dir):
+    @pytest.mark.asyncio
+    async def test_different_files_different_hash(self, temp_dir, temp_cache_dir):
         """Test different files produce different hashes"""
         cache = CacheService(cache_dir=temp_cache_dir)
 
@@ -79,8 +79,8 @@ class TestCacheKeyGeneration:
         file2 = temp_dir / "file2.txt"
         file2.write_text("Content 2")
 
-        hash1 = cache.generate_file_hash(file1)
-        hash2 = cache.generate_file_hash(file2)
+        hash1 = await cache.generate_file_hash(file1)
+        hash2 = await cache.generate_file_hash(file2)
 
         assert hash1 != hash2
 
@@ -164,6 +164,7 @@ class TestCacheKeyGeneration:
 # CACHE STORAGE AND RETRIEVAL TESTS
 # ============================================================================
 
+
 class TestCacheStorageRetrieval:
     """Test cache storage and retrieval"""
 
@@ -188,7 +189,7 @@ class TestCacheStorageRetrieval:
             original_filename=input_file.name,
             output_file_path=output_file,
             output_format="png",
-            conversion_options=options
+            conversion_options=options,
         )
 
         # Retrieve result
@@ -230,7 +231,7 @@ class TestCacheStorageRetrieval:
             original_filename=input_file.name,
             output_file_path=output_file,
             output_format="png",
-            conversion_options=options
+            conversion_options=options,
         )
 
         # Retrieve it
@@ -260,7 +261,7 @@ class TestCacheStorageRetrieval:
             original_filename=input_file.name,
             output_file_path=output_file,
             output_format="png",
-            conversion_options=options
+            conversion_options=options,
         )
 
         # Wait a moment to ensure expiration
@@ -276,6 +277,7 @@ class TestCacheStorageRetrieval:
 # ============================================================================
 # METADATA HANDLING TESTS
 # ============================================================================
+
 
 class TestCacheMetadata:
     """Test cache metadata handling"""
@@ -330,7 +332,7 @@ class TestCacheMetadata:
             original_filename=input_file.name,
             output_file_path=output_file,
             output_format="png",
-            conversion_options=options
+            conversion_options=options,
         )
 
         # Retrieve and verify metadata
@@ -344,6 +346,7 @@ class TestCacheMetadata:
 # ============================================================================
 # CACHE CLEANUP TESTS
 # ============================================================================
+
 
 class TestCacheCleanup:
     """Test cache cleanup functionality"""
@@ -368,7 +371,7 @@ class TestCacheCleanup:
             original_filename=input_file.name,
             output_file_path=output_file,
             output_format="png",
-            conversion_options=options
+            conversion_options=options,
         )
 
         # Wait a moment
@@ -416,7 +419,7 @@ class TestCacheCleanup:
                 original_filename=input_file.name,
                 output_file_path=output_file,
                 output_format="png",
-                conversion_options=options
+                conversion_options=options,
             )
 
             # Small delay to ensure different timestamps
@@ -434,16 +437,13 @@ class TestCacheCleanup:
 # CACHE INFO TESTS
 # ============================================================================
 
+
 class TestCacheInfo:
     """Test cache information retrieval"""
 
     def test_get_cache_info(self, temp_cache_dir):
         """Test getting cache information"""
-        cache = CacheService(
-            cache_dir=temp_cache_dir,
-            expiration_hours=24,
-            max_size_mb=500
-        )
+        cache = CacheService(cache_dir=temp_cache_dir, expiration_hours=24, max_size_mb=500)
 
         info = cache.get_cache_info()
 
@@ -508,6 +508,7 @@ class TestCacheInfo:
 # CLEAR ALL TEST
 # ============================================================================
 
+
 class TestCacheClear:
     """Test cache clearing"""
 
@@ -567,6 +568,7 @@ class TestCacheClear:
 # PATH HELPER TESTS
 # ============================================================================
 
+
 class TestCachePathHelpers:
     """Test cache path helper methods"""
 
@@ -595,10 +597,12 @@ class TestCachePathHelpers:
 # ERROR HANDLING TESTS
 # ============================================================================
 
+
 class TestCacheErrorHandling:
     """Test error handling in cache service"""
 
-    def test_generate_file_hash_error(self, temp_cache_dir):
+    @pytest.mark.asyncio
+    async def test_generate_file_hash_error(self, temp_cache_dir):
         """Test error handling when file cannot be read (lines 86-88)"""
         cache = CacheService(cache_dir=temp_cache_dir)
 
@@ -606,7 +610,7 @@ class TestCacheErrorHandling:
         nonexistent_file = Path("/nonexistent/file.txt")
 
         with pytest.raises(Exception):
-            cache.generate_file_hash(nonexistent_file)
+            await cache.generate_file_hash(nonexistent_file)
 
     def test_write_metadata_error(self, temp_cache_dir, monkeypatch):
         """Test error handling when metadata cannot be written (lines 186-188)"""
@@ -621,7 +625,7 @@ class TestCacheErrorHandling:
             created_at=time.time(),
             expires_at=time.time() + 3600,
             file_size=1024,
-            conversion_options={}
+            conversion_options={},
         )
 
         # Mock open to raise exception
@@ -755,6 +759,7 @@ class TestCacheErrorHandling:
 # CLEANUP ALL TESTS
 # ============================================================================
 
+
 class TestCleanupAll:
     """Test cleanup_all method"""
 
@@ -805,6 +810,7 @@ class TestCleanupAll:
 # ============================================================================
 # CACHE SIZE EXCEEDED TESTS
 # ============================================================================
+
 
 class TestCacheSizeExceeded:
     """Test cache size limit enforcement"""
@@ -898,6 +904,7 @@ class TestCacheSizeExceeded:
 # GLOBAL SERVICE TESTS
 # ============================================================================
 
+
 class TestGlobalCacheService:
     """Test global cache service initialization"""
 
@@ -917,9 +924,7 @@ class TestGlobalCacheService:
 
         # Initialize cache service
         service = initialize_cache_service(
-            cache_dir=temp_cache_dir,
-            expiration_hours=2,
-            max_size_mb=100
+            cache_dir=temp_cache_dir, expiration_hours=2, max_size_mb=100
         )
 
         # Verify returned service

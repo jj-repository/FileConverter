@@ -99,7 +99,7 @@ class TestSRTConversion:
                     session_id="test-session"
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
                 # Verify progress was sent
                 assert mock_progress.call_count >= 3
                 # Verify load was called with correct encoding
@@ -136,7 +136,7 @@ class TestSRTConversion:
                     session_id="test-session"
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
                 mock_subs.save.assert_called_once()
                 # Verify format_ parameter
                 call_kwargs = mock_subs.save.call_args[1]
@@ -244,7 +244,7 @@ class TestVTTConversion:
                     session_id="test-session"
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
                 mock_subs.save.assert_called_once()
 
     @pytest.mark.asyncio
@@ -356,7 +356,7 @@ class TestASSConversion:
                     session_id="test-session"
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
                 mock_subs.save.assert_called_once()
 
     @pytest.mark.asyncio
@@ -393,7 +393,7 @@ class TestASSConversion:
                     session_id="test-session"
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_convert_with_style_preservation(self, temp_dir):
@@ -663,7 +663,7 @@ class TestTimingAdjustment:
                     session_id="test-session"
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
                 mock_load.assert_called_once()
                 # Verify shift was called
                 mock_subs.shift.assert_called_once_with(ms=5000)
@@ -696,7 +696,7 @@ class TestTimingAdjustment:
                     session_id="test-session"
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
                 mock_subs.shift.assert_called_once_with(ms=-2000)
 
     @pytest.mark.asyncio

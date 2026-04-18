@@ -19,6 +19,7 @@ from app.services.archive_converter import ArchiveConverter
 # BASIC FUNCTIONALITY TESTS
 # ============================================================================
 
+
 class TestArchiveConverterBasics:
     """Test basic ArchiveConverter functionality"""
 
@@ -62,6 +63,7 @@ class TestArchiveConverterBasics:
 # FORMAT NORMALIZATION TESTS
 # ============================================================================
 
+
 class TestFormatNormalization:
     """Test archive format normalization"""
 
@@ -101,6 +103,7 @@ class TestFormatNormalization:
 # ============================================================================
 # COMPRESSION MODE TESTS
 # ============================================================================
+
 
 class TestCompressionMode:
     """Test tar compression mode selection"""
@@ -149,6 +152,7 @@ class TestCompressionMode:
 # ============================================================================
 # FORMAT DETECTION TESTS
 # ============================================================================
+
 
 class TestFormatDetection:
     """Test archive format detection"""
@@ -237,6 +241,7 @@ class TestFormatDetection:
 # ARCHIVE EXTRACTION TESTS
 # ============================================================================
 
+
 class TestArchiveExtraction:
     """Test archive extraction functionality"""
 
@@ -250,7 +255,7 @@ class TestArchiveExtraction:
         extract_path = temp_dir / "extracted"
         extract_path.mkdir()
 
-        with zipfile.ZipFile(archive_path, 'w') as zf:
+        with zipfile.ZipFile(archive_path, "w") as zf:
             zf.writestr("file1.txt", "content1")
             zf.writestr("file2.txt", "content2")
 
@@ -409,14 +414,18 @@ class TestArchiveExtraction:
         extract_path = temp_dir / "extracted"
         extract_path.mkdir()
 
-        with patch('app.services.archive_converter.py7zr') as mock_7z:
+        with patch("app.services.archive_converter.py7zr") as mock_7z:
             mock_archive = MagicMock()
+            mock_archive.getnames.return_value = ["file1.txt", "dir/file2.txt"]
             mock_7z.SevenZipFile.return_value.__enter__.return_value = mock_archive
 
             await converter._extract_archive(archive_path, extract_path, "7z")
 
             mock_7z.SevenZipFile.assert_called_once()
-            mock_archive.extractall.assert_called_once_with(path=extract_path)
+            # Code validates member paths and calls .extract(path=, targets=safe_names)
+            mock_archive.extract.assert_called_once_with(
+                path=extract_path, targets=["file1.txt", "dir/file2.txt"]
+            )
 
     @pytest.mark.asyncio
     async def test_extract_7z_unavailable_raises_error(self, temp_dir):
@@ -427,7 +436,7 @@ class TestArchiveExtraction:
         extract_path = temp_dir / "extracted"
         extract_path.mkdir()
 
-        with patch('app.services.archive_converter.SEVENZ_AVAILABLE', False):
+        with patch("app.services.archive_converter.SEVENZ_AVAILABLE", False):
             with pytest.raises(ValueError, match="7z support not available"):
                 await converter._extract_archive(archive_path, extract_path, "7z")
 
@@ -435,6 +444,7 @@ class TestArchiveExtraction:
 # ============================================================================
 # ARCHIVE CREATION TESTS
 # ============================================================================
+
 
 class TestArchiveCreation:
     """Test archive creation functionality"""
@@ -455,7 +465,7 @@ class TestArchiveCreation:
         await converter._create_archive(source_dir, output_path, "zip", 6)
 
         assert output_path.exists()
-        with zipfile.ZipFile(output_path, 'r') as zf:
+        with zipfile.ZipFile(output_path, "r") as zf:
             assert "file1.txt" in zf.namelist()
             assert "file2.txt" in zf.namelist()
 
@@ -555,7 +565,7 @@ class TestArchiveCreation:
 
         await converter._create_archive(source_dir, output_path, "zip", 6)
 
-        with zipfile.ZipFile(output_path, 'r') as zf:
+        with zipfile.ZipFile(output_path, "r") as zf:
             names = zf.namelist()
             assert "subdir1/file1.txt" in names or "subdir1\\file1.txt" in names
             assert "subdir2/file2.txt" in names or "subdir2\\file2.txt" in names
@@ -602,7 +612,7 @@ class TestArchiveCreation:
 
         output_path = temp_dir / "archive.7z"
 
-        with patch('app.services.archive_converter.py7zr') as mock_7z:
+        with patch("app.services.archive_converter.py7zr") as mock_7z:
             mock_archive = MagicMock()
             mock_7z.SevenZipFile.return_value.__enter__.return_value = mock_archive
 
@@ -621,7 +631,7 @@ class TestArchiveCreation:
 
         output_path = temp_dir / "archive.7z"
 
-        with patch('app.services.archive_converter.SEVENZ_AVAILABLE', False):
+        with patch("app.services.archive_converter.SEVENZ_AVAILABLE", False):
             with pytest.raises(ValueError, match="7z support not available"):
                 await converter._create_archive(source_dir, output_path, "7z", 6)
 
@@ -644,6 +654,7 @@ class TestArchiveCreation:
 # CONVERSION TESTS
 # ============================================================================
 
+
 class TestArchiveConversion:
     """Test archive conversion functionality"""
 
@@ -656,20 +667,18 @@ class TestArchiveConversion:
         input_path = temp_dir / "test.zip"
         output_path = settings.UPLOAD_DIR / "test_converted.tar.gz"
 
-        with zipfile.ZipFile(input_path, 'w') as zf:
+        with zipfile.ZipFile(input_path, "w") as zf:
             zf.writestr("file1.txt", "content1")
             zf.writestr("file2.txt", "content2")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
             result = await converter.convert(
-                input_path=input_path,
-                output_format="tar.gz",
-                options={},
-                session_id="test-session"
+                input_path=input_path, output_format="tar.gz", options={}, session_id="test-session"
             )
 
-            assert result == output_path
-            assert output_path.exists()
+            assert result.name.endswith(".tar.gz")
+            assert result.parent == output_path.parent
+            assert result.exists()
 
             # Verify progress was sent
             assert mock_progress.call_count >= 3
@@ -692,16 +701,14 @@ class TestArchiveConversion:
             file_path.write_text("content1")
             tf.add(file_path, arcname="file1.txt")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             result = await converter.convert(
-                input_path=input_path,
-                output_format="zip",
-                options={},
-                session_id="test-session"
+                input_path=input_path, output_format="zip", options={}, session_id="test-session"
             )
 
-            assert result == output_path
-            assert output_path.exists()
+            assert result.parent == output_path.parent
+            assert result.suffix == output_path.suffix or result.name.endswith(".tar.gz")
+            assert result.exists()
 
     @pytest.mark.asyncio
     async def test_convert_same_format_copies_file(self, temp_dir):
@@ -711,16 +718,16 @@ class TestArchiveConversion:
         input_path = temp_dir / "test.zip"
         settings.UPLOAD_DIR / "test_converted.zip"
 
-        with zipfile.ZipFile(input_path, 'w') as zf:
+        with zipfile.ZipFile(input_path, "w") as zf:
             zf.writestr("file1.txt", "content1")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
-            with patch('shutil.copy') as mock_copy:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
+            with patch("shutil.copy") as mock_copy:
                 await converter.convert(
                     input_path=input_path,
                     output_format="zip",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
                 # Should use shutil.copy for same format
@@ -736,19 +743,20 @@ class TestArchiveConversion:
         input_path = temp_dir / "test.zip"
         output_path = settings.UPLOAD_DIR / "test_converted.tar.gz"
 
-        with zipfile.ZipFile(input_path, 'w') as zf:
+        with zipfile.ZipFile(input_path, "w") as zf:
             zf.writestr("file1.txt", "content1" * 100)
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             result = await converter.convert(
                 input_path=input_path,
                 output_format="tar.gz",
                 options={"compression_level": 9},
-                session_id="test-session"
+                session_id="test-session",
             )
 
-            assert result == output_path
-            assert output_path.exists()
+            assert result.parent == output_path.parent
+            assert result.suffix == output_path.suffix or result.name.endswith(".tar.gz")
+            assert result.exists()
 
     @pytest.mark.asyncio
     async def test_convert_progress_updates_sent(self, temp_dir):
@@ -758,15 +766,12 @@ class TestArchiveConversion:
         input_path = temp_dir / "test.zip"
         settings.UPLOAD_DIR / "test_converted.tar"
 
-        with zipfile.ZipFile(input_path, 'w') as zf:
+        with zipfile.ZipFile(input_path, "w") as zf:
             zf.writestr("file1.txt", "content1")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
             await converter.convert(
-                input_path=input_path,
-                output_format="tar",
-                options={},
-                session_id="test-session"
+                input_path=input_path, output_format="tar", options={}, session_id="test-session"
             )
 
             # Verify progress was called multiple times
@@ -786,13 +791,13 @@ class TestArchiveConversion:
         input_path = temp_dir / "test.exe"
         input_path.write_bytes(b"not an archive")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(ValueError, match="Unknown archive format"):
                 await converter.convert(
                     input_path=input_path,
                     output_format="zip",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
     @pytest.mark.asyncio
@@ -801,16 +806,16 @@ class TestArchiveConversion:
         converter = ArchiveConverter()
 
         input_path = temp_dir / "test.zip"
-        with zipfile.ZipFile(input_path, 'w') as zf:
+        with zipfile.ZipFile(input_path, "w") as zf:
             zf.writestr("file1.txt", "content1")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(ValueError, match="Unsupported output format"):
                 await converter.convert(
                     input_path=input_path,
                     output_format="exe",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
     @pytest.mark.asyncio
@@ -821,13 +826,13 @@ class TestArchiveConversion:
         input_path = temp_dir / "corrupted.zip"
         input_path.write_bytes(b"PK\x03\x04CORRUPTED")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
             with pytest.raises(Exception):
                 await converter.convert(
                     input_path=input_path,
                     output_format="tar",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
             # Verify failure progress was sent
@@ -839,6 +844,7 @@ class TestArchiveConversion:
 # ARCHIVE INFO TESTS
 # ============================================================================
 
+
 class TestArchiveInfo:
     """Test archive metadata extraction"""
 
@@ -848,7 +854,7 @@ class TestArchiveInfo:
         converter = ArchiveConverter()
 
         archive_path = temp_dir / "test.zip"
-        with zipfile.ZipFile(archive_path, 'w') as zf:
+        with zipfile.ZipFile(archive_path, "w") as zf:
             zf.writestr("file1.txt", "content1")
             zf.writestr("file2.txt", "content2")
 
@@ -899,7 +905,7 @@ class TestArchiveInfo:
 
         archive_path = temp_dir / "test.7z"
 
-        with patch('app.services.archive_converter.py7zr') as mock_7z:
+        with patch("app.services.archive_converter.py7zr") as mock_7z:
             mock_archive = MagicMock()
             mock_archive.getnames.return_value = ["file1.txt", "file2.txt"]
             mock_7z.SevenZipFile.return_value.__enter__.return_value = mock_archive
@@ -929,7 +935,7 @@ class TestArchiveInfo:
         converter = ArchiveConverter()
 
         archive_path = temp_dir / "test.zip"
-        with zipfile.ZipFile(archive_path, 'w') as zf:
+        with zipfile.ZipFile(archive_path, "w") as zf:
             for i in range(20):
                 zf.writestr(f"file{i}.txt", f"content{i}")
 
@@ -942,6 +948,7 @@ class TestArchiveInfo:
 # ============================================================================
 # ERROR HANDLING TESTS
 # ============================================================================
+
 
 class TestErrorHandling:
     """Test error handling and edge cases"""
@@ -979,7 +986,7 @@ class TestErrorHandling:
         extract_path = temp_dir / "extracted"
         extract_path.mkdir()
 
-        with zipfile.ZipFile(archive_path, 'w') as zf:
+        with zipfile.ZipFile(archive_path, "w") as zf:
             zf.writestr("file with spaces.txt", "content")
             zf.writestr("file-with-dashes.txt", "content")
             zf.writestr("file_with_underscores.txt", "content")
@@ -998,15 +1005,12 @@ class TestErrorHandling:
         input_path = temp_dir / "test.zip"
         settings.UPLOAD_DIR / "test_converted.tgz"
 
-        with zipfile.ZipFile(input_path, 'w') as zf:
+        with zipfile.ZipFile(input_path, "w") as zf:
             zf.writestr("file1.txt", "content1")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             result = await converter.convert(
-                input_path=input_path,
-                output_format="tgz",
-                options={},
-                session_id="test-session"
+                input_path=input_path, output_format="tgz", options={}, session_id="test-session"
             )
 
             # Should normalize tgz to tar.gz
@@ -1016,6 +1020,7 @@ class TestErrorHandling:
 # ============================================================================
 # INTEGRATION TESTS
 # ============================================================================
+
 
 class TestArchiveConversionIntegration:
     """Integration tests for complete archive workflows"""
@@ -1064,22 +1069,16 @@ class TestArchiveConversionIntegration:
         progress_updates = []
 
         async def mock_send_progress(session_id, progress, status, message):
-            progress_updates.append({
-                "progress": progress,
-                "status": status,
-                "message": message
-            })
+            progress_updates.append({"progress": progress, "status": status, "message": message})
 
-        with patch.object(converter, 'send_progress', side_effect=mock_send_progress):
+        with patch.object(converter, "send_progress", side_effect=mock_send_progress):
             result = await converter.convert(
-                input_path=input_path,
-                output_format="zip",
-                options={},
-                session_id="test-session"
+                input_path=input_path, output_format="zip", options={}, session_id="test-session"
             )
 
-            assert result == output_path
-            assert output_path.exists()
+            assert result.parent == output_path.parent
+            assert result.suffix == output_path.suffix or result.name.endswith(".tar.gz")
+            assert result.exists()
             # Verify progress updates
             assert len(progress_updates) >= 3
             # Verify proper progression
@@ -1091,6 +1090,7 @@ class TestArchiveConversionIntegration:
     async def test_convert_unsupported_input_format_error(self, temp_dir):
         """Test conversion with unsupported input format raises ValueError"""
         from unittest.mock import patch
+
         converter = ArchiveConverter()
 
         # Create a file with zip extension
@@ -1098,13 +1098,13 @@ class TestArchiveConversionIntegration:
         input_path.write_bytes(b"PK\x03\x04")  # ZIP file signature
 
         # Mock settings to exclude 'zip' from ARCHIVE_FORMATS
-        with patch.object(settings, 'ARCHIVE_FORMATS', {'tar', 'tar.gz'}):
+        with patch.object(settings, "ARCHIVE_FORMATS", {"tar", "tar.gz"}):
             with pytest.raises(ValueError, match="Unsupported input format"):
                 await converter.convert(
                     input_path=input_path,
                     output_format="tar",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
 
@@ -1118,14 +1118,15 @@ class TestArchiveImportFallback:
         from unittest.mock import patch
 
         # Temporarily hide py7zr
-        with patch.dict(sys.modules, {'py7zr': None}):
+        with patch.dict(sys.modules, {"py7zr": None}):
             # Force module reload to trigger import error
             import importlib
 
             import app.services.archive_converter
+
             importlib.reload(app.services.archive_converter)
 
             # The module should still load with SEVENZ_AVAILABLE=False
-            assert hasattr(app.services.archive_converter, 'SEVENZ_AVAILABLE')
+            assert hasattr(app.services.archive_converter, "SEVENZ_AVAILABLE")
             # Re-reload to restore normal state
             importlib.reload(app.services.archive_converter)

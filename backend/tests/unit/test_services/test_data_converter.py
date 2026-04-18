@@ -21,6 +21,7 @@ from app.services.data_converter import DataConverter
 # BASIC FUNCTIONALITY TESTS
 # ============================================================================
 
+
 class TestDataConverterBasics:
     """Test basic DataConverter functionality"""
 
@@ -63,6 +64,7 @@ class TestDataConverterBasics:
 # JSON CONVERSION TESTS
 # ============================================================================
 
+
 class TestJSONConversion:
     """Test JSON data conversion"""
 
@@ -75,27 +77,24 @@ class TestJSONConversion:
         json_data = [
             {"name": "Alice", "age": 30, "city": "New York"},
             {"name": "Bob", "age": 25, "city": "London"},
-            {"name": "Charlie", "age": 35, "city": "Paris"}
+            {"name": "Charlie", "age": 35, "city": "Paris"},
         ]
         input_file.write_text(json.dumps(json_data))
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify CSV content
-            df = pd.read_csv(output_file)
+            df = pd.read_csv(result)
             assert len(df) == 3
             assert "name" in df.columns
             assert "age" in df.columns
@@ -113,24 +112,21 @@ class TestJSONConversion:
         json_data = {
             "name": ["Alice", "Bob", "Charlie"],
             "age": [30, 25, 35],
-            "city": ["New York", "London", "Paris"]
+            "city": ["New York", "London", "Paris"],
         }
         input_file.write_text(json.dumps(json_data))
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            df = pd.read_csv(output_file)
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            df = pd.read_csv(result)
             assert len(df) == 3
 
     @pytest.mark.asyncio
@@ -144,18 +140,15 @@ class TestJSONConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            df = pd.read_csv(output_file)
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            df = pd.read_csv(result)
             assert len(df) == 1
 
     @pytest.mark.asyncio
@@ -164,29 +157,23 @@ class TestJSONConversion:
         converter = DataConverter()
 
         input_file = temp_dir / "test.json"
-        json_data = [
-            {"name": "Alice", "age": 30},
-            {"name": "Bob", "age": 25}
-        ]
+        json_data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
         input_file.write_text(json.dumps(json_data))
 
         output_file = settings.UPLOAD_DIR / "test_converted.xml"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="xml",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="xml", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify XML structure
-            tree = ET.parse(output_file)
+            tree = ET.parse(result)
             root = tree.getroot()
             assert root.tag == "data"
             assert len(list(root)) == 2  # 2 items
@@ -197,30 +184,25 @@ class TestJSONConversion:
         converter = DataConverter()
 
         input_file = temp_dir / "test.json"
-        json_data = [
-            {"name": "Alice", "age": 30},
-            {"name": "Bob", "age": 25}
-        ]
+        json_data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
         input_file.write_text(json.dumps(json_data))
 
         output_file = settings.UPLOAD_DIR / "test_converted.yaml"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="yaml",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="yaml", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify YAML can be parsed
             import yaml
-            with open(output_file, 'r') as f:
+
+            with open(result, "r") as f:
                 data = yaml.safe_load(f)
                 assert len(data) == 2
 
@@ -232,13 +214,13 @@ class TestJSONConversion:
         input_file = temp_dir / "test.json"
         input_file.write_text("{ invalid json }")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
             with pytest.raises(Exception):
                 await converter.convert(
                     input_path=input_file,
                     output_format="csv",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
             # Verify failure progress was sent
@@ -253,13 +235,13 @@ class TestJSONConversion:
         input_file = temp_dir / "test.json"
         input_file.write_text(json.dumps("just a string"))
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(ValueError, match="Unsupported JSON structure"):
                 await converter.convert(
                     input_path=input_file,
                     output_format="csv",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
     @pytest.mark.asyncio
@@ -274,22 +256,23 @@ class TestJSONConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
                 input_path=input_file,
                 output_format="csv",
                 options={"encoding": "utf-8"},
-                session_id="test-session"
+                session_id="test-session",
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
 
 # ============================================================================
 # CSV CONVERSION TESTS
 # ============================================================================
+
 
 class TestCSVConversion:
     """Test CSV data conversion"""
@@ -305,21 +288,18 @@ class TestCSVConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify JSON content
-            with open(output_file, 'r') as f:
+            with open(result, "r") as f:
                 data = json.load(f)
                 assert len(data) == 2
                 assert data[0]["name"] == "Alice"
@@ -335,18 +315,15 @@ class TestCSVConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.xml"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="xml",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="xml", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
     @pytest.mark.asyncio
     async def test_csv_with_custom_delimiter(self, temp_dir):
@@ -359,20 +336,20 @@ class TestCSVConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
                 input_path=input_file,
                 output_format="json",
                 options={"delimiter": ";"},
-                session_id="test-session"
+                session_id="test-session",
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
             # Verify data was parsed correctly with custom delimiter
-            with open(output_file, 'r') as f:
+            with open(result, "r") as f:
                 data = json.load(f)
                 assert len(data) == 2
                 assert data[0]["name"] == "Alice"
@@ -383,28 +360,25 @@ class TestCSVConversion:
         converter = DataConverter()
 
         input_file = temp_dir / "test.json"
-        json_data = [
-            {"name": "Alice", "age": 30},
-            {"name": "Bob", "age": 25}
-        ]
+        json_data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
         input_file.write_text(json.dumps(json_data))
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
                 input_path=input_file,
                 output_format="csv",
                 options={"delimiter": ";"},
-                session_id="test-session"
+                session_id="test-session",
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
             # Verify delimiter in output
-            content = output_file.read_text()
+            content = result.read_text()
             assert ";" in content
 
     @pytest.mark.asyncio
@@ -418,17 +392,17 @@ class TestCSVConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
                 input_path=input_file,
                 output_format="json",
                 options={"encoding": "utf-8"},
-                session_id="test-session"
+                session_id="test-session",
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_csv_malformed_handling(self, temp_dir):
@@ -442,23 +416,21 @@ class TestCSVConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             # Should still convert (pandas handles this)
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
 
 # ============================================================================
 # XML CONVERSION TESTS
 # ============================================================================
+
 
 class TestXMLConversion:
     """Test XML data conversion"""
@@ -484,21 +456,18 @@ class TestXMLConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify JSON content
-            with open(output_file, 'r') as f:
+            with open(result, "r") as f:
                 data = json.load(f)
                 assert len(data) == 2
 
@@ -523,20 +492,17 @@ class TestXMLConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
             # Verify CSV content
-            df = pd.read_csv(output_file)
+            df = pd.read_csv(result)
             assert len(df) == 2
 
     @pytest.mark.asyncio
@@ -561,17 +527,14 @@ class TestXMLConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_xml_malformed_raises_error(self, temp_dir):
@@ -586,19 +549,20 @@ class TestXMLConversion:
     <item>"""  # Missing closing tag
         input_file.write_text(xml_content)
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(Exception):
                 await converter.convert(
                     input_path=input_file,
                     output_format="json",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
 
 # ============================================================================
 # YAML CONVERSION TESTS
 # ============================================================================
+
 
 class TestYAMLConversion:
     """Test YAML data conversion"""
@@ -621,20 +585,17 @@ class TestYAMLConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
             # Verify JSON content
-            with open(output_file, 'r') as f:
+            with open(result, "r") as f:
                 data = json.load(f)
                 assert len(data) == 2
 
@@ -654,20 +615,17 @@ class TestYAMLConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
             # Verify CSV content
-            df = pd.read_csv(output_file)
+            df = pd.read_csv(result)
             assert len(df) == 2
 
     @pytest.mark.asyncio
@@ -684,17 +642,14 @@ class TestYAMLConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_yaml_malformed_handling(self, temp_dir):
@@ -708,19 +663,20 @@ invalid: [unclosed
 """
         input_file.write_text(yaml_content)
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(Exception):
                 await converter.convert(
                     input_path=input_file,
                     output_format="json",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
 
 # ============================================================================
 # FORMAT SUPPORT TESTS
 # ============================================================================
+
 
 class TestFormatSupport:
     """Test format support and validation"""
@@ -768,13 +724,13 @@ class TestFormatSupport:
         input_file = temp_dir / "test.txt"
         input_file.write_text("some text")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(ValueError, match="Unsupported conversion"):
                 await converter.convert(
                     input_path=input_file,
                     output_format="json",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
     @pytest.mark.asyncio
@@ -785,19 +741,20 @@ class TestFormatSupport:
         input_file = temp_dir / "test.json"
         input_file.write_text(json.dumps([{"name": "Alice"}]))
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(ValueError, match="Unsupported conversion"):
                 await converter.convert(
                     input_path=input_file,
                     output_format="txt",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
 
 # ============================================================================
 # PROGRESS UPDATE TESTS
 # ============================================================================
+
 
 class TestProgressUpdates:
     """Test progress tracking during conversion"""
@@ -813,14 +770,11 @@ class TestProgressUpdates:
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
             # Verify progress calls
@@ -849,15 +803,12 @@ class TestProgressUpdates:
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             session_id = "unique-session-123"
             await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id=session_id
+                input_path=input_file, output_format="csv", options={}, session_id=session_id
             )
 
             # Verify session ID is passed to all progress calls
@@ -872,13 +823,13 @@ class TestProgressUpdates:
         input_file = temp_dir / "test.json"
         input_file.write_text("{ invalid json }")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
             with pytest.raises(Exception):
                 await converter.convert(
                     input_path=input_file,
                     output_format="csv",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
             # Verify final progress shows failure
@@ -896,14 +847,11 @@ class TestProgressUpdates:
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
             # Extract progress percentages
@@ -915,12 +863,13 @@ class TestProgressUpdates:
 
             # Verify no decrease
             for i in range(1, len(percentages)):
-                assert percentages[i] >= percentages[i-1]
+                assert percentages[i] >= percentages[i - 1]
 
 
 # ============================================================================
 # EDGE CASES AND ERROR HANDLING
 # ============================================================================
+
 
 class TestEdgeCases:
     """Test edge cases and error handling"""
@@ -935,18 +884,15 @@ class TestEdgeCases:
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            df = pd.read_csv(output_file)
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            df = pd.read_csv(result)
             assert len(df) == 0
 
     @pytest.mark.asyncio
@@ -955,25 +901,19 @@ class TestEdgeCases:
         converter = DataConverter()
 
         input_file = temp_dir / "test.json"
-        json_data = [
-            {"name": "Alice", "age": None},
-            {"name": None, "age": 25}
-        ]
+        json_data = [{"name": "Alice", "age": None}, {"name": None, "age": 25}]
         input_file.write_text(json.dumps(json_data))
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_csv_empty_file(self, temp_dir):
@@ -985,7 +925,7 @@ class TestEdgeCases:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             # Empty file should raise error
@@ -994,7 +934,7 @@ class TestEdgeCases:
                     input_path=input_file,
                     output_format="json",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
     @pytest.mark.asyncio
@@ -1008,20 +948,20 @@ class TestEdgeCases:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
                 input_path=input_file,
                 output_format="json",
                 options={"pretty": True},
-                session_id="test-session"
+                session_id="test-session",
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
             # Verify pretty formatting
-            content = output_file.read_text()
+            content = result.read_text()
             assert "\n" in content  # Pretty print includes newlines
 
     @pytest.mark.asyncio
@@ -1035,17 +975,17 @@ class TestEdgeCases:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
                 input_path=input_file,
                 output_format="json",
                 options={"pretty": False},
-                session_id="test-session"
+                session_id="test-session",
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_xml_to_yaml_conversion(self, temp_dir):
@@ -1064,18 +1004,15 @@ class TestEdgeCases:
 
         output_file = settings.UPLOAD_DIR / "test_converted.yaml"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="yaml",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="yaml", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
     @pytest.mark.asyncio
     async def test_output_path_generation(self, temp_dir):
@@ -1086,18 +1023,15 @@ class TestEdgeCases:
         json_data = [{"name": "Alice"}]
         input_file.write_text(json.dumps(json_data))
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            # Output should have _converted suffix and correct extension
-            assert result.stem == "my_data_converted"
+            # Output stem is "<input_stem>_<uuid-prefix>", extension matches target format
+            assert result.stem.startswith("my_data_")
             assert result.suffix == ".csv"
 
     @pytest.mark.asyncio
@@ -1111,18 +1045,15 @@ class TestEdgeCases:
 
         output_file = settings.UPLOAD_DIR / "test_converted.yaml"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="yaml",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="yaml", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
     @pytest.mark.asyncio
     async def test_json_with_unicode_characters(self, temp_dir):
@@ -1133,23 +1064,23 @@ class TestEdgeCases:
         json_data = [
             {"name": "José", "city": "São Paulo"},
             {"name": "François", "city": "Paris"},
-            {"name": "Müller", "city": "Berlin"}
+            {"name": "Müller", "city": "Berlin"},
         ]
         input_file.write_text(json.dumps(json_data, ensure_ascii=False), encoding="utf-8")
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
                 input_path=input_file,
                 output_format="csv",
                 options={"encoding": "utf-8"},
-                session_id="test-session"
+                session_id="test-session",
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
 
 # ============================================================================
@@ -1159,6 +1090,7 @@ class TestEdgeCases:
 # ============================================================================
 # TOML CONVERSION TESTS
 # ============================================================================
+
 
 class TestTOMLConversion:
     """Test TOML data conversion"""
@@ -1179,21 +1111,18 @@ city = "New York"
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify JSON content
-            with open(output_file, 'r') as f:
+            with open(result, "r") as f:
                 data = json.load(f)
                 assert len(data) == 1
                 assert data[0]["title"] == "TOML Example"
@@ -1212,18 +1141,15 @@ age = 30
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            df = pd.read_csv(output_file)
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            df = pd.read_csv(result)
             assert len(df) == 1
 
     @pytest.mark.asyncio
@@ -1237,21 +1163,18 @@ age = 30
 
         output_file = settings.UPLOAD_DIR / "test_converted.toml"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="toml",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="toml", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify TOML can be parsed
-            data = toml.load(output_file)
+            data = toml.load(result)
             assert data["name"] == "Alice"
 
     @pytest.mark.asyncio
@@ -1262,7 +1185,7 @@ age = 30
         input_file = temp_dir / "test.json"
         input_file.write_text(json.dumps([]))
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
             with pytest.raises(ValueError, match="Cannot convert empty DataFrame to TOML"):
@@ -1270,13 +1193,14 @@ age = 30
                     input_path=input_file,
                     output_format="toml",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
 
 # ============================================================================
 # INI CONVERSION TESTS
 # ============================================================================
+
 
 class TestINIConversion:
     """Test INI data conversion"""
@@ -1300,21 +1224,18 @@ port = 6379
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify JSON content
-            with open(output_file, 'r') as f:
+            with open(result, "r") as f:
                 data = json.load(f)
                 assert len(data) == 2
                 assert data[0]["section"] == "database"
@@ -1337,18 +1258,15 @@ port = 9090
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            df = pd.read_csv(output_file)
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            df = pd.read_csv(result)
             assert len(df) == 2
 
     @pytest.mark.asyncio
@@ -1359,28 +1277,25 @@ port = 9090
         input_file = temp_dir / "test.json"
         json_data = [
             {"section": "database", "host": "localhost", "port": "5432"},
-            {"section": "cache", "host": "redis", "port": "6379"}
+            {"section": "cache", "host": "redis", "port": "6379"},
         ]
         input_file.write_text(json.dumps(json_data))
 
         output_file = settings.UPLOAD_DIR / "test_converted.ini"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="ini",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="ini", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify INI can be parsed
             config = configparser.ConfigParser()
-            config.read(output_file)
+            config.read(result)
             assert "database" in config.sections()
             assert config["database"]["host"] == "localhost"
 
@@ -1388,6 +1303,7 @@ port = 9090
 # ============================================================================
 # JSONL CONVERSION TESTS
 # ============================================================================
+
 
 class TestJSONLConversion:
     """Test JSONL (JSON Lines) data conversion"""
@@ -1406,21 +1322,18 @@ class TestJSONLConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify JSON content
-            with open(output_file, 'r') as f:
+            with open(result, "r") as f:
                 data = json.load(f)
                 assert len(data) == 3
                 assert data[0]["name"] == "Alice"
@@ -1438,18 +1351,15 @@ class TestJSONLConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.csv"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="csv",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="csv", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            df = pd.read_csv(output_file)
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            df = pd.read_csv(result)
             assert len(df) == 2
 
     @pytest.mark.asyncio
@@ -1458,29 +1368,23 @@ class TestJSONLConversion:
         converter = DataConverter()
 
         input_file = temp_dir / "test.json"
-        json_data = [
-            {"name": "Alice", "age": 30},
-            {"name": "Bob", "age": 25}
-        ]
+        json_data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
         input_file.write_text(json.dumps(json_data))
 
         output_file = settings.UPLOAD_DIR / "test_converted.jsonl"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="jsonl",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="jsonl", options={}, session_id="test-session"
             )
 
-            assert result == output_file
-            assert output_file.exists()
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
+            assert result.exists()
 
             # Verify JSONL format (one JSON object per line)
-            lines = output_file.read_text().strip().split('\n')
+            lines = result.read_text().strip().split("\n")
             assert len(lines) == 2
             first_obj = json.loads(lines[0])
             assert first_obj["name"] == "Alice"
@@ -1500,20 +1404,17 @@ class TestJSONLConversion:
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
             # Verify only non-empty lines were parsed
-            with open(output_file, 'r') as f:
+            with open(result, "r") as f:
                 data = json.load(f)
                 assert len(data) == 2
 
@@ -1521,6 +1422,7 @@ class TestJSONLConversion:
 # ============================================================================
 # METADATA EXTRACTION TESTS
 # ============================================================================
+
 
 class TestGetDataInfo:
     """Test get_data_info metadata extraction"""
@@ -1607,7 +1509,7 @@ class TestGetDataInfo:
         xml_file.write_text(xml_content)
 
         # Mock DEFUSEDXML_AVAILABLE as False - XML parsing should be disabled for security
-        with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
+        with patch("app.services.data_converter.DEFUSEDXML_AVAILABLE", False):
             info = await converter.get_data_info(xml_file)
 
             # Should return error since XML parsing is disabled without defusedxml
@@ -1644,6 +1546,7 @@ class TestGetDataInfo:
 # DEFUSEDXML FALLBACK TESTS
 # ============================================================================
 
+
 class TestDefusedXMLFallback:
     """Test XML parsing is disabled when defusedxml is not available (security)"""
 
@@ -1662,15 +1565,15 @@ class TestDefusedXMLFallback:
 </data>"""
         input_file.write_text(xml_content)
 
-        with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
-            with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch("app.services.data_converter.DEFUSEDXML_AVAILABLE", False):
+            with patch.object(converter, "send_progress", new=AsyncMock()):
                 # Should raise ValueError because XML parsing is disabled for security
                 with pytest.raises(ValueError) as exc_info:
                     await converter.convert(
                         input_path=input_file,
                         output_format="json",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                 assert "defusedxml" in str(exc_info.value).lower()
@@ -1688,6 +1591,7 @@ class TestDefusedXMLFallback:
         # If defusedxml is available, it should be True, otherwise False
         try:
             import defusedxml
+
             assert dc.DEFUSEDXML_AVAILABLE is True
         except ImportError:
             assert dc.DEFUSEDXML_AVAILABLE is False
@@ -1696,6 +1600,7 @@ class TestDefusedXMLFallback:
 # ============================================================================
 # ADDITIONAL EDGE CASES
 # ============================================================================
+
 
 class TestAdditionalEdgeCases:
     """Test additional edge cases for better coverage"""
@@ -1715,20 +1620,17 @@ city: New York
 
         output_file = settings.UPLOAD_DIR / "test_converted.json"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             result = await converter.convert(
-                input_path=input_file,
-                output_format="json",
-                options={},
-                session_id="test-session"
+                input_path=input_file, output_format="json", options={}, session_id="test-session"
             )
 
-            assert result == output_file
+            assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
             # Verify data was converted correctly
-            with open(output_file, 'r') as f:
+            with open(result, "r") as f:
                 data = json.load(f)
                 assert len(data) == 1
                 assert data[0]["name"] == "Alice"
@@ -1742,7 +1644,7 @@ city: New York
         yaml_content = "just a string"
         input_file.write_text(yaml_content)
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
             with pytest.raises(ValueError, match="Unsupported YAML structure"):
@@ -1750,7 +1652,7 @@ city: New York
                     input_path=input_file,
                     output_format="json",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
     @pytest.mark.asyncio
@@ -1763,18 +1665,17 @@ city: New York
         input_file.write_text(toml_content)
 
         # Mock toml.load to return non-dict (though unlikely in practice)
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-            with patch('toml.load', return_value="not a dict"):
+            with patch("toml.load", return_value="not a dict"):
                 with pytest.raises(ValueError, match="Unsupported TOML structure"):
                     await converter.convert(
                         input_path=input_file,
                         output_format="json",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
-
 
     @pytest.mark.asyncio
     async def test_xml_parsing_fallback_when_defusedxml_unavailable(self, temp_dir):
@@ -1790,18 +1691,18 @@ city: New York
 </root>"""
         input_file.write_text(xml_content)
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
             # Temporarily disable defusedxml
-            with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
+            with patch("app.services.data_converter.DEFUSEDXML_AVAILABLE", False):
                 # Should raise ValueError because XML parsing is disabled for security
                 with pytest.raises(ValueError) as exc_info:
                     await converter.convert(
                         input_path=input_file,
                         output_format="json",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                 assert "defusedxml" in str(exc_info.value).lower()
@@ -1816,15 +1717,16 @@ class TestDataImportFallback:
         from unittest.mock import patch
 
         # Temporarily hide defusedxml
-        with patch.dict(sys.modules, {'defusedxml': None, 'defusedxml.ElementTree': None}):
+        with patch.dict(sys.modules, {"defusedxml": None, "defusedxml.ElementTree": None}):
             # Force module reload to trigger import error
             import importlib
 
             import app.services.data_converter
+
             importlib.reload(app.services.data_converter)
 
             # The module should still load with DEFUSEDXML_AVAILABLE=False
-            assert hasattr(app.services.data_converter, 'DEFUSEDXML_AVAILABLE')
+            assert hasattr(app.services.data_converter, "DEFUSEDXML_AVAILABLE")
             # Re-reload to restore normal state
             importlib.reload(app.services.data_converter)
 
@@ -1846,7 +1748,7 @@ class TestDataEdgeCases:
 </root>"""
         input_file.write_text(xml_content)
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
             # Create a mock parser that supports entity attribute and SetParamEntityParsing
@@ -1857,15 +1759,15 @@ class TestDataEdgeCases:
             mock_parser.parser = mock_inner_parser
 
             # Temporarily disable defusedxml - XML parsing should be blocked for security
-            with patch('app.services.data_converter.DEFUSEDXML_AVAILABLE', False):
-                with patch('xml.etree.ElementTree.XMLParser', return_value=mock_parser):
+            with patch("app.services.data_converter.DEFUSEDXML_AVAILABLE", False):
+                with patch("xml.etree.ElementTree.XMLParser", return_value=mock_parser):
                     # Should raise ValueError because XML parsing is disabled for security
                     with pytest.raises(ValueError) as exc_info:
                         await converter.convert(
                             input_path=input_file,
                             output_format="json",
                             options={},
-                            session_id="test-session"
+                            session_id="test-session",
                         )
 
                     assert "defusedxml" in str(exc_info.value).lower()
@@ -1879,19 +1781,19 @@ class TestDataEdgeCases:
         # but the format isn't handled in the if/elif chain
         converter.supported_formats = {
             "input": ["csv", "json", "xml", "yaml", "yml", "toml", "ini", "jsonl", "xyz"],
-            "output": ["csv", "json"]
+            "output": ["csv", "json"],
         }
 
         input_file = temp_dir / "test.xyz"
         input_file.write_text("test data")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(ValueError, match="Unsupported input format: xyz"):
                 await converter.convert(
                     input_path=input_file,
                     output_format="csv",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
     @pytest.mark.asyncio
@@ -1903,21 +1805,20 @@ class TestDataEdgeCases:
         # but the format isn't handled in the output if/elif chain
         converter.supported_formats = {
             "input": ["json"],
-            "output": ["csv", "json", "xml", "yaml", "yml", "toml", "ini", "jsonl", "xyz"]
+            "output": ["csv", "json", "xml", "yaml", "yml", "toml", "ini", "jsonl", "xyz"],
         }
 
         input_file = temp_dir / "test.json"
         input_file.write_text(json.dumps([{"name": "Alice"}]))
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(ValueError, match="Unsupported output format: xyz"):
                 await converter.convert(
                     input_path=input_file,
                     output_format="xyz",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
-
 
 
 @pytest.fixture

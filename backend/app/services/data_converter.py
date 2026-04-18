@@ -75,7 +75,7 @@ class DataConverter(BaseConverter):
             raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
+        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
 
         # Get options
         encoding = options.get("encoding", "utf-8")
@@ -271,11 +271,11 @@ class DataConverter(BaseConverter):
         """Convert DataFrame to simple XML"""
         root = ET.Element("data")
 
-        for _, row in df.iterrows():
+        for record in df.to_dict("records"):
             item = ET.SubElement(root, "item")
-            for col in df.columns:
+            for col, value in record.items():
                 field = ET.SubElement(item, str(col))
-                field.text = str(row[col])
+                field.text = str(value)
 
         tree = ET.ElementTree(root)
         tree.write(output_path, encoding=encoding, xml_declaration=True)

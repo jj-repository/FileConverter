@@ -16,6 +16,7 @@ from app.services.ebook_converter import EbookConverter
 # BASIC FUNCTIONALITY TESTS
 # ============================================================================
 
+
 class TestEbookConverterBasics:
     """Test basic EbookConverter functionality"""
 
@@ -58,6 +59,7 @@ class TestEbookConverterBasics:
 # EPUB CREATION TESTS (Convert to EPUB)
 # ============================================================================
 
+
 class TestEpubCreation:
     """Test EPUB creation from other formats"""
 
@@ -71,8 +73,8 @@ class TestEpubCreation:
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
-            with patch('ebooklib.epub.write_epub') as mock_write:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
+            with patch("ebooklib.epub.write_epub") as mock_write:
                 # Create fake output file
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
@@ -81,11 +83,10 @@ class TestEpubCreation:
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
-                assert output_file.exists()
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
                 # Verify progress was sent
                 assert mock_progress.call_count >= 4
@@ -103,8 +104,8 @@ class TestEpubCreation:
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
-            with patch('ebooklib.epub.write_epub') as mock_write:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
+            with patch("ebooklib.epub.write_epub") as mock_write:
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -112,11 +113,10 @@ class TestEpubCreation:
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
-                assert output_file.exists()
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
                 assert mock_progress.call_count >= 4
                 mock_write.assert_called_once()
 
@@ -130,28 +130,27 @@ class TestEpubCreation:
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.EpubBook') as mock_book_class:
-                with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.EpubBook") as mock_book_class:
+                with patch("ebooklib.epub.write_epub"):
                     mock_book = MagicMock()
                     mock_book_class.return_value = mock_book
 
                     output_file.parent.mkdir(parents=True, exist_ok=True)
                     output_file.write_bytes(b"fake epub")
 
-                    options = {
-                        "title": "Test Book",
-                        "author": "Test Author"
-                    }
+                    options = {"title": "Test Book", "author": "Test Author"}
 
                     result = await converter.convert(
                         input_path=input_file,
                         output_format="epub",
                         options=options,
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
-                    assert result == output_file
+                    assert (
+                        result.suffix == output_file.suffix and result.parent == output_file.parent
+                    )
                     # Verify book methods were called
                     mock_book.set_identifier.assert_called_once()
                     # Default title from filename if options not used
@@ -171,8 +170,8 @@ class TestEpubCreation:
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.write_epub"):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -182,11 +181,10 @@ class TestEpubCreation:
                     input_path=input_file,
                     output_format="epub",
                     options=options,
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
-                assert output_file.exists()
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_convert_to_epub_progress_updates(self, temp_dir):
@@ -198,8 +196,8 @@ class TestEpubCreation:
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
+            with patch("ebooklib.epub.write_epub"):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -207,10 +205,10 @@ class TestEpubCreation:
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
                 # Verify progress messages
                 progress_calls = mock_progress.call_args_list
@@ -229,6 +227,7 @@ class TestEpubCreation:
 # EPUB EXTRACTION TESTS (Convert from EPUB)
 # ============================================================================
 
+
 class TestEpubExtraction:
     """Test EPUB extraction to other formats"""
 
@@ -243,13 +242,15 @@ class TestEpubExtraction:
 
         output_file = settings.UPLOAD_DIR / "test_converted.txt"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.read_epub") as mock_read:
                 # Mock EPUB book
                 mock_book = MagicMock()
                 mock_book.get_metadata.return_value = [("Title", "")]
                 mock_items = [
-                    MagicMock(get_type=lambda: 9, get_content=lambda: b"<html><p>Content</p></html>")
+                    MagicMock(
+                        get_type=lambda: 9, get_content=lambda: b"<html><p>Content</p></html>"
+                    )
                 ]
                 mock_book.get_items.return_value = mock_items
                 mock_read.return_value = mock_book
@@ -260,11 +261,10 @@ class TestEpubExtraction:
                     input_path=input_file,
                     output_format="txt",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
-                assert output_file.exists()
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_convert_epub_to_html_success(self, temp_dir):
@@ -276,12 +276,15 @@ class TestEpubExtraction:
 
         output_file = settings.UPLOAD_DIR / "test_converted.html"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.read_epub") as mock_read:
                 mock_book = MagicMock()
                 mock_book.get_metadata.return_value = [("Title", "")]
                 mock_items = [
-                    MagicMock(get_type=lambda: 9, get_content=lambda: b"<html><body><p>Content</p></body></html>")
+                    MagicMock(
+                        get_type=lambda: 9,
+                        get_content=lambda: b"<html><body><p>Content</p></body></html>",
+                    )
                 ]
                 mock_book.get_items.return_value = mock_items
                 mock_read.return_value = mock_book
@@ -292,11 +295,10 @@ class TestEpubExtraction:
                     input_path=input_file,
                     output_format="html",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
-                assert output_file.exists()
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_convert_epub_to_pdf_success(self, temp_dir):
@@ -308,12 +310,14 @@ class TestEpubExtraction:
 
         output_file = settings.UPLOAD_DIR / "test_converted.pdf"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.read_epub") as mock_read:
                 mock_book = MagicMock()
                 mock_book.get_metadata.return_value = [("Title", "")]
                 mock_items = [
-                    MagicMock(get_type=lambda: 9, get_content=lambda: b"<html><p>Content</p></html>")
+                    MagicMock(
+                        get_type=lambda: 9, get_content=lambda: b"<html><p>Content</p></html>"
+                    )
                 ]
                 mock_book.get_items.return_value = mock_items
                 mock_read.return_value = mock_book
@@ -326,11 +330,10 @@ class TestEpubExtraction:
                     input_path=input_file,
                     output_format="pdf",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
-                assert output_file.exists()
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_convert_epub_preserves_metadata(self, temp_dir):
@@ -342,17 +345,19 @@ class TestEpubExtraction:
 
         output_file = settings.UPLOAD_DIR / "test_converted.txt"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.read_epub") as mock_read:
                 mock_book = MagicMock()
                 # Mock metadata
                 mock_book.get_metadata.side_effect = lambda dc, field: {
-                    'title': [("Test Book", "")],
-                    'creator': [("Test Author", "")]
+                    "title": [("Test Book", "")],
+                    "creator": [("Test Author", "")],
                 }.get(field, [])
 
                 mock_items = [
-                    MagicMock(get_type=lambda: 9, get_content=lambda: b"<html><p>Book content</p></html>")
+                    MagicMock(
+                        get_type=lambda: 9, get_content=lambda: b"<html><p>Book content</p></html>"
+                    )
                 ]
                 mock_book.get_items.return_value = mock_items
                 mock_read.return_value = mock_book
@@ -363,18 +368,19 @@ class TestEpubExtraction:
                     input_path=input_file,
                     output_format="txt",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
                 # Check metadata is in output
-                content = output_file.read_text()
+                content = result.read_text()
                 assert "Title:" in content or "Author:" in content or len(content) > 0
 
 
 # ============================================================================
 # FORMAT SUPPORT TESTS
 # ============================================================================
+
 
 class TestFormatSupport:
     """Test format support detection"""
@@ -423,6 +429,7 @@ class TestFormatSupport:
 # METADATA HANDLING TESTS
 # ============================================================================
 
+
 class TestMetadataHandling:
     """Test metadata extraction and handling"""
 
@@ -434,18 +441,18 @@ class TestMetadataHandling:
         test_file = temp_dir / "test.epub"
         test_file.write_bytes(b"fake epub")
 
-        with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch("ebooklib.epub.read_epub") as mock_read:
             mock_book = MagicMock()
             mock_book.get_metadata.side_effect = lambda dc, field: {
-                'title': [("Test Book Title", "")],
-                'creator': [("Test Author Name", "")],
-                'language': [("en", "")]
+                "title": [("Test Book Title", "")],
+                "creator": [("Test Author Name", "")],
+                "language": [("en", "")],
             }.get(field, [])
 
             mock_items = [
                 MagicMock(get_type=lambda: 9),
                 MagicMock(get_type=lambda: 9),
-                MagicMock(get_type=lambda: 9)
+                MagicMock(get_type=lambda: 9),
             ]
             mock_book.get_items.return_value = mock_items
             mock_read.return_value = mock_book
@@ -471,7 +478,7 @@ class TestMetadataHandling:
         test_file = temp_dir / "test.epub"
         test_file.write_bytes(b"fake epub")
 
-        with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch("ebooklib.epub.read_epub") as mock_read:
             mock_book = MagicMock()
             mock_book.get_metadata.return_value = []  # No metadata
 
@@ -494,10 +501,10 @@ class TestMetadataHandling:
         test_file = temp_dir / "test.epub"
         test_file.write_bytes(b"fake epub")
 
-        with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch("ebooklib.epub.read_epub") as mock_read:
             mock_book = MagicMock()
             mock_book.get_metadata.side_effect = lambda dc, field: {
-                'title': [("Book", "")],
+                "title": [("Book", "")],
             }.get(field, [])
 
             mock_items = [MagicMock(get_type=lambda: 9)]
@@ -518,9 +525,9 @@ class TestMetadataHandling:
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.EpubBook') as mock_book_class:
-                with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.EpubBook") as mock_book_class:
+                with patch("ebooklib.epub.write_epub"):
                     mock_book = MagicMock()
                     mock_book_class.return_value = mock_book
 
@@ -531,18 +538,19 @@ class TestMetadataHandling:
                         input_path=input_file,
                         output_format="epub",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
                     # Verify metadata was set
                     mock_book.set_identifier.assert_called_once()
                     mock_book.set_title.assert_called()
-                    mock_book.set_language.assert_called_with('en')
+                    mock_book.set_language.assert_called_with("en")
 
 
 # ============================================================================
 # ERROR HANDLING TESTS
 # ============================================================================
+
 
 class TestErrorHandling:
     """Test error handling and edge cases"""
@@ -555,14 +563,14 @@ class TestErrorHandling:
         input_file = temp_dir / "corrupted.epub"
         input_file.write_bytes(b"not really an epub")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.read_epub', side_effect=Exception("Bad EPUB file")):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.read_epub", side_effect=Exception("Bad EPUB file")):
                 with pytest.raises(Exception):
                     await converter.convert(
                         input_path=input_file,
                         output_format="txt",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
     @pytest.mark.asyncio
@@ -573,13 +581,13 @@ class TestErrorHandling:
         input_file = temp_dir / "test.exe"
         input_file.write_text("not ebook")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(ValueError, match="Conversion from"):
                 await converter.convert(
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
     @pytest.mark.asyncio
@@ -595,8 +603,8 @@ class TestErrorHandling:
         # Reference non-existent cover image
         options = {"cover_image": "/path/to/nonexistent/cover.jpg"}
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.write_epub"):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -605,10 +613,10 @@ class TestErrorHandling:
                     input_path=input_file,
                     output_format="epub",
                     options=options,
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_convert_unsupported_input_format(self, temp_dir):
@@ -618,13 +626,13 @@ class TestErrorHandling:
         input_file = temp_dir / "test.doc"
         input_file.write_bytes(b"old doc format")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(ValueError, match="Conversion from"):
                 await converter.convert(
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
     @pytest.mark.asyncio
@@ -635,13 +643,13 @@ class TestErrorHandling:
         input_file = temp_dir / "test.txt"
         input_file.write_text("Test content")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             with pytest.raises(ValueError, match="Unsupported"):
                 await converter.convert(
                     input_path=input_file,
                     output_format="docx",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
     @pytest.mark.asyncio
@@ -652,14 +660,14 @@ class TestErrorHandling:
         input_file = temp_dir / "test.epub"
         input_file.write_bytes(b"fake epub")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.read_epub', side_effect=Exception("Cannot read EPUB")):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.read_epub", side_effect=Exception("Cannot read EPUB")):
                 with pytest.raises(Exception, match="Cannot read EPUB"):
                     await converter.convert(
                         input_path=input_file,
                         output_format="txt",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
 
     @pytest.mark.asyncio
@@ -669,12 +677,12 @@ class TestErrorHandling:
 
         input_file = temp_dir / "test.txt"
         # Write with some bytes that might cause encoding issues
-        input_file.write_bytes(b'\x80\x81\x82\x83')
+        input_file.write_bytes(b"\x80\x81\x82\x83")
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.write_epub"):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
 
                 # Should handle gracefully or raise appropriate error
@@ -683,7 +691,7 @@ class TestErrorHandling:
                         input_path=input_file,
                         output_format="epub",
                         options={},
-                        session_id="test-session"
+                        session_id="test-session",
                     )
                 except (UnicodeDecodeError, Exception):
                     # Either raises or handles - both acceptable
@@ -697,7 +705,7 @@ class TestErrorHandling:
         test_file = temp_dir / "corrupted.epub"
         test_file.write_bytes(b"not really epub")
 
-        with patch('ebooklib.epub.read_epub', side_effect=Exception("Bad EPUB")):
+        with patch("ebooklib.epub.read_epub", side_effect=Exception("Bad EPUB")):
             info = await converter.get_info(test_file)
 
             # Should return basic info without crashing
@@ -713,6 +721,7 @@ class TestErrorHandling:
 # PROGRESS TRACKING TESTS
 # ============================================================================
 
+
 class TestProgressTracking:
     """Test progress tracking during conversion"""
 
@@ -726,8 +735,8 @@ class TestProgressTracking:
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
+            with patch("ebooklib.epub.write_epub"):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -735,7 +744,7 @@ class TestProgressTracking:
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
                 # Verify progress calls
@@ -757,13 +766,15 @@ class TestProgressTracking:
 
         output_file = settings.UPLOAD_DIR / "test_converted.txt"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()) as mock_progress:
-            with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch.object(converter, "send_progress", new=AsyncMock()) as mock_progress:
+            with patch("ebooklib.epub.read_epub") as mock_read:
                 mock_book = MagicMock()
                 mock_book.get_metadata.return_value = []
                 mock_items = [
-                    MagicMock(get_type=lambda: 9, get_content=lambda: b"<html><p>Content</p></html>"),
-                    MagicMock(get_type=lambda: 9, get_content=lambda: b"<html><p>More</p></html>")
+                    MagicMock(
+                        get_type=lambda: 9, get_content=lambda: b"<html><p>Content</p></html>"
+                    ),
+                    MagicMock(get_type=lambda: 9, get_content=lambda: b"<html><p>More</p></html>"),
                 ]
                 mock_book.get_items.return_value = mock_items
                 mock_read.return_value = mock_book
@@ -774,7 +785,7 @@ class TestProgressTracking:
                     input_path=input_file,
                     output_format="txt",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
                 # Verify progress updates
@@ -785,6 +796,7 @@ class TestProgressTracking:
 # ============================================================================
 # OUTPUT FILE GENERATION TESTS
 # ============================================================================
+
 
 class TestOutputFileGeneration:
     """Test output file generation and naming"""
@@ -797,8 +809,8 @@ class TestOutputFileGeneration:
         input_file = temp_dir / "mybook.txt"
         input_file.write_text("Content")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.write_epub"):
                 output_dir = settings.UPLOAD_DIR
                 output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -806,11 +818,12 @@ class TestOutputFileGeneration:
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                # Check output filename format
-                assert result.name == "mybook_converted.epub"
+                # Output filename is "<input_stem>_<uuid-prefix>.<format>"
+                assert result.stem.startswith("mybook_")
+                assert result.suffix == ".epub"
                 assert result.parent == output_dir
 
     @pytest.mark.asyncio
@@ -821,8 +834,8 @@ class TestOutputFileGeneration:
         input_file = temp_dir / "test.txt"
         input_file.write_text("Content")
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.write_epub"):
                 output_dir = settings.UPLOAD_DIR
                 output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -830,7 +843,7 @@ class TestOutputFileGeneration:
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
                 assert result.parent == output_dir
@@ -841,6 +854,7 @@ class TestOutputFileGeneration:
 # SPECIAL CHARACTER AND ENCODING TESTS
 # ============================================================================
 
+
 class TestSpecialCharactersAndEncoding:
     """Test handling of special characters and various encodings"""
 
@@ -850,12 +864,12 @@ class TestSpecialCharactersAndEncoding:
         converter = EbookConverter()
 
         input_file = temp_dir / "test.txt"
-        input_file.write_text("Unicode test: 你好世界 🎉 naïve café", encoding='utf-8')
+        input_file.write_text("Unicode test: 你好世界 🎉 naïve café", encoding="utf-8")
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.write_epub"):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -863,10 +877,10 @@ class TestSpecialCharactersAndEncoding:
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_epub_to_txt_preserves_special_chars(self, temp_dir):
@@ -878,15 +892,13 @@ class TestSpecialCharactersAndEncoding:
 
         output_file = settings.UPLOAD_DIR / "test_converted.txt"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.read_epub") as mock_read:
                 mock_book = MagicMock()
                 mock_book.get_metadata.return_value = []
                 # Content with special chars
-                html_content = "<html><p>Unicode: 你好 🎉</p></html>".encode('utf-8')
-                mock_items = [
-                    MagicMock(get_type=lambda: 9, get_content=lambda: html_content)
-                ]
+                html_content = "<html><p>Unicode: 你好 🎉</p></html>".encode("utf-8")
+                mock_items = [MagicMock(get_type=lambda: 9, get_content=lambda: html_content)]
                 mock_book.get_items.return_value = mock_items
                 mock_read.return_value = mock_book
 
@@ -896,16 +908,16 @@ class TestSpecialCharactersAndEncoding:
                     input_path=input_file,
                     output_format="txt",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
-                assert output_file.exists()
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
 
 # ============================================================================
 # COMPLEX CONVERSION SCENARIOS
 # ============================================================================
+
 
 class TestComplexScenarios:
     """Test complex conversion scenarios"""
@@ -920,20 +932,29 @@ class TestComplexScenarios:
 
         output_file = settings.UPLOAD_DIR / "multibook_converted.txt"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.read_epub") as mock_read:
                 mock_book = MagicMock()
                 mock_book.get_metadata.side_effect = lambda dc, field: {
-                    'title': [("Multi-Chapter Book", "")],
-                    'creator': [("Multiple Authors", "")]
+                    "title": [("Multi-Chapter Book", "")],
+                    "creator": [("Multiple Authors", "")],
                 }.get(field, [])
 
                 # Multiple items/chapters
                 mock_items = [
-                    MagicMock(get_type=lambda: 9, get_content=lambda: b"<html><h1>Chapter 1</h1><p>Content 1</p></html>"),
-                    MagicMock(get_type=lambda: 9, get_content=lambda: b"<html><h1>Chapter 2</h1><p>Content 2</p></html>"),
-                    MagicMock(get_type=lambda: 9, get_content=lambda: b"<html><h1>Chapter 3</h1><p>Content 3</p></html>"),
-                    MagicMock(get_type=lambda: 0)  # Non-HTML item
+                    MagicMock(
+                        get_type=lambda: 9,
+                        get_content=lambda: b"<html><h1>Chapter 1</h1><p>Content 1</p></html>",
+                    ),
+                    MagicMock(
+                        get_type=lambda: 9,
+                        get_content=lambda: b"<html><h1>Chapter 2</h1><p>Content 2</p></html>",
+                    ),
+                    MagicMock(
+                        get_type=lambda: 9,
+                        get_content=lambda: b"<html><h1>Chapter 3</h1><p>Content 3</p></html>",
+                    ),
+                    MagicMock(get_type=lambda: 0),  # Non-HTML item
                 ]
                 mock_book.get_items.return_value = mock_items
                 mock_read.return_value = mock_book
@@ -944,11 +965,10 @@ class TestComplexScenarios:
                     input_path=input_file,
                     output_format="txt",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
-                assert output_file.exists()
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_convert_long_text_file_to_epub(self, temp_dir):
@@ -962,8 +982,8 @@ class TestComplexScenarios:
 
         output_file = settings.UPLOAD_DIR / "longbook_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.write_epub"):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -971,16 +991,16 @@ class TestComplexScenarios:
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
-                assert output_file.exists()
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
 
 # ============================================================================
 # OPTIONS AND PARAMETERS TESTS
 # ============================================================================
+
 
 class TestOptionsAndParameters:
     """Test handling of conversion options and parameters"""
@@ -995,8 +1015,8 @@ class TestOptionsAndParameters:
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.write_epub"):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -1004,10 +1024,10 @@ class TestOptionsAndParameters:
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_convert_with_custom_options(self, temp_dir):
@@ -1019,23 +1039,19 @@ class TestOptionsAndParameters:
 
         output_file = settings.UPLOAD_DIR / "test_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.write_epub"):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
                 result = await converter.convert(
                     input_path=input_file,
                     output_format="epub",
-                    options={
-                        "title": "Custom Title",
-                        "author": "Custom Author",
-                        "language": "fr"
-                    },
-                    session_id="test-session"
+                    options={"title": "Custom Title", "author": "Custom Author", "language": "fr"},
+                    session_id="test-session",
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
     @pytest.mark.asyncio
     async def test_html_to_epub_preserves_structure(self, temp_dir):
@@ -1059,8 +1075,8 @@ class TestOptionsAndParameters:
 
         output_file = settings.UPLOAD_DIR / "structured_converted.epub"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.write_epub'):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.write_epub"):
                 output_file.parent.mkdir(parents=True, exist_ok=True)
                 output_file.write_bytes(b"fake epub")
 
@@ -1068,10 +1084,10 @@ class TestOptionsAndParameters:
                     input_path=input_file,
                     output_format="epub",
                     options={},
-                    session_id="test-session"
+                    session_id="test-session",
                 )
 
-                assert result == output_file
+                assert result.suffix == output_file.suffix and result.parent == output_file.parent
 
 
 class TestEbookEdgeCases:
@@ -1100,14 +1116,14 @@ class TestEbookEdgeCases:
         mock_book.get_items.return_value = [mock_item]
         mock_book.get_metadata.return_value = []  # No title/author
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             await converter._epub_to_txt(mock_book, output_file, "test-session")
 
             assert output_file.exists()
             # Verify script and style tags were removed
             content = output_file.read_text()
-            assert 'alert' not in content
-            assert '.test' not in content
+            assert "alert" not in content
+            assert ".test" not in content
 
     @pytest.mark.asyncio
     async def test_epub_to_html_handles_missing_body_tag(self, temp_dir):
@@ -1126,13 +1142,13 @@ class TestEbookEdgeCases:
         mock_book.get_items.return_value = [mock_item]
         mock_book.get_metadata.return_value = []  # No title/author
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
+        with patch.object(converter, "send_progress", new=AsyncMock()):
             await converter._epub_to_html(mock_book, output_file, "test-session")
 
             assert output_file.exists()
             # Verify the HTML content was included despite missing body tag
             content = output_file.read_text()
-            assert 'Direct content without body' in content
+            assert "Direct content without body" in content
 
     @pytest.mark.asyncio
     async def test_epub_to_pdf_handles_paragraph_errors(self, temp_dir):
@@ -1152,20 +1168,22 @@ class TestEbookEdgeCases:
         mock_book.get_items.return_value = [mock_item]
         mock_book.get_metadata.return_value = []
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('app.services.ebook_converter.SimpleDocTemplate') as mock_doc_class:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("app.services.ebook_converter.SimpleDocTemplate") as mock_doc_class:
                 # Make Paragraph raise exception to test error handling
-                with patch('app.services.ebook_converter.Paragraph') as mock_paragraph_class:
+                with patch("app.services.ebook_converter.Paragraph") as mock_paragraph_class:
                     mock_paragraph_class.side_effect = Exception("Paragraph rendering error")
-                    with patch('app.services.ebook_converter.Spacer', return_value=MagicMock()):
-                        with patch('app.services.ebook_converter.getSampleStyleSheet') as mock_styles:
+                    with patch("app.services.ebook_converter.Spacer", return_value=MagicMock()):
+                        with patch(
+                            "app.services.ebook_converter.getSampleStyleSheet"
+                        ) as mock_styles:
                             mock_styles.return_value = {
-                                'Title': MagicMock(),
-                                'Heading2': MagicMock(),
-                                'BodyText': MagicMock()
+                                "Title": MagicMock(),
+                                "Heading2": MagicMock(),
+                                "BodyText": MagicMock(),
                             }
 
-                            with patch('app.services.ebook_converter.logger') as mock_logger:
+                            with patch("app.services.ebook_converter.logger") as mock_logger:
                                 mock_doc_instance = MagicMock()
                                 mock_doc_class.return_value = mock_doc_instance
 
@@ -1200,15 +1218,17 @@ class TestEbookEdgeCases:
         mock_book.get_items.return_value = [mock_item]
         mock_book.get_metadata.return_value = []
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('app.services.ebook_converter.SimpleDocTemplate') as mock_doc_class:
-                with patch('app.services.ebook_converter.Paragraph', return_value=MagicMock()):
-                    with patch('app.services.ebook_converter.Spacer', return_value=MagicMock()):
-                        with patch('app.services.ebook_converter.getSampleStyleSheet') as mock_styles:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("app.services.ebook_converter.SimpleDocTemplate") as mock_doc_class:
+                with patch("app.services.ebook_converter.Paragraph", return_value=MagicMock()):
+                    with patch("app.services.ebook_converter.Spacer", return_value=MagicMock()):
+                        with patch(
+                            "app.services.ebook_converter.getSampleStyleSheet"
+                        ) as mock_styles:
                             mock_styles.return_value = {
-                                'Title': MagicMock(),
-                                'Heading2': MagicMock(),
-                                'BodyText': MagicMock()
+                                "Title": MagicMock(),
+                                "Heading2": MagicMock(),
+                                "BodyText": MagicMock(),
                             }
 
                             mock_doc_instance = MagicMock()
@@ -1229,8 +1249,8 @@ class TestEbookEdgeCases:
 
         output_file = settings.UPLOAD_DIR / "test_converted.xyz"
 
-        with patch.object(converter, 'send_progress', new=AsyncMock()):
-            with patch('ebooklib.epub.read_epub') as mock_read:
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            with patch("ebooklib.epub.read_epub") as mock_read:
                 mock_book = MagicMock()
                 mock_read.return_value = mock_book
 
@@ -1239,7 +1259,7 @@ class TestEbookEdgeCases:
                         input_file,
                         output_file,
                         "xyz",  # Unsupported format
-                        "test-session"
+                        "test-session",
                     )
 
 
@@ -1281,7 +1301,7 @@ class TestBleachXSSVectors:
         assert "<object" not in out.lower()
 
     def test_preserves_safe_html(self):
-        out = self._sanitize('<p><strong>bold</strong> <em>italic</em></p>')
+        out = self._sanitize("<p><strong>bold</strong> <em>italic</em></p>")
         assert "<p>" in out
         assert "<strong>" in out
         assert "<em>" in out

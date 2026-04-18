@@ -449,11 +449,11 @@ ipcMain.handle('show-item-in-folder', async (event, filePath) => {
   try {
     const realPath = fs.realpathSync(filePath);
 
-    // Validate path is within expected directories
+    // Validate path is within expected directories (use path.relative to avoid prefix-confusion)
     const homePath = require('os').homedir();
     const appPath = app.getPath('userData');
     const downloadsPath = app.getPath('downloads');
-    if (!realPath.startsWith(homePath) && !realPath.startsWith(appPath) && !realPath.startsWith(downloadsPath)) {
+    if (!isPathInAllowedRoots(realPath, [homePath, appPath, downloadsPath])) {
       return { success: false, error: 'Access denied: path outside allowed directories' };
     }
 

@@ -63,24 +63,15 @@ class SpreadsheetConverter(BaseConverter):
         Returns:
             Path to converted spreadsheet
         """
-        await self.send_progress(
-            session_id, 0, "converting", "Starting spreadsheet conversion"
-        )
+        await self.send_progress(session_id, 0, "converting", "Starting spreadsheet conversion")
 
         # Validate format
         input_format = input_path.suffix.lower().lstrip(".")
-        if not self.validate_format(
-            input_format, output_format, self.supported_formats
-        ):
-            raise ValueError(
-                f"Unsupported conversion: {input_format} to {output_format}"
-            )
+        if not self.validate_format(input_format, output_format, self.supported_formats):
+            raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
-        output_path = (
-            settings.UPLOAD_DIR
-            / f"{input_path.stem}_{uuid.uuid4().hex}.{output_format}"
-        )
+        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
 
         # Get options
         sheet_name = options.get("sheet_name")
@@ -88,9 +79,7 @@ class SpreadsheetConverter(BaseConverter):
         encoding = options.get("encoding", "utf-8")
         delimiter = options.get("delimiter")
 
-        await self.send_progress(
-            session_id, 20, "converting", "Reading input spreadsheet"
-        )
+        await self.send_progress(session_id, 20, "converting", "Reading input spreadsheet")
 
         try:
             # Read input file (wrap pandas I/O in thread pool)
@@ -116,9 +105,7 @@ class SpreadsheetConverter(BaseConverter):
             else:
                 raise ValueError(f"Unsupported input format: {input_format}")
 
-            await self.send_progress(
-                session_id, 60, "converting", "Converting spreadsheet format"
-            )
+            await self.send_progress(session_id, 60, "converting", "Converting spreadsheet format")
 
             # Write output file (wrap pandas I/O in thread pool)
             if output_format in ["xlsx", "xls"]:
@@ -129,9 +116,7 @@ class SpreadsheetConverter(BaseConverter):
                     raise ValueError(
                         "XLS output not supported. Use XLSX instead. (XLS reading is supported)"
                     )
-                await asyncio.to_thread(
-                    df.to_excel, output_path, index=False, engine="openpyxl"
-                )
+                await asyncio.to_thread(df.to_excel, output_path, index=False, engine="openpyxl")
             elif output_format == "ods":
                 if not ODF_AVAILABLE:
                     raise ValueError("ODS support not available. Install odfpy.")
@@ -161,14 +146,10 @@ class SpreadsheetConverter(BaseConverter):
             return output_path
 
         except Exception as e:
-            await self.send_progress(
-                session_id, 0, "failed", f"Conversion failed: {str(e)}"
-            )
+            await self.send_progress(session_id, 0, "failed", f"Conversion failed: {str(e)}")
             raise
 
-    async def _read_excel(
-        self, file_path: Path, sheet_name: str = None
-    ) -> pd.DataFrame:
+    async def _read_excel(self, file_path: Path, sheet_name: str = None) -> pd.DataFrame:
         """Read Excel file (XLSX or XLS)"""
         if sheet_name:
             return await asyncio.to_thread(
@@ -251,9 +232,9 @@ class SpreadsheetConverter(BaseConverter):
         table.addElement(header_row)
 
         # Add data rows
-        for _, row in df.iterrows():
+        for values in df.itertuples(index=False, name=None):
             table_row = TableRow()
-            for value in row:
+            for value in values:
                 cell = TableCell()
                 p = P(text=str(value) if pd.notna(value) else "")
                 cell.addElement(p)
@@ -296,9 +277,7 @@ class SpreadsheetConverter(BaseConverter):
                     doc = await asyncio.to_thread(opendocument.load, str(file_path))
                     sheets = doc.spreadsheet.getElementsByType(Table)
                     info["sheets"] = len(sheets)
-                    info["sheet_names"] = [
-                        sheet.getAttribute("name") for sheet in sheets
-                    ]
+                    info["sheet_names"] = [sheet.getAttribute("name") for sheet in sheets]
 
                     if sheets:
                         rows = sheets[0].getElementsByType(TableRow)

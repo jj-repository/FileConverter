@@ -189,6 +189,16 @@ function createAppMenu() {
         },
         { type: 'separator' },
         {
+          label: 'Open Logs Folder',
+          click: () => {
+            const logDir = path.join(app.getPath('userData'), 'logs');
+            try {
+              fs.mkdirSync(logDir, { recursive: true });
+            } catch (_) { /* ignore */ }
+            shell.openPath(logDir);
+          }
+        },
+        {
           label: 'View on GitHub',
           click: () => shell.openExternal(`https://github.com/${GITHUB_REPO}`)
         },
@@ -291,16 +301,18 @@ function createWindow() {
 
 async function startBackend() {
   try {
-    backendManager = new BackendManager(isDev);
+    const logDir = path.join(app.getPath('userData'), 'logs');
+    backendManager = new BackendManager(isDev, logDir);
     await backendManager.start();
     console.log('Backend server started successfully');
   } catch (error) {
     console.error('Failed to start backend:', error);
     // Show error dialog
     const { dialog } = require('electron');
+    const logDir = path.join(app.getPath('userData'), 'logs');
     dialog.showErrorBox(
       'Backend Error',
-      `Failed to start the backend server:\n${error.message}\n\nThe application will continue, but file conversion may not work.`
+      `Failed to start the backend server:\n${error.message}\n\nThe application will continue, but file conversion may not work.\n\nLogs: ${logDir}`
     );
   }
 }

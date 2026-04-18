@@ -1,7 +1,6 @@
 import { useState, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TabNavigation } from './components/Layout/TabNavigation';
-import { LanguageSelector } from './components/Common/LanguageSelector';
 import { ToastProvider } from './components/Common/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import { FileType } from './types/conversion';
@@ -105,7 +104,6 @@ function App() {
                 FileConverter
               </h1>
               <div className="flex-1 flex justify-end items-center gap-3">
-                <LanguageSelector />
                 {window.electron?.checkForUpdates && (
                   <button
                     onClick={() => window.electron?.checkForUpdates()}

@@ -4,11 +4,28 @@ const fs = require('fs');
 const net = require('net');
 
 class BackendManager {
-  constructor(isDev = false) {
+  constructor(isDev = false, logDir = null) {
     this.isDev = isDev;
     this.process = null;
     this.port = 8000;
     this.isReady = false;
+    this.logDir = logDir;
+    this.logStream = null;
+    if (logDir) {
+      try {
+        fs.mkdirSync(logDir, { recursive: true });
+        this.logStream = fs.createWriteStream(path.join(logDir, 'backend.log'), { flags: 'a' });
+        this.logStream.write(`\n--- session start ${new Date().toISOString()} ---\n`);
+      } catch (e) {
+        console.error(`Failed to open log file: ${e.message}`);
+      }
+    }
+  }
+
+  writeLog(line) {
+    if (this.logStream) {
+      try { this.logStream.write(line.endsWith('\n') ? line : line + '\n'); } catch (_) { /* ignore */ }
+    }
   }
 
   /**
@@ -141,8 +158,13 @@ class BackendManager {
         '--host', '127.0.0.1',  // Bind to localhost only for security
         '--port', this.port.toString()
       ];
+      if (this.logDir) {
+        args.push('--log-dir', this.logDir);
+      }
 
-      console.log(`Executing: ${backendExecutable} ${args.join(' ')}`);
+      const startMsg = `Executing: ${backendExecutable} ${args.join(' ')}`;
+      console.log(startMsg);
+      this.writeLog(`[electron] ${startMsg}`);
 
       this.process = spawn(backendExecutable, args, {
         env: {
@@ -185,17 +207,23 @@ class BackendManager {
 
     // Handle stdout
     this.process.stdout.on('data', (data) => {
-      console.log(`[Backend] ${data.toString().trim()}`);
+      const text = data.toString().trim();
+      console.log(`[Backend] ${text}`);
+      this.writeLog(`[backend-stdout] ${text}`);
     });
 
     // Handle stderr
     this.process.stderr.on('data', (data) => {
-      console.error(`[Backend Error] ${data.toString().trim()}`);
+      const text = data.toString().trim();
+      console.error(`[Backend Error] ${text}`);
+      this.writeLog(`[backend-stderr] ${text}`);
     });
 
     // Handle process exit
     this.process.on('exit', (code, signal) => {
-      console.log(`Backend process exited with code ${code} and signal ${signal}`);
+      const msg = `Backend process exited with code ${code} and signal ${signal}`;
+      console.log(msg);
+      this.writeLog(`[electron] ${msg}`);
       this.process = null;
       this.isReady = false;
     });

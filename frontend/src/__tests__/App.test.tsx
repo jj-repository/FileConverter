@@ -23,10 +23,6 @@ vi.mock('../components/Layout/TabNavigation', () => ({
   ),
 }));
 
-vi.mock('../components/Common/LanguageSelector', () => ({
-  LanguageSelector: () => <div data-testid="language-selector">Language Selector</div>,
-}));
-
 // Mock all lazy-loaded converters
 vi.mock('../components/Converter/ImageConverter', () => ({
   ImageConverter: () => <div data-testid="image-converter">Image Converter</div>,
@@ -95,14 +91,6 @@ describe('App', () => {
 
       expect(title).toBeInTheDocument();
       expect(title.tagName).toBe('H1');
-    });
-
-    it('should render LanguageSelector in header', () => {
-      render(<App />);
-      const languageSelector = screen.getByTestId('language-selector');
-
-      expect(languageSelector).toBeInTheDocument();
-      expect(languageSelector).toHaveTextContent('Language Selector');
     });
 
     it('should render TabNavigation component', () => {
@@ -431,16 +419,11 @@ describe('App', () => {
       expect(title).toHaveClass('text-5xl', 'font-bold', 'text-gray-900', 'text-center');
     });
 
-    it('should have flex layout for header with LanguageSelector on right', () => {
+    it('should have flex layout for header', () => {
       const { container } = render(<App />);
       const headerFlex = container.querySelector('.flex.justify-between.items-start');
 
       expect(headerFlex).toBeInTheDocument();
-
-      const languageSelector = screen.getByTestId('language-selector');
-      const languageSelectorWrapper = languageSelector.closest('.flex-1.flex.justify-end');
-
-      expect(languageSelectorWrapper).toBeInTheDocument();
     });
   });
 

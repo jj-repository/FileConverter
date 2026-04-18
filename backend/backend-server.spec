@@ -38,6 +38,8 @@ a = Analysis(
         'pydantic', 'pydantic_settings', 'pydantic_core',
         'pydantic.deprecated', 'pydantic.deprecated.decorator',
         'fastapi', 'starlette',
+        *collect_submodules('fastapi'),
+        *collect_submodules('starlette'),
         *collect_submodules('app'),
     ],
     hookspath=[],

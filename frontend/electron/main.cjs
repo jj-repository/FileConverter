@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const BackendManager = require('./backend-manager.cjs');
+const { runUpdate } = require('./update-manager.cjs');
 const {
   DOWNLOAD_MAX_BYTES,
   isPathInAllowedRoots,
@@ -64,102 +65,37 @@ function versionNewer(latest, current) {
   return false;
 }
 
-// Check for updates
+// Check + apply update via full auto-update flow (download + SHA256 verify + relaunch)
 function checkForUpdates(silent = false) {
-  const options = {
-    hostname: 'api.github.com',
-    path: `/repos/${GITHUB_REPO}/releases/latest`,
-    method: 'GET',
-    headers: {
-      'User-Agent': `FileConverter/${APP_VERSION}`
-    }
-  };
+  runUpdate({ silent, parentWindow: mainWindow });
+}
 
-  const req = https.request(options, (res) => {
-    let data = '';
-    res.on('data', chunk => data += chunk);
-    res.on('end', () => {
-      req.setTimeout(0); // Clear timeout on successful response
-      try {
-        const release = JSON.parse(data);
-        const latestVersion = (release.tag_name || '').replace(/^v/, '');
-
-        if (!latestVersion) {
-          if (!silent && mainWindow) {
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: 'Update Check',
-              message: 'Could not determine latest version.',
-              buttons: ['OK']
-            });
-          }
-          return;
-        }
-
-        if (versionNewer(latestVersion, APP_VERSION)) {
-          if (mainWindow) {
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: 'Update Available',
-              message: `A new version is available!\n\nCurrent: v${APP_VERSION}\nLatest: v${latestVersion}`,
-              detail: release.body || 'No release notes available.',
-              buttons: ['Download Update', 'Later'],
-              defaultId: 0
-            }).then(result => {
-              if (result.response === 0) {
-                shell.openExternal(GITHUB_RELEASES_URL);
-              }
-            });
-          }
-        } else if (!silent && mainWindow) {
-          dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'No Updates',
-            message: `You are running the latest version (v${APP_VERSION}).`,
-            buttons: ['OK']
-          });
-        }
-      } catch (e) {
-        if (!silent && mainWindow) {
-          dialog.showMessageBox(mainWindow, {
-            type: 'error',
-            title: 'Update Check Failed',
-            message: 'Failed to check for updates.',
-            detail: e.message,
-            buttons: ['OK']
-          });
-        }
-      }
-    });
+function showAboutDialog() {
+  if (!mainWindow) return;
+  const aboutWindow = new BrowserWindow({
+    width: 360,
+    height: 360,
+    parent: mainWindow,
+    modal: true,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    title: 'About FileConverter',
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      devTools: false,
+    },
   });
+  aboutWindow.setMenu(null);
 
-  req.on('error', (e) => {
-    if (!silent && mainWindow) {
-      dialog.showMessageBox(mainWindow, {
-        type: 'error',
-        title: 'Update Check Failed',
-        message: 'Failed to check for updates.',
-        detail: e.message,
-        buttons: ['OK']
-      });
-    }
-  });
-
-  // Add timeout to prevent hanging requests
-  req.setTimeout(10000, () => {
-    req.destroy();
-    if (!silent && mainWindow) {
-      dialog.showMessageBox(mainWindow, {
-        type: 'error',
-        title: 'Update Check Failed',
-        message: 'Failed to check for updates.',
-        detail: 'Request timed out after 10 seconds.',
-        buttons: ['OK']
-      });
-    }
-  });
-
-  req.end();
+  const aboutHtml = path.join(__dirname, 'about.html');
+  const mascotFile = path.join(__dirname, 'takodachi.webp');
+  const mascotUrl = 'file://' + mascotFile.replace(/\\/g, '/');
+  const qs = `?v=${encodeURIComponent(APP_VERSION)}&mascot=${encodeURIComponent(mascotUrl)}`;
+  aboutWindow.loadFile(aboutHtml, { search: qs });
 }
 
 // Create application menu with update options
@@ -204,17 +140,7 @@ function createAppMenu() {
         },
         {
           label: 'About FileConverter',
-          click: () => {
-            if (mainWindow) {
-              dialog.showMessageBox(mainWindow, {
-                type: 'info',
-                title: 'About FileConverter',
-                message: `FileConverter v${APP_VERSION}`,
-                detail: 'A desktop file conversion application.\n\nBuilt with Electron and Python.',
-                buttons: ['OK']
-              });
-            }
-          }
+          click: () => showAboutDialog(),
         }
       ]
     }

@@ -78,10 +78,19 @@ jobs:
         if: runner.os == 'Windows'
         run: Set-MpPreference -DisableRealtimeMonitoring $true
 
+      - name: Cache PyInstaller build directory (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: backend/build
+          key: pyinstaller-win-${{ hashFiles('backend/requirements.txt', 'backend/backend-server.spec', 'backend/app/**/*.py') }}
+          restore-keys: |
+            pyinstaller-win-
+
       - name: Build backend with PyInstaller (Windows)
         if: runner.os == 'Windows'
         working-directory: backend
-        timeout-minutes: 30
+        timeout-minutes: 45
         run: |
           .\venv\Scripts\Activate.ps1
           pyinstaller backend-server.spec --log-level INFO

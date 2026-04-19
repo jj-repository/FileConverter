@@ -81,7 +81,7 @@ jobs:
       - name: Build backend with PyInstaller (Windows)
         if: runner.os == 'Windows'
         working-directory: backend
-        timeout-minutes: 60
+        timeout-minutes: 30
         run: |
           .\venv\Scripts\Activate.ps1
           pyinstaller backend-server.spec --log-level INFO

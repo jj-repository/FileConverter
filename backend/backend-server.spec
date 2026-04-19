@@ -2,80 +2,25 @@
 """
 PyInstaller spec for the FileConverter backend.
 
-The set of third-party packages to bundle is derived from requirements.txt —
-not hand-maintained here. For each declared distribution we resolve its
-top-level import names via importlib.metadata, then run collect_submodules
-and collect_data_files on each. This keeps the frozen bundle in sync with
-the declared runtime dependencies automatically; adding a dep to
-requirements.txt is sufficient.
+Correctness is enforced by the --smoke-test step in CI (see run_server.py
+and .github/workflows/build-release.yml): after PyInstaller produces the
+frozen exe, the CI runs `backend-server --smoke-test`, which imports
+app.main. Any ImportError fails the build before it reaches a user.
+
+That smoke test lets this spec stay minimal. We only run collect_submodules
+on packages known to use dynamic/re-exported imports (web stack, ebook
+tooling). Heavy packages like pandas/PIL/lxml are handled by PyInstaller's
+built-in hooks, so we don't pay for walking them ourselves — doing so blew
+the Windows 60-minute step budget.
 """
 
 import os
-import re
-from importlib.metadata import PackageNotFoundError, distribution
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 HERE = os.getcwd()
-REQ_FILE = os.path.join(HERE, 'requirements.txt')
 
-
-def parse_requirements(path):
-    name_re = re.compile(r'^\s*([A-Za-z0-9_.\-]+)')
-    with open(path, encoding='utf-8') as f:
-        for line in f:
-            line = line.split('#', 1)[0].strip()
-            if not line or line.startswith('-'):
-                continue
-            m = name_re.match(line)
-            if m:
-                yield m.group(1)
-
-
-def top_level_packages(dist_name):
-    """Return top-level import names for an installed distribution."""
-    try:
-        dist = distribution(dist_name)
-    except PackageNotFoundError:
-        print(f"[spec] not installed, skipping: {dist_name}")
-        return []
-
-    tl = dist.read_text('top_level.txt')
-    if tl:
-        return [n.strip() for n in tl.splitlines()
-                if n.strip() and not n.startswith('_')]
-
-    names = set()
-    for f in dist.files or []:
-        parts = f.parts
-        if not parts:
-            continue
-        head = parts[0]
-        if head.endswith(('.dist-info', '.egg-info')):
-            continue
-        names.add(head[:-3] if head.endswith('.py') else head)
-    return sorted(n for n in names if not n.startswith('_'))
-
-
-hidden = []
-datas_from_deps = []
-seen = set()
-for dist_name in parse_requirements(REQ_FILE):
-    for pkg in top_level_packages(dist_name):
-        if pkg in seen:
-            continue
-        seen.add(pkg)
-        try:
-            hidden += collect_submodules(pkg)
-        except Exception as e:
-            print(f"[spec] collect_submodules({pkg!r}) failed: {e}")
-        try:
-            datas_from_deps += collect_data_files(pkg)
-        except Exception as e:
-            print(f"[spec] collect_data_files({pkg!r}) failed: {e}")
-
-hidden += collect_submodules('app')
-
+# Bundle our own package sources and any JSON config they ship.
 app_datas = []
 app_dir = os.path.join(HERE, 'app')
 for root, dirs, files in os.walk(app_dir):
@@ -89,13 +34,54 @@ for root, dirs, files in os.walk(app_dir):
 
 static_dirs = [('app/static', 'app/static')]
 
+# Packages with dynamic or re-exported imports PyInstaller's static
+# analyzer misses. Expand only if smoke-test surfaces a new ModuleNotFound.
+SUBMODULE_PACKAGES = [
+    'fastapi', 'starlette', 'slowapi', 'uvicorn',
+    'pydantic', 'pydantic_settings', 'pydantic_core',
+    'websockets',
+    'ebooklib',
+]
+
+# Packages that ship non-Python data files (templates, fonts, schemas)
+# which must land next to their code in the frozen tree.
+DATA_PACKAGES = [
+    'openpyxl', 'reportlab', 'ebooklib', 'odf',
+]
+
+collected_hidden = []
+for pkg in SUBMODULE_PACKAGES:
+    try:
+        collected_hidden += collect_submodules(pkg)
+    except Exception as e:
+        print(f"[spec] collect_submodules({pkg!r}) failed: {e}")
+
+collected_datas = []
+for pkg in DATA_PACKAGES:
+    try:
+        collected_datas += collect_data_files(pkg)
+    except Exception as e:
+        print(f"[spec] collect_data_files({pkg!r}) failed: {e}")
+
 
 a = Analysis(
     ['run_server.py'],
     pathex=[HERE],
     binaries=[],
-    datas=app_datas + static_dirs + datas_from_deps,
-    hiddenimports=hidden,
+    datas=app_datas + static_dirs + collected_datas,
+    hiddenimports=[
+        'aiofiles', 'multipart', 'python_multipart',
+        'bleach', 'bs4', 'markdown',
+        'py7zr', 'pypdf', 'pypandoc',
+        'docx', 'ebooklib',
+        'pysubs2', 'ffmpeg',
+        'PIL', 'pillow_heif',
+        'pandas', 'openpyxl', 'odf',
+        'reportlab', 'fontTools', 'brotli',
+        'yaml', 'toml', 'defusedxml', 'magic', 'lxml',
+        *collected_hidden,
+        *collect_submodules('app'),
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

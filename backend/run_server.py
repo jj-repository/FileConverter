@@ -48,10 +48,12 @@ def main():
     if "--smoke-test" in argv:
         # Import-only check used by the build pipeline to verify the frozen
         # bundle contains every module the app touches at startup. Exits 0
-        # on success, non-zero with traceback on any ImportError.
+        # on success, non-zero with traceback on any ImportError. Prints are
+        # flushed so CI logs show progress even if a later import hangs.
+        print("smoke-test: importing app.main", flush=True)
         import app.main  # noqa: F401
 
-        print("smoke-test: imports OK")
+        print("smoke-test: imports OK", flush=True)
         return
 
     port = int(parse_arg(argv, "--port") or 8000)

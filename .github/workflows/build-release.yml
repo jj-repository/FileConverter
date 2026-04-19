@@ -72,6 +72,7 @@ jobs:
       - name: Smoke-test frozen backend (Linux)
         if: runner.os == 'Linux'
         working-directory: backend
+        timeout-minutes: 3
         run: ./dist/backend-server/backend-server --smoke-test
 
       - name: Disable Windows Defender real-time monitoring (speeds up PyInstaller)
@@ -98,6 +99,7 @@ jobs:
       - name: Smoke-test frozen backend (Windows)
         if: runner.os == 'Windows'
         working-directory: backend
+        timeout-minutes: 3
         run: .\dist\backend-server\backend-server.exe --smoke-test
 
       - name: Download FFmpeg and Pandoc (Linux)

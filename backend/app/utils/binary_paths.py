@@ -2,6 +2,7 @@
 Utility to detect and return paths to bundled binaries (FFmpeg, Pandoc).
 Falls back to system binaries if bundled ones are not found.
 """
+
 import platform
 import shutil
 import sys
@@ -19,7 +20,7 @@ def get_bundled_binary_path(binary_name: str) -> str:
         Path to the binary (bundled if available, system otherwise)
     """
     # Determine if running in a packaged environment
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, "frozen", False):
         # Running in PyInstaller bundle
         base_path = Path(sys._MEIPASS)
     else:
@@ -68,3 +69,8 @@ def get_ffprobe_path() -> str:
 def get_pandoc_path() -> str:
     """Get the path to pandoc binary."""
     return get_bundled_binary_path("pandoc")
+
+
+def get_typst_path() -> str:
+    """Get the path to typst binary (used by pandoc as --pdf-engine)."""
+    return get_bundled_binary_path("typst")

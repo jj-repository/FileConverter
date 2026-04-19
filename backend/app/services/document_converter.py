@@ -114,9 +114,30 @@ class DocumentConverter(BaseConverter):
         if output_format == "html":
             cmd.append("--standalone")
 
-        # PDF engine
+        # PDF engine: ship typst alongside pandoc (~30MB single binary); no TeX
+        # toolchain required. Pandoc's default typst template references
+        # main/sans/mono font variables and errors if they're unset. Pick
+        # fonts that are baseline-installed on each OS.
         if output_format == "pdf":
-            cmd.extend(["--pdf-engine=pdflatex"])
+            if sys.platform == "win32":
+                main_font, sans_font, mono_font = "Arial", "Arial", "Consolas"
+            elif sys.platform == "darwin":
+                main_font, sans_font, mono_font = "Helvetica", "Helvetica", "Menlo"
+            else:
+                main_font = "DejaVu Serif"
+                sans_font = "DejaVu Sans"
+                mono_font = "DejaVu Sans Mono"
+            cmd.extend(
+                [
+                    f"--pdf-engine={settings.TYPST_PATH}",
+                    "-V",
+                    f"mainfont={main_font}",
+                    "-V",
+                    f"sansfont={sans_font}",
+                    "-V",
+                    f"monofont={mono_font}",
+                ]
+            )
 
         await self.send_progress(session_id, 20, "converting", "Converting document with Pandoc")
 

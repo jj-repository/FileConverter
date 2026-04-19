@@ -6,7 +6,12 @@ from typing import Set
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.utils.binary_paths import get_ffmpeg_path, get_ffprobe_path, get_pandoc_path
+from app.utils.binary_paths import (
+    get_ffmpeg_path,
+    get_ffprobe_path,
+    get_pandoc_path,
+    get_typst_path,
+)
 
 # Configure logger for config warnings
 _config_logger = logging.getLogger(__name__)
@@ -63,6 +68,7 @@ class Settings(BaseSettings):
     FFMPEG_PATH: str = ""
     FFPROBE_PATH: str = ""
     PANDOC_PATH: str = ""
+    TYPST_PATH: str = ""
 
     # Supported formats
     IMAGE_FORMATS: Set[str] = {
@@ -254,3 +260,4 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 settings.FFMPEG_PATH = get_ffmpeg_path()
 settings.FFPROBE_PATH = get_ffprobe_path()
 settings.PANDOC_PATH = get_pandoc_path()
+settings.TYPST_PATH = get_typst_path()

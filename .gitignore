@@ -83,3 +83,4 @@ resources/bin/macos/ffmpeg
 resources/bin/macos/ffprobe
 resources/bin/macos/pandoc
 .ruff_cache/
+resources/bin/

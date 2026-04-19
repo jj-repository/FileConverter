@@ -125,7 +125,10 @@
       "artifactName": "FileConverter-Linux.${ext}"
     },
     "deb": {
-      "artifactName": "FileConverter-Linux.${ext}"
+      "artifactName": "FileConverter-Linux.${ext}",
+      "depends": [
+        "fonts-dejavu-core"
+      ]
     }
   }
 }

@@ -131,6 +131,15 @@ jobs:
           chmod +x resources/bin/linux/pandoc
           rm -rf pandoc-3.6.1*
 
+          # Download Typst (used as pandoc's --pdf-engine; single 30MB binary,
+          # no TeX toolchain needed).
+          TYPST_VER="v0.14.2"
+          gh release download "${TYPST_VER}" --repo typst/typst -p "typst-x86_64-unknown-linux-musl.tar.xz"
+          tar -xf typst-x86_64-unknown-linux-musl.tar.xz
+          mv typst-x86_64-unknown-linux-musl/typst resources/bin/linux/
+          chmod +x resources/bin/linux/typst
+          rm -rf typst-x86_64-unknown-linux-musl*
+
       - name: Download FFmpeg and Pandoc (Windows)
         if: runner.os == 'Windows'
         env:
@@ -161,6 +170,14 @@ jobs:
           Expand-Archive -Path pandoc.zip -DestinationPath .
           Copy-Item "pandoc-3.6.1\pandoc.exe" resources\bin\windows\
           Remove-Item -Recurse -Force pandoc-3.6.1, pandoc.zip
+
+          # Download Typst (used as pandoc's --pdf-engine; single 30MB binary).
+          $typstVer = "v0.14.2"
+          gh release download $typstVer --repo typst/typst -p "typst-x86_64-pc-windows-msvc.zip"
+          Rename-Item "typst-x86_64-pc-windows-msvc.zip" typst.zip
+          Expand-Archive -Path typst.zip -DestinationPath .
+          Copy-Item "typst-x86_64-pc-windows-msvc\typst.exe" resources\bin\windows\
+          Remove-Item -Recurse -Force typst-x86_64-pc-windows-msvc, typst.zip
 
       - name: Build Electron app (Linux)
         if: runner.os == 'Linux'

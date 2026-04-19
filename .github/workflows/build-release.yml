@@ -69,6 +69,11 @@ jobs:
           source venv/bin/activate
           pyinstaller backend-server.spec --clean
 
+      - name: Smoke-test frozen backend (Linux)
+        if: runner.os == 'Linux'
+        working-directory: backend
+        run: ./dist/backend-server/backend-server --smoke-test
+
       - name: Disable Windows Defender real-time monitoring (speeds up PyInstaller)
         if: runner.os == 'Windows'
         run: Set-MpPreference -DisableRealtimeMonitoring $true
@@ -80,6 +85,11 @@ jobs:
         run: |
           .\venv\Scripts\Activate.ps1
           pyinstaller backend-server.spec --log-level INFO
+
+      - name: Smoke-test frozen backend (Windows)
+        if: runner.os == 'Windows'
+        working-directory: backend
+        run: .\dist\backend-server\backend-server.exe --smoke-test
 
       - name: Download FFmpeg and Pandoc (Linux)
         if: runner.os == 'Linux'

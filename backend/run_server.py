@@ -44,6 +44,16 @@ def parse_arg(argv, flag):
 def main():
     """Run the FastAPI server."""
     argv = sys.argv[1:]
+
+    if "--smoke-test" in argv:
+        # Import-only check used by the build pipeline to verify the frozen
+        # bundle contains every module the app touches at startup. Exits 0
+        # on success, non-zero with traceback on any ImportError.
+        import app.main  # noqa: F401
+
+        print("smoke-test: imports OK")
+        return
+
     port = int(parse_arg(argv, "--port") or 8000)
     host = parse_arg(argv, "--host") or "127.0.0.1"
     log_dir = parse_arg(argv, "--log-dir") or os.environ.get("FC_LOG_DIR")

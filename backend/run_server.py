@@ -84,4 +84,11 @@ def main():
 
 
 if __name__ == "__main__":
+    # On Windows, PyInstaller-frozen apps must call freeze_support() as the
+    # first thing in the entry point. Without it, any transitive multiprocessing
+    # import (pandas and others) causes the frozen exe to re-spawn itself
+    # recursively on import, hanging the app. No-op on POSIX.
+    import multiprocessing
+
+    multiprocessing.freeze_support()
     main()

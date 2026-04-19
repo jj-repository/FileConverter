@@ -75,9 +75,19 @@ jobs:
         timeout-minutes: 3
         run: ./dist/backend-server/backend-server --smoke-test
 
-      - name: Disable Windows Defender real-time monitoring (speeds up PyInstaller)
+      - name: Disable Windows Defender (speeds up PyInstaller)
         if: runner.os == 'Windows'
-        run: Set-MpPreference -DisableRealtimeMonitoring $true
+        run: |
+          Set-MpPreference -DisableRealtimeMonitoring $true
+          Set-MpPreference -DisableBehaviorMonitoring $true
+          Set-MpPreference -DisableBlockAtFirstSeen $true
+          Set-MpPreference -DisableIOAVProtection $true
+          Set-MpPreference -DisableScriptScanning $true
+          Set-MpPreference -MAPSReporting 0
+          Set-MpPreference -SubmitSamplesConsent 2
+          Add-MpPreference -ExclusionPath "D:\a\FileConverter"
+          Add-MpPreference -ExclusionProcess "pyinstaller.exe"
+          Add-MpPreference -ExclusionProcess "python.exe"
 
       - name: Build backend with PyInstaller (Windows)
         if: runner.os == 'Windows'

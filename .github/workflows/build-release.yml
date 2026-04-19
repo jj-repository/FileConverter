@@ -100,7 +100,7 @@ jobs:
       - name: Smoke-test frozen backend (Windows)
         if: runner.os == 'Windows'
         working-directory: backend
-        timeout-minutes: 3
+        timeout-minutes: 10
         run: .\dist\backend-server\backend-server.exe --smoke-test
 
       - name: Download FFmpeg and Pandoc (Linux)

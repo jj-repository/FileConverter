@@ -31,34 +31,41 @@ foreach ($cmd in @("python", "node", "npm", "git", "gh")) {
         throw "$cmd not found on PATH"
     }
 }
-$pyVer = (python --version) 2>&1
+# Windows 11 ships a Microsoft Store `python` stub that silently opens the
+# Store dialog and returns no output. Detect it early — otherwise venv
+# creation fails with a cryptic error.
+$pyVer = (python --version 2>&1 | Out-String).Trim()
+if ([string]::IsNullOrWhiteSpace($pyVer)) {
+    throw "python returned no version output — likely the Microsoft Store stub. Install real Python 3.11 from python.org and re-run."
+}
 if ($pyVer -notmatch "3\.11") {
     Write-Warning "Python $pyVer — CI uses 3.11. Continuing, but build may diverge."
 }
+# `gh` commands need auth for release downloads; fail fast rather than 1 step deep.
+Invoke-Native gh auth status
 
 Step "Frontend deps + build"
 Push-Location frontend
-npm ci
-npm run build
+Invoke-Native npm ci
+Invoke-Native npm run build
 Pop-Location
 
 Step "Backend venv + deps"
 Push-Location backend
 if (Test-Path venv) { Remove-Item -Recurse -Force venv }
-python -m venv venv
+Invoke-Native python -m venv venv
 .\venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-pip install pyinstaller==6.14.2
+Invoke-Native python -m pip install --upgrade pip
+Invoke-Native pip install -r requirements.txt
+Invoke-Native pip install pyinstaller==6.14.2
 
 Step "PyInstaller build"
 if (Test-Path build) { Remove-Item -Recurse -Force build }
 if (Test-Path dist)  { Remove-Item -Recurse -Force dist }
-pyinstaller backend-server.spec --clean --log-level INFO
+Invoke-Native pyinstaller backend-server.spec --clean --log-level INFO
 
 Step "Smoke-test frozen backend"
-.\dist\backend-server\backend-server.exe --smoke-test
-if ($LASTEXITCODE -ne 0) { throw "Smoke-test failed (exit $LASTEXITCODE)" }
+Invoke-Native .\dist\backend-server\backend-server.exe --smoke-test
 
 deactivate
 Pop-Location
@@ -101,7 +108,7 @@ Remove-Item -Recurse -Force .build-tmp
 
 Step "Electron build (Windows)"
 Push-Location frontend
-npx electron-builder --win --publish never
+Invoke-Native npx electron-builder --win --publish never
 Pop-Location
 
 Step "Done"

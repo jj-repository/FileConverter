@@ -14,12 +14,15 @@ try:
 except ImportError:
     HEIF_AVAILABLE = False
 
-# SVG support
+# SVG support — cairosvg pulls in cairocffi, which calls ctypes.dlopen at
+# import time and raises OSError (not ImportError) when libcairo-2.dll is
+# missing. On Windows we don't yet bundle the cairo DLL, so SVG is best-effort:
+# catch both so the rest of the app keeps working.
 try:
     import cairosvg
 
     SVG_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     SVG_AVAILABLE = False
 
 from app.config import settings
@@ -69,7 +72,9 @@ class ImageConverter(BaseConverter):
             raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         await self.send_progress(session_id, 20, "converting", "Loading image")
 

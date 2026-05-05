@@ -32,14 +32,14 @@ foreach ($cmd in @("python", "node", "npm", "git", "gh")) {
     }
 }
 # Windows 11 ships a Microsoft Store `python` stub that silently opens the
-# Store dialog and returns no output. Detect it early — otherwise venv
+# Store dialog and returns no output. Detect it early -- otherwise venv
 # creation fails with a cryptic error.
 $pyVer = (python --version 2>&1 | Out-String).Trim()
 if ([string]::IsNullOrWhiteSpace($pyVer)) {
-    throw "python returned no version output — likely the Microsoft Store stub. Install real Python 3.11 from python.org and re-run."
+    throw "python returned no version output -- likely the Microsoft Store stub. Install real Python 3.11 from python.org and re-run."
 }
 if ($pyVer -notmatch "3\.11") {
-    Write-Warning "Python $pyVer — CI uses 3.11. Continuing, but build may diverge."
+    Write-Warning "Python $pyVer -- CI uses 3.11. Continuing, but build may diverge."
 }
 # `gh` commands need auth for release downloads; fail fast rather than 1 step deep.
 Invoke-Native gh auth status
@@ -77,8 +77,8 @@ if (Test-Path .build-tmp) { Remove-Item -Recurse -Force .build-tmp }
 Push-Location (New-Item -ItemType Directory -Force -Path ".build-tmp").FullName
 
 # FFmpeg (pinned autobuild + sha256 verify)
-$btbnTag = "autobuild-2026-04-18-13-04"
-$ffmpegBase = "ffmpeg-n7.1.3-45-g2d6ee37238-win64-gpl-7.1"
+$btbnTag = "autobuild-2026-05-05-13-19"
+$ffmpegBase = "ffmpeg-n7.1.4-win64-gpl-7.1"
 $ffmpegZip = "$ffmpegBase.zip"
 Invoke-Native gh release download $btbnTag --repo BtbN/FFmpeg-Builds -p $ffmpegZip -p "checksums.sha256"
 Rename-Item $ffmpegZip ffmpeg.zip -Force
@@ -113,4 +113,4 @@ Pop-Location
 
 Step "Done"
 Get-ChildItem frontend\dist-electron\*.exe | Format-Table Name, @{N="MB";E={[math]::Round($_.Length/1MB,1)}}
-Write-Host "`nNext: upload these .exe files to the v1.16.0 GitHub release." -ForegroundColor Green
+Write-Host "`nNext: upload these .exe files to the v1.17.0 GitHub release." -ForegroundColor Green

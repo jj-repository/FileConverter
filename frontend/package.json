@@ -1,7 +1,7 @@
 {
   "name": "fileconverter",
   "private": true,
-  "version": "1.16.0",
+  "version": "1.17.0",
   "description": "Desktop file conversion application",
   "main": "electron/main.cjs",
   "type": "module",
@@ -92,13 +92,6 @@
           "!*.spec",
           "!run_server.py"
         ]
-      },
-      {
-        "from": "../resources/bin/${os}",
-        "to": "resources/bin/${os}",
-        "filter": [
-          "**/*"
-        ]
       }
     ],
     "win": {
@@ -106,7 +99,16 @@
         "nsis",
         "portable"
       ],
-      "icon": "build/icon.ico"
+      "icon": "build/icon.ico",
+      "extraResources": [
+        {
+          "from": "../resources/bin/windows",
+          "to": "resources/bin/windows",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ]
     },
     "nsis": {
       "artifactName": "FileConverter-Setup.${ext}"
@@ -122,7 +124,16 @@
       "category": "Utility",
       "icon": "build/icon.png",
       "maintainer": "FileConverter <fileconverter@users.noreply.github.com>",
-      "artifactName": "FileConverter-Linux.${ext}"
+      "artifactName": "FileConverter-Linux.${ext}",
+      "extraResources": [
+        {
+          "from": "../resources/bin/linux",
+          "to": "resources/bin/linux",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ]
     },
     "deb": {
       "artifactName": "FileConverter-Linux.${ext}",

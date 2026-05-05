@@ -9,50 +9,48 @@ import sys
 from pathlib import Path
 
 
+_PLATFORM_DIRS = {
+    "Windows": ("windows", ".exe"),
+    "Linux": ("linux", ""),
+    "Darwin": ("macos", ""),
+}
+
+
 def get_bundled_binary_path(binary_name: str) -> str:
     """
-    Get the path to a bundled binary (ffmpeg, ffprobe, or pandoc).
+    Get the path to a bundled binary (ffmpeg, ffprobe, pandoc, typst).
 
-    Args:
-        binary_name: Name of the binary (ffmpeg, ffprobe, or pandoc)
+    Looks for the binary in a list of candidate roots:
+      - PyInstaller _MEIPASS (when binaries are bundled into the spec).
+      - Electron extraResources, three levels above _MEIPASS
+        (<install>/resources/backend/dist/backend-server/ -> <install>/resources/).
+      - Project root (dev mode).
 
-    Returns:
-        Path to the binary (bundled if available, system otherwise)
+    Falls back to PATH lookup, then the bare name.
     """
-    # Determine if running in a packaged environment
-    if getattr(sys, "frozen", False):
-        # Running in PyInstaller bundle
-        base_path = Path(sys._MEIPASS)
-    else:
-        # Running in development mode
-        base_path = Path(__file__).parent.parent.parent.parent  # Go up to project root
-
-    # Determine platform-specific binary directory and extension
-    system = platform.system()
-    if system == "Windows":
-        bin_dir = base_path / "resources" / "bin" / "windows"
-        binary_name_with_ext = f"{binary_name}.exe"
-    elif system == "Linux":
-        bin_dir = base_path / "resources" / "bin" / "linux"
-        binary_name_with_ext = binary_name
-    elif system == "Darwin":  # macOS
-        bin_dir = base_path / "resources" / "bin" / "macos"
-        binary_name_with_ext = binary_name
-    else:
-        # Unsupported platform, fall back to system binary
+    info = _PLATFORM_DIRS.get(platform.system())
+    if info is None:
         return shutil.which(binary_name) or binary_name
+    platform_dir, ext = info
+    binary_filename = f"{binary_name}{ext}"
 
-    # Check if bundled binary exists
-    bundled_binary = bin_dir / binary_name_with_ext
-    if bundled_binary.exists() and bundled_binary.is_file():
-        return str(bundled_binary.absolute())
+    candidates: list[Path] = []
+    if getattr(sys, "frozen", False):
+        mei = Path(sys._MEIPASS)
+        candidates.append(mei)
+        candidates.append(mei.parent.parent.parent)
+    else:
+        candidates.append(Path(__file__).parent.parent.parent.parent)
 
-    # Fall back to system binary
+    for root in candidates:
+        bundled = root / "resources" / "bin" / platform_dir / binary_filename
+        if bundled.exists() and bundled.is_file():
+            return str(bundled.absolute())
+
     system_binary = shutil.which(binary_name)
     if system_binary:
         return system_binary
 
-    # Last resort: return the binary name and hope it's in PATH
     return binary_name
 
 

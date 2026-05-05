@@ -3,7 +3,20 @@
  */
 
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Under Electron's loadFile() the page is served from file://, so `/api` would
+// resolve to a non-existent file:// URL. main.cjs passes the actual backend
+// port via the query string (`?backendPort=...`), which we honour here. The
+// `VITE_API_URL` env var still wins (used by the web build).
+function resolveApiBaseUrl(): string {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined') {
+    const port = new URLSearchParams(window.location.search).get('backendPort');
+    if (port) return `http://localhost:${port}`;
+  }
+  return 'http://localhost:8000';
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 // Timing Configuration
 export const AUTO_DOWNLOAD_DELAY = 200; // ms

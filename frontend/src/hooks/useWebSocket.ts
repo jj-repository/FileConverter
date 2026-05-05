@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { ProgressUpdate } from '../types/conversion';
+import { API_BASE_URL } from '../config/constants';
 
 // Reconnection configuration
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -51,8 +52,15 @@ export const useWebSocket = (sessionId: string | null) => {
       wsRef.current = null;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/progress/${currentSessionId}`;
+    // Under file:// (Electron production) window.location.host is empty,
+    // so derive the WS URL from the resolved API base instead.
+    let wsUrl: string;
+    if (window.location.protocol === 'file:') {
+      wsUrl = `${API_BASE_URL.replace(/^http/, 'ws')}/ws/progress/${currentSessionId}`;
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${protocol}//${window.location.host}/ws/progress/${currentSessionId}`;
+    }
 
     try {
       const ws = new WebSocket(wsUrl);

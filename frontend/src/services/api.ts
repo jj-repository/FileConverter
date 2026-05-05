@@ -1,8 +1,16 @@
 import axios from 'axios';
 import { ConversionResponse, ConversionOptions } from '../types/conversion';
+import { API_BASE_URL } from '../config/constants';
+
+// In dev, vite serves at :5173 and proxies `/api` to the backend, so the
+// relative path is fine. In Electron production the page is loaded via
+// loadFile() (file://) and `/api` would resolve to a non-existent file://
+// URL — switch to the absolute backend URL in that case.
+const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
+const baseURL = isFileProtocol ? `${API_BASE_URL}/api` : '/api';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
 });
 
 // --- Factory for standard converter APIs ---

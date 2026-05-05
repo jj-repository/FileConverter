@@ -1,7 +1,7 @@
 # FileConverter
 
 Electron+FastAPI desktop app for converting files between formats. Stack: Electron, React/TypeScript, Vite, Tailwind, FastAPI/Python.
-v1.17 (frontend + backend synchronized).
+v1.18 (frontend + backend synchronized).
 
 Docs: .claude/index.md
 

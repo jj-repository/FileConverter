@@ -190,7 +190,13 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     // DevTools disabled by default - press F12 to open manually if needed
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    // Pass the actual backend port to the renderer. The port is chosen at
+    // startup (8000 + first free), so the renderer must read it dynamically
+    // rather than hard-code 8000.
+    const backendPort = backendManager ? backendManager.getPort() : 8000;
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'), {
+      search: `backendPort=${backendPort}`
+    });
   }
 
   // Prevent DevTools from opening automatically

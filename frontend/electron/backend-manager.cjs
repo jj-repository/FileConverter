@@ -169,7 +169,11 @@ class BackendManager {
       this.process = spawn(backendExecutable, args, {
         env: {
           ...process.env,
-          PYTHONUNBUFFERED: '1'
+          PYTHONUNBUFFERED: '1',
+          // Allow the Electron renderer to call the API. Pages loaded via
+          // loadFile() send `Origin: null` for cross-origin fetches; the
+          // backend binds to 127.0.0.1 only, so this is safe.
+          ALLOWED_ORIGINS: 'null,http://localhost:5173,http://127.0.0.1:5173'
         },
         windowsHide: true // Hide console window on Windows
       });

@@ -53,6 +53,16 @@ def main():
         print("smoke-test: importing app.main", flush=True)
         import app.main  # noqa: F401
 
+        # libmagic must be loadable. validation.py wraps `import magic` in
+        # try/except (so MIME validation degrades gracefully at runtime), which
+        # means an unloadable libmagic does not abort app.main import. Without
+        # this explicit check, a v1.19-style regression (python-magic shadowing
+        # python-magic-bin's patched loader) reaches users as a runtime 503.
+        print("smoke-test: instantiating magic.Magic", flush=True)
+        import magic  # noqa: F401
+
+        magic.Magic(mime=True)
+
         print("smoke-test: imports OK", flush=True)
         return
 

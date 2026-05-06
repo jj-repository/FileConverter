@@ -57,6 +57,11 @@ Invoke-Native python -m venv venv
 .\venv\Scripts\Activate.ps1
 Invoke-Native python -m pip install --upgrade pip
 Invoke-Native pip install -r requirements.txt
+# python-magic (cross-platform) lists loader.py with no DLL search; pip resolves
+# it AFTER python-magic-bin and overwrites the bin's patched loader, leaving
+# `import magic` broken at runtime. Reinstall python-magic-bin LAST so its
+# loader.py (which knows about bundled libmagic\libmagic.dll) wins.
+Invoke-Native pip install --force-reinstall --no-deps python-magic-bin==0.4.14
 Invoke-Native pip install pyinstaller==6.14.2
 
 Step "PyInstaller build"
@@ -113,4 +118,4 @@ Pop-Location
 
 Step "Done"
 Get-ChildItem frontend\dist-electron\*.exe | Format-Table Name, @{N="MB";E={[math]::Round($_.Length/1MB,1)}}
-Write-Host "`nNext: upload these .exe files to the v1.19.0 GitHub release." -ForegroundColor Green
+Write-Host "`nNext: upload these .exe files to the v1.20.0 GitHub release." -ForegroundColor Green

@@ -60,6 +60,12 @@ jobs:
           .\venv\Scripts\Activate.ps1
           pip install --upgrade pip
           pip install -r requirements.txt
+          # python-magic (cross-platform) ships a loader.py with no DLL search;
+          # pip resolves it AFTER python-magic-bin and overwrites the bin's
+          # patched loader, leaving `import magic` broken at runtime. Reinstall
+          # python-magic-bin LAST so its loader (which knows about bundled
+          # libmagic\libmagic.dll) wins.
+          pip install --force-reinstall --no-deps python-magic-bin==0.4.14
           pip install pyinstaller==6.14.2
 
       - name: Build backend with PyInstaller (Linux)

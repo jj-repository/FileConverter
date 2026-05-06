@@ -113,4 +113,4 @@ Pop-Location
 
 Step "Done"
 Get-ChildItem frontend\dist-electron\*.exe | Format-Table Name, @{N="MB";E={[math]::Round($_.Length/1MB,1)}}
-Write-Host "`nNext: upload these .exe files to the v1.18.0 GitHub release." -ForegroundColor Green
+Write-Host "`nNext: upload these .exe files to the v1.19.0 GitHub release." -ForegroundColor Green

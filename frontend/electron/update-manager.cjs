@@ -158,22 +158,32 @@ function spawnDetached(cmd, args, opts = {}) {
 }
 
 async function applyPortableWin(newExePath, install) {
-  // Write a cmd script that: waits for current process, replaces exe, launches new, deletes self
+  // PowerShell rather than cmd: a detached `cmd /c` flashes a console window
+  // even with windowsHide:true, but `powershell -WindowStyle Hidden` stays
+  // invisible. Wait-Process blocks until every FileConverter.exe process is
+  // gone (the portable wrapper extracts a copy under %TEMP% and runs that),
+  // then swaps the exe and relaunches.
   const currentExe = install.exePath;
-  const scriptPath = path.join(app.getPath('temp'), `fc-update-${Date.now()}.cmd`);
-  const script = `@echo off
-:wait
-tasklist /FI "IMAGENAME eq ${path.basename(currentExe)}" | find /I "${path.basename(currentExe)}" >nul
-if not errorlevel 1 (
-  timeout /t 1 /nobreak >nul
-  goto wait
-)
-move /Y "${newExePath}" "${currentExe}" >nul
-start "" "${currentExe}"
-del "%~f0"
+  const exeBaseName = path.basename(currentExe).replace(/\.exe$/i, '');
+  const scriptPath = path.join(app.getPath('temp'), `fc-update-${Date.now()}.ps1`);
+
+  // Escape single quotes for PowerShell single-quoted string literals.
+  const esc = (s) => s.replace(/'/g, "''");
+
+  const script = `$ErrorActionPreference = 'SilentlyContinue'
+Get-Process -Name '${esc(exeBaseName)}' -ErrorAction SilentlyContinue |
+    Wait-Process -Timeout 120 -ErrorAction SilentlyContinue
+Move-Item -Path '${esc(newExePath)}' -Destination '${esc(currentExe)}' -Force
+Start-Process -FilePath '${esc(currentExe)}'
+Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force
 `;
   fs.writeFileSync(scriptPath, script, { encoding: 'utf8' });
-  spawnDetached('cmd.exe', ['/c', scriptPath], { windowsHide: true });
+  spawnDetached('powershell.exe', [
+    '-NoProfile', '-NonInteractive',
+    '-WindowStyle', 'Hidden',
+    '-ExecutionPolicy', 'Bypass',
+    '-File', scriptPath,
+  ], { windowsHide: true });
   app.quit();
 }
 

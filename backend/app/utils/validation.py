@@ -171,6 +171,16 @@ def validate_mime_type(file_path: Path, expected_types: Set[str]) -> None:
         mime = magic.Magic(mime=True)
         mime_type = mime.from_file(str(file_path))
 
+        # libmagic returns "application/octet-stream" when it can't ID the
+        # file. Many legitimate container formats (.3gp, .ts, .vob, .ogv,
+        # short/truncated samples, etc.) hit this. Extensions are already
+        # whitelisted by validate_file_extension before this runs, so we
+        # accept the file when libmagic is uncertain rather than rejecting
+        # all uploads of those formats.
+        if mime_type == "application/octet-stream":
+            logger.info("libmagic returned octet-stream for %s; trusting extension whitelist", file_path.name)
+            return
+
         # Check if MIME type matches expected types
         is_valid = any(expected in mime_type for expected in expected_types)
 

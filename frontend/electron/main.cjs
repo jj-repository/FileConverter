@@ -457,8 +457,13 @@ ipcMain.handle('download-file', async (event, { url, directory, filename }) => {
       throw new Error('Invalid filename');
     }
 
-    // SECURITY: Validate directory exists and resolve to absolute path
-    const realDirectory = fs.realpathSync(directory);
+    // Default to the system Downloads folder when the renderer doesn't pass
+    // a directory (manual Download button click without an explicit output
+    // dir set). Without this, the renderer falls back to navigating
+    // `window.location.href = downloadUrl`, which under file:// resolves to
+    // a non-existent file:// URL and leaves a blank renderer.
+    const targetDirectory = directory || app.getPath('downloads');
+    const realDirectory = fs.realpathSync(targetDirectory);
     const outputPath = path.join(realDirectory, sanitizedFilename);
 
     // SECURITY: Ensure output path is within the specified directory.

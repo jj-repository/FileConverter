@@ -7,7 +7,7 @@ params) and delegates common download / formats / info operations here.
 import logging
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -43,8 +43,15 @@ async def handle_convert(
     category: str,
     mime_types: dict,
     api_prefix: str,
+    extra_output_formats: Optional[set] = None,
 ) -> ConversionResponse:
-    """Shared conversion flow: validate -> save -> convert -> respond."""
+    """Shared conversion flow: validate -> save -> convert -> respond.
+
+    `formats` is the input + default-output whitelist. `extra_output_formats`
+    allows additional output formats that are NOT permitted as inputs (used
+    by the video router to allow audio extraction outputs without accepting
+    audio files as inputs).
+    """
     session_id = str(uuid.uuid4())
     session_validator.register_session(session_id)
     input_path = None
@@ -55,7 +62,8 @@ async def handle_convert(
         validate_file_extension(file.filename, formats)
         output_fmt = output_format.lower()
 
-        if output_fmt not in formats:
+        allowed_outputs = formats | (extra_output_formats or set())
+        if output_fmt not in allowed_outputs:
             raise HTTPException(
                 status_code=400,
                 detail=f"Unsupported output format: {output_format}",
@@ -119,12 +127,16 @@ async def handle_download(
             ext = filename.rsplit(".", 1)[-1].lower()
 
     media_type = mime_map.get(ext, default_mime)
+    # No BackgroundTask cleanup: range requests, electron's speculative HEAD/
+    # GET pairs, and any retry can trigger a second GET that finds the file
+    # already deleted, producing a 0-byte file in the user's Downloads. The
+    # per-session electron temp dir holding UPLOAD_DIR is wiped on app exit,
+    # so retention until then is acceptable.
     return FileResponse(
         path=str(file_path),
         filename=filename,
         media_type=media_type,
         headers={"Content-Disposition": make_content_disposition(filename)},
-        background=BackgroundTask(cleanup_after_download, str(file_path)),
     )
 
 

@@ -58,7 +58,6 @@ async def download_ebook(filename: str):
         filename=filename,
         media_type=media_type,
         headers={"Content-Disposition": make_content_disposition(filename)},
-        background=BackgroundTask(cleanup_after_download, str(file_path)),
     )
 
 

@@ -291,5 +291,4 @@ async def download_file(filename: str):
         filename=filename,
         media_type=media_type,
         headers={"Content-Disposition": make_content_disposition(filename)},
-        background=BackgroundTask(cleanup_after_download, str(file_path)),
     )

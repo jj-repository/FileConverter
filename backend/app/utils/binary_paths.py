@@ -22,8 +22,10 @@ def get_bundled_binary_path(binary_name: str) -> str:
 
     Looks for the binary in a list of candidate roots:
       - PyInstaller _MEIPASS (when binaries are bundled into the spec).
-      - Electron extraResources, three levels above _MEIPASS
-        (<install>/resources/backend/dist/backend-server/ -> <install>/resources/).
+      - Electron extraResources. PyInstaller 6.x onedir places _MEIPASS in an
+        `_internal` subdir, so we walk four levels up
+        (<install>/resources/backend/dist/backend-server/_internal/ ->
+        <install>/resources/). Pre-6.x layout (no _internal) is also tried.
       - Project root (dev mode).
 
     Falls back to PATH lookup, then the bare name.
@@ -38,6 +40,7 @@ def get_bundled_binary_path(binary_name: str) -> str:
     if getattr(sys, "frozen", False):
         mei = Path(sys._MEIPASS)
         candidates.append(mei)
+        candidates.append(mei.parent.parent.parent.parent)
         candidates.append(mei.parent.parent.parent)
     else:
         candidates.append(Path(__file__).parent.parent.parent.parent)

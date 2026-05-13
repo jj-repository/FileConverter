@@ -39,25 +39,37 @@ async def websocket_progress(websocket: WebSocket, session_id: str):
         return
 
     # Validate origin to prevent cross-site WebSocket hijacking.
-    # Empty/absent origin is allowed for Electron (file: scheme renderer sends no origin).
+    # Allowed callers:
+    #   - Browser dev server / API host (http://localhost, http://127.0.0.1).
+    #   - Production electron renderer: Chromium emits Origin: null for the
+    #     file:// scheme.
+    #   - Any non-http(s) scheme (file://, app://, asar://): not reachable by
+    #     a remote attacker, so safe to accept.
+    # An empty origin is also allowed (some clients omit the header).
     origin = websocket.headers.get("origin", "")
-    if origin and not origin.startswith(("http://localhost", "http://127.0.0.1")):
+    logger.info("WebSocket handshake origin=%r session=%s", origin, session_id)
+    origin_ok = (
+        not origin
+        or origin == "null"
+        or origin.startswith(("http://localhost", "http://127.0.0.1"))
+        or not origin.startswith(("http://", "https://"))
+    )
+    if not origin_ok:
         await websocket.close(code=1008, reason="Invalid origin")
+        logger.warning("WebSocket connection denied (origin %r): %s", origin, session_id)
         rate_limiter.remove_connection(client_ip)
         return
     await websocket.accept()
     await ws_manager.connect(session_id, websocket)
 
     try:
-        # Send initial connection message
-        await websocket.send_json(
-            {
-                "session_id": session_id,
-                "progress": 0,
-                "status": "pending",
-                "message": "WebSocket connected",
-            }
-        )
+        # Don't send a synthetic "pending" status on connect: when the WS
+        # handshake races with the convert HTTP response (the renderer opens
+        # the WS as soon as it learns the session_id, but conversion may
+        # already be complete), the frontend's status is already
+        # `completed`. Pushing "pending" here downgrades the UI back to a
+        # progress-bar state with no further events incoming, leaving the
+        # download button hidden permanently.
 
         # Keep connection alive
         while True:

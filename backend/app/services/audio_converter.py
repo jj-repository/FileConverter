@@ -235,7 +235,8 @@ class AudioConverter(BaseConverter):
 
             if process.returncode != 0:
                 error_msg = stderr.decode("utf-8", errors="ignore") if stderr else "Unknown error"
-                raise Exception(f"FFmpeg conversion failed: {error_msg[:200]}")
+                logger.error("FFmpeg conversion failed (full stderr):\n%s", error_msg)
+                raise Exception(f"FFmpeg conversion failed: {error_msg[-500:]}")
 
             await self.send_progress(session_id, 98, "converting", "Finalizing audio")
 

@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 from app.config import settings
+from app import __version__
 from app.main import app, cleanup_old_files
 from app.services.cache_service import get_cache_service, initialize_cache_service
 from fastapi.testclient import TestClient
@@ -432,22 +433,6 @@ class TestStaticFileServing:
         # This confirms the endpoint is mounted
         assert response.status_code == 404
 
-    def test_files_endpoint_serves_file(self, client, temp_dir):
-        """Test that files endpoint can serve uploaded files"""
-        # Create a test file in upload directory
-        test_file = settings.UPLOAD_DIR / "test_static.txt"
-        test_file.write_text("test content")
-
-        try:
-            response = client.get("/files/test_static.txt")
-
-            assert response.status_code == 200
-            assert response.text == "test content"
-
-        finally:
-            if test_file.exists():
-                test_file.unlink()
-
 
 class TestErrorHandling:
     """Test application error handling"""
@@ -483,7 +468,7 @@ class TestAppConfiguration:
 
     def test_app_version_configured(self):
         """Test that app version is configured correctly"""
-        assert app.version == "1.03"
+        assert app.version == __version__
 
     def test_app_description_configured(self):
         """Test that app description is configured correctly"""

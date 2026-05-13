@@ -186,13 +186,36 @@ class ImageConverter(BaseConverter):
                 if output_format.lower() in ["jpg", "jpeg"] and img.mode != "RGB":
                     img = await asyncio.to_thread(img.convert, "RGB")
 
-                # Map format names for PIL (PIL uses 'JPEG' not 'JPG')
-                pil_format = output_format.upper()
-                if pil_format == "JPG":
-                    pil_format = "JPEG"
+                # Raster → SVG: PIL has no SVG encoder. Wrap the raster as a
+                # base64 data-URI inside an <svg><image/></svg> document so the
+                # output is a valid .svg openable in any browser.
+                if output_format.lower() == "svg":
+                    import base64
+                    import io
 
-                # Save image (run in thread pool to avoid blocking)
-                await asyncio.to_thread(img.save, output_path, format=pil_format, **save_options)
+                    buf = io.BytesIO()
+                    png_img = img if img.mode in ("RGB", "RGBA", "L", "LA") else img.convert("RGBA")
+                    await asyncio.to_thread(png_img.save, buf, format="PNG", optimize=True)
+                    encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+                    w, h = img.size
+                    svg_doc = (
+                        f'<?xml version="1.0" encoding="UTF-8"?>\n'
+                        f'<svg xmlns="http://www.w3.org/2000/svg" '
+                        f'width="{w}" height="{h}" viewBox="0 0 {w} {h}">'
+                        f'<image width="{w}" height="{h}" '
+                        f'href="data:image/png;base64,{encoded}"/></svg>\n'
+                    )
+                    await asyncio.to_thread(output_path.write_text, svg_doc, encoding="utf-8")
+                else:
+                    # Map format names for PIL (PIL uses 'JPEG' not 'JPG')
+                    pil_format = output_format.upper()
+                    if pil_format == "JPG":
+                        pil_format = "JPEG"
+
+                    # Save image (run in thread pool to avoid blocking)
+                    await asyncio.to_thread(
+                        img.save, output_path, format=pil_format, **save_options
+                    )
 
             finally:
                 img.close()

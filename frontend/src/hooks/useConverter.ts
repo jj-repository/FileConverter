@@ -126,7 +126,12 @@ export const useConverter = (options: UseConverterOptions) => {
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDraggingOver(false);
+    // Only clear when the drag leaves the container entirely, not when it
+    // enters a child element (select, input, etc.) — child dragLeave events
+    // bubble up and would otherwise cause the overlay to flicker away.
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDraggingOver(false);
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {

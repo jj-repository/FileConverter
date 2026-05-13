@@ -124,7 +124,21 @@ class Settings(BaseSettings):
     FONT_FORMATS: Set[str] = {"ttf", "otf", "woff", "woff2"}
 
     # FFmpeg allowed options (whitelist for security)
-    ALLOWED_VIDEO_CODECS: Set[str] = {"libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4", "h264"}
+    ALLOWED_VIDEO_CODECS: Set[str] = {
+        "libx264",
+        "libx265",
+        "libvpx",
+        "libvpx-vp9",
+        "mpeg4",
+        "h264",
+        # Required as auto-overrides for legacy containers (vob/ogv/wmv); the
+        # user-picked codec is still whitelisted from this set, but the
+        # server may force one of these when the user's choice is incompatible
+        # with the chosen output container.
+        "mpeg2video",
+        "wmv2",
+        "libtheora",
+    }
     ALLOWED_AUDIO_CODECS: Set[str] = {
         "aac",
         "libmp3lame",
@@ -133,6 +147,8 @@ class Settings(BaseSettings):
         "flac",
         "pcm_s16le",
         "wmav2",
+        "mp2",
+        "ac3",
     }
     ALLOWED_RESOLUTIONS: Set[str] = {"original", "480p", "720p", "1080p", "4k", "2k"}
     ALLOWED_BITRATES: Set[str] = {

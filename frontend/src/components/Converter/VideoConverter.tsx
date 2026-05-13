@@ -30,16 +30,40 @@ const BITRATES = [
   { value: '10M', label: '10 Mbps (Very High)' },
 ];
 
+const AUDIO_EXTRACT_FORMATS = ['mp3', 'aac', 'm4a', 'ogg', 'opus', 'flac', 'wav', 'wma'];
+
+const AUDIO_BITRATES = [
+  { value: '128k', label: '128 kbps' },
+  { value: '192k', label: '192 kbps' },
+  { value: '256k', label: '256 kbps' },
+  { value: '320k', label: '320 kbps' },
+];
+
 export const VideoConverter: React.FC = () => {
   const { t } = useTranslation();
   const [codec, setCodec] = useState<string>('libx264');
   const [resolution, setResolution] = useState<string>('original');
   const [bitrate, setBitrate] = useState<string>('2M');
+  const [extractAudio, setExtractAudio] = useState<boolean>(false);
+  const [audioBitrate, setAudioBitrate] = useState<string>('192k');
 
   const converter = useConverter({ defaultOutputFormat: 'mp4' });
 
+  const formatOptions = extractAudio ? AUDIO_EXTRACT_FORMATS : VIDEO_FORMATS;
+
+  // Reset output format when toggling extract-audio so the dropdown lands
+  // on a value that's actually present in the new options list.
+  const handleToggleExtractAudio = (next: boolean) => {
+    setExtractAudio(next);
+    converter.setOutputFormat(next ? 'mp3' : 'mp4');
+  };
+
   const handleConvert = async () => {
-    await converter.handleConvert(videoAPI, { codec, resolution, bitrate });
+    if (extractAudio) {
+      await converter.handleConvert(videoAPI, { bitrate: audioBitrate });
+    } else {
+      await converter.handleConvert(videoAPI, { codec, resolution, bitrate });
+    }
   };
 
   return (
@@ -81,6 +105,20 @@ export const VideoConverter: React.FC = () => {
               </p>
             </div>
 
+            <div className="flex items-center gap-3 bg-gray-50 px-4 py-3 rounded-lg">
+              <input
+                id="extract-audio"
+                type="checkbox"
+                checked={extractAudio}
+                onChange={(e) => handleToggleExtractAudio(e.target.checked)}
+                disabled={converter.status === 'converting'}
+                className="h-4 w-4"
+              />
+              <label htmlFor="extract-audio" className="text-sm font-medium text-gray-700 cursor-pointer">
+                Extract audio only (drop video, save as audio file)
+              </label>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="output-format" className="block text-sm font-medium text-gray-700 mb-2">
@@ -92,9 +130,9 @@ export const VideoConverter: React.FC = () => {
                   onChange={(e) => converter.setOutputFormat(e.target.value)}
                   className="input"
                   disabled={converter.status === 'converting'}
-                  aria-label="Select output format for video conversion"
+                  aria-label="Select output format"
                 >
-                  {VIDEO_FORMATS.map((format) => (
+                  {formatOptions.map((format) => (
                     <option key={format} value={format}>
                       {format.toUpperCase()}
                     </option>
@@ -102,65 +140,91 @@ export const VideoConverter: React.FC = () => {
                 </select>
               </div>
 
-              <div>
-                <label htmlFor="video-codec" className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('converter.video.codecLabel')}
-                </label>
-                <select
-                  id="video-codec"
-                  value={codec}
-                  onChange={(e) => setCodec(e.target.value)}
-                  className="input"
-                  disabled={converter.status === 'converting'}
-                  aria-label="Select video codec"
-                >
-                  {CODECS.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {extractAudio ? (
+                <div>
+                  <label htmlFor="audio-bitrate" className="block text-sm font-medium text-gray-700 mb-2">
+                    Audio Bitrate
+                  </label>
+                  <select
+                    id="audio-bitrate"
+                    value={audioBitrate}
+                    onChange={(e) => setAudioBitrate(e.target.value)}
+                    className="input"
+                    disabled={converter.status === 'converting'}
+                    aria-label="Select audio bitrate"
+                  >
+                    {AUDIO_BITRATES.map((b) => (
+                      <option key={b.value} value={b.value}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label htmlFor="video-codec" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('converter.video.codecLabel')}
+                  </label>
+                  <select
+                    id="video-codec"
+                    value={codec}
+                    onChange={(e) => setCodec(e.target.value)}
+                    className="input"
+                    disabled={converter.status === 'converting'}
+                    aria-label="Select video codec"
+                  >
+                    {CODECS.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              <div>
-                <label htmlFor="video-resolution" className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('converter.video.resolutionLabel')}
-                </label>
-                <select
-                  id="video-resolution"
-                  value={resolution}
-                  onChange={(e) => setResolution(e.target.value)}
-                  className="input"
-                  disabled={converter.status === 'converting'}
-                  aria-label="Select video resolution"
-                >
-                  {RESOLUTIONS.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {!extractAudio && (
+                <>
+                  <div>
+                    <label htmlFor="video-resolution" className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('converter.video.resolutionLabel')}
+                    </label>
+                    <select
+                      id="video-resolution"
+                      value={resolution}
+                      onChange={(e) => setResolution(e.target.value)}
+                      className="input"
+                      disabled={converter.status === 'converting'}
+                      aria-label="Select video resolution"
+                    >
+                      {RESOLUTIONS.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div>
-                <label htmlFor="video-bitrate" className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('converter.video.bitrateLabel')}
-                </label>
-                <select
-                  id="video-bitrate"
-                  value={bitrate}
-                  onChange={(e) => setBitrate(e.target.value)}
-                  className="input"
-                  disabled={converter.status === 'converting'}
-                  aria-label="Select video bitrate"
-                >
-                  {BITRATES.map((b) => (
-                    <option key={b.value} value={b.value}>
-                      {b.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <div>
+                    <label htmlFor="video-bitrate" className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('converter.video.bitrateLabel')}
+                    </label>
+                    <select
+                      id="video-bitrate"
+                      value={bitrate}
+                      onChange={(e) => setBitrate(e.target.value)}
+                      className="input"
+                      disabled={converter.status === 'converting'}
+                      aria-label="Select video bitrate"
+                    >
+                      {BITRATES.map((b) => (
+                        <option key={b.value} value={b.value}>
+                          {b.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
 
             <div>

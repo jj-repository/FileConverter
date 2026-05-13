@@ -65,7 +65,7 @@ export const useConverter = (options: UseConverterOptions) => {
 
   // State management
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [outputFormat, setOutputFormat] = useState<string>(defaultOutputFormat);
+  const [outputFormat, setOutputFormatRaw] = useState<string>(defaultOutputFormat);
   const [outputDirectory, setOutputDirectory] = useState<string | null>(null);
   const [status, setStatus] = useState<ConversionStatus>('idle');
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -86,6 +86,23 @@ export const useConverter = (options: UseConverterOptions) => {
       setShowFeedback(true);
     }
   }, [progress]);
+
+  // Wrap setOutputFormat: changing format after a completed conversion makes
+  // the cached downloadUrl stale (it points at a file in the old format), and
+  // showing a Download button for it tricks the user into saving an mp4 when
+  // they just toggled to mp3. Reset to idle so the user must re-convert.
+  const setOutputFormat = useCallback((next: string) => {
+    setOutputFormatRaw(next);
+    setStatus((prev) => {
+      if (prev === 'completed' || prev === 'failed') {
+        setDownloadUrl(null);
+        setError(null);
+        setShowFeedback(false);
+        return 'idle';
+      }
+      return prev;
+    });
+  }, []);
 
   // File selection handler
   const handleFileSelect = useCallback((file: File) => {
@@ -148,8 +165,14 @@ export const useConverter = (options: UseConverterOptions) => {
     try {
       const urlParts = url.split('/');
       const defaultFilename = urlParts[urlParts.length - 1] || `converted.${outputFormat}`;
+      // Trust the extension from the server's download URL, not the current
+      // outputFormat state — the user can change the dropdown after a
+      // conversion completes, and renaming a .m2ts payload to .mp4 produces
+      // a file no player can demux.
+      const dotIdx = defaultFilename.lastIndexOf('.');
+      const actualExt = dotIdx > -1 ? defaultFilename.slice(dotIdx + 1) : outputFormat;
       const safeCustom = customFilename ? sanitizeFilename(customFilename) : null;
-      const filename = safeCustom ? `${safeCustom}.${outputFormat}` : defaultFilename;
+      const filename = safeCustom ? `${safeCustom}.${actualExt}` : defaultFilename;
 
       const result = await window.electron.downloadFile({
         url: `${API_BASE_URL}${url}`,
@@ -240,19 +263,25 @@ export const useConverter = (options: UseConverterOptions) => {
   const handleDownload = useCallback(async () => {
     if (!downloadUrl) return;
 
-    // If user selected an output directory and we're in Electron, download to that directory
-    if (outputDirectory && window.electron?.downloadFile) {
-      try {
-        const urlParts = downloadUrl.split('/');
-        const defaultFilename = urlParts[urlParts.length - 1] || `converted.${outputFormat}`;
-        // Sanitize filename to prevent path traversal attacks
-        const safeCustomFilename = customFilename ? sanitizeFilename(customFilename) : null;
-        const filename = safeCustomFilename ? `${safeCustomFilename}.${outputFormat}` : sanitizeFilename(defaultFilename);
+    const urlParts = downloadUrl.split('/');
+    const defaultFilename = urlParts[urlParts.length - 1] || `converted.${outputFormat}`;
+    // Use the URL's extension, not state outputFormat — see autoDownload.
+    const dotIdx = defaultFilename.lastIndexOf('.');
+    const actualExt = dotIdx > -1 ? defaultFilename.slice(dotIdx + 1) : outputFormat;
+    const safeCustomFilename = customFilename ? sanitizeFilename(customFilename) : null;
+    const filename = safeCustomFilename ? `${safeCustomFilename}.${actualExt}` : sanitizeFilename(defaultFilename);
 
+    // Prefer the electron download IPC whenever it's available -- the browser
+    // fallback (window.location.href = downloadUrl) navigates the renderer in
+    // file:// mode, which yields a 404 and a white-screen freeze. The IPC
+    // handler defaults to the system Downloads folder when no directory is
+    // passed.
+    if (window.electron?.downloadFile) {
+      try {
         const result = await window.electron.downloadFile({
           url: `${API_BASE_URL}${downloadUrl}`,
-          directory: outputDirectory,
-          filename: filename
+          directory: outputDirectory ?? null,
+          filename,
         });
 
         if (result.success) {
@@ -270,11 +299,21 @@ export const useConverter = (options: UseConverterOptions) => {
       } catch (err) {
         notify.error(`Failed to download file: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
-    } else {
-      // Browser download - validate URL is same-origin to prevent open redirect
-      if (downloadUrl.startsWith('/') || downloadUrl.startsWith(window.location.origin)) {
-        window.location.href = downloadUrl;
-      }
+      return;
+    }
+
+    // Pure browser fallback: trigger a download via an anchor element so the
+    // current page isn't navigated. Validate same-origin first.
+    const absoluteUrl = downloadUrl.startsWith('/')
+      ? `${API_BASE_URL}${downloadUrl}`
+      : downloadUrl;
+    if (absoluteUrl.startsWith(API_BASE_URL) || absoluteUrl.startsWith(window.location.origin)) {
+      const a = document.createElement('a');
+      a.href = absoluteUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   }, [downloadUrl, outputDirectory, outputFormat, customFilename, notify]);
 

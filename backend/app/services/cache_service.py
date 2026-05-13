@@ -90,6 +90,11 @@ class CacheService:
             logger.error(f"Error generating file hash for {file_path}: {e}")
             raise
 
+    # Bump when backend conversion profiles change so stale cache entries
+    # (e.g. m2ts with old aac audio after switching to ac3) get invalidated
+    # without requiring a manual cache wipe.
+    _CACHE_VERSION = "v2"
+
     def generate_options_hash(self, options: Dict[str, Any]) -> str:
         """
         Generate hash of conversion options
@@ -101,7 +106,7 @@ class CacheService:
             SHA-256 hash (first 8 chars) of sorted options
         """
         # Sort options for consistent hashing
-        options_str = json.dumps(options, sort_keys=True)
+        options_str = json.dumps(options, sort_keys=True) + "|" + self._CACHE_VERSION
         options_hash = hashlib.sha256(options_str.encode()).hexdigest()
         return options_hash[:8]
 

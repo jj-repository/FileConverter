@@ -9,12 +9,24 @@ from app.services.video_converter import VideoConverter
 from app.utils.validation import VIDEO_MIME_TYPES
 from app.utils.websocket_security import check_rate_limit
 
+# Audio container formats the user can request as a video-converter output
+# (the video stream is dropped, audio is re-encoded). Kept narrower than
+# settings.AUDIO_FORMATS because not every audio container has a sensible
+# encoder default for arbitrary video sources.
+AUDIO_EXTRACT_FORMATS: set = {"mp3", "aac", "m4a", "ogg", "opus", "flac", "wav", "wma"}
+
 router = APIRouter()
 converter = VideoConverter()
 
 VideoCodec = Literal["libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4", "h264"]
 VideoResolution = Literal["original", "480p", "720p", "1080p", "4k", "2k"]
-VideoBitrate = Literal["500k", "1M", "2M", "3M", "4M", "5M", "8M", "10M"]
+# Includes audio bitrates (128k-320k) because the video endpoint also handles
+# audio extraction (Extract Audio toggle), where the frontend sends a kbps
+# value matching the AUDIO_BITRATES dropdown.
+VideoBitrate = Literal[
+    "500k", "1M", "2M", "3M", "4M", "5M", "8M", "10M",
+    "128k", "192k", "256k", "320k",
+]
 
 VIDEO_MIME_MAP = {
     "mp4": "video/mp4",
@@ -54,6 +66,7 @@ async def convert_video(
         category="video",
         mime_types=VIDEO_MIME_TYPES,
         api_prefix="video",
+        extra_output_formats=AUDIO_EXTRACT_FORMATS,
     )
 
 

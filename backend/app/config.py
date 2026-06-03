@@ -145,6 +145,7 @@ class Settings(BaseSettings):
         "libvorbis",
         "libopus",
         "flac",
+        "alac",
         "pcm_s16le",
         "wmav2",
         "mp2",

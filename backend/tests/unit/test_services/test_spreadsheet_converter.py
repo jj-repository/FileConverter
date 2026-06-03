@@ -332,25 +332,25 @@ class TestXLSXConversion:
                     assert "sheet_name" in call_args[1]
 
     @pytest.mark.asyncio
-    async def test_xlsx_output_not_supported_for_xls(self, temp_dir):
-        """Test that XLS output format raises error (only XLSX supported)"""
+    async def test_xls_output_roundtrip(self, temp_dir):
+        """CSV -> legacy .xls now works (written via xlwt) and reads back."""
         converter = SpreadsheetConverter()
 
         input_file = temp_dir / "test.csv"
         input_file.write_text("A,B\n1,2\n")
 
-        with pytest.raises(ValueError, match="XLS output not supported"):
-            with patch.object(converter, "send_progress", new=AsyncMock()):
-                with patch("pandas.read_csv") as mock_read_csv:
-                    mock_df = MagicMock(spec=pd.DataFrame)
-                    mock_read_csv.return_value = mock_df
+        with patch.object(converter, "send_progress", new=AsyncMock()):
+            output_path = await converter.convert(
+                input_path=input_file,
+                output_format="xls",
+                options={},
+                session_id="test-session",
+            )
 
-                    await converter.convert(
-                        input_path=input_file,
-                        output_format="xls",
-                        options={},
-                        session_id="test-session",
-                    )
+        assert output_path.exists() and output_path.stat().st_size > 0
+        df = pd.read_excel(output_path, engine="xlrd")
+        assert list(df.columns) == ["A", "B"]
+        assert df.iloc[0].tolist() == [1, 2]
 
 
 # ============================================================================
@@ -1021,15 +1021,15 @@ class TestConversionOptions:
         """Test CSV conversion with various delimiters"""
         converter = SpreadsheetConverter()
 
-        delimiters = [",", ";", "\t", "|"]
+        # Map each delimiter to a filesystem-safe label ('|' is illegal in
+        # Windows filenames, so never embed the raw delimiter in the path).
+        delimiters = {",": "comma", ";": "semicolon", "\t": "tab", "|": "pipe"}
 
-        for delim in delimiters:
-            input_file = temp_dir / f"test_{delim.replace(chr(9), 'tab')}.csv"
+        for delim, label in delimiters.items():
+            input_file = temp_dir / f"test_{label}.csv"
             input_file.write_text(f"A{delim}B{delim}C\n1{delim}2{delim}3\n")
 
-            output_file = (
-                settings.UPLOAD_DIR / f"test_{delim.replace(chr(9), 'tab')}_converted.xlsx"
-            )
+            output_file = settings.UPLOAD_DIR / f"test_{label}_converted.xlsx"
 
             with patch.object(converter, "send_progress", new=AsyncMock()):
                 with patch("pandas.read_csv") as mock_read_csv:

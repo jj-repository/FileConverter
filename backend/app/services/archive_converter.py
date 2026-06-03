@@ -3,6 +3,7 @@ import gzip
 import shutil
 import tarfile
 import tempfile
+import time
 import uuid
 import zipfile
 from pathlib import Path
@@ -90,7 +91,9 @@ class ArchiveConverter(BaseConverter):
             raise ValueError(f"Unsupported output format: {output_format}")
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         # Get options
         compression_level = options.get("compression_level", 6)
@@ -291,13 +294,26 @@ class ArchiveConverter(BaseConverter):
     ):
         """Synchronous archive creation (called from thread pool)"""
         if format == "zip":
+            # ZIP timestamps can't predate 1980-01-01. Sources extracted from
+            # tars often carry epoch (1970) mtimes, so clamp each entry's
+            # date_time rather than letting zipfile raise ValueError.
+            zip_epoch = (1980, 1, 1, 0, 0, 0)
             with zipfile.ZipFile(
                 output_path, "w", zipfile.ZIP_DEFLATED, compresslevel=compression_level
             ) as zf:
                 for file_path in source_dir.rglob("*"):
                     if file_path.is_file():
                         arcname = file_path.relative_to(source_dir)
-                        zf.write(file_path, arcname)
+                        # Build ZipInfo manually: ZipInfo.from_file() raises in
+                        # its constructor for pre-1980 mtimes before we could
+                        # clamp, so compute and clamp the date_time ourselves.
+                        date_time = time.localtime(file_path.stat().st_mtime)[:6]
+                        if date_time < zip_epoch:
+                            date_time = zip_epoch
+                        zinfo = zipfile.ZipInfo(str(arcname), date_time=date_time)
+                        zinfo.compress_type = zipfile.ZIP_DEFLATED
+                        with open(file_path, "rb") as fh:
+                            zf.writestr(zinfo, fh.read())
 
         elif format in ["tar", "tar.gz", "tgz", "tar.bz2", "tbz2"]:
             mode = self._get_compression_mode(format)

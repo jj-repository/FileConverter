@@ -20,9 +20,11 @@ class AudioConverter(BaseConverter):
 
     def __init__(self, websocket_manager=None):
         super().__init__(websocket_manager)
+        # FFmpeg can decode Monkey's Audio (.ape) but has no encoder for it,
+        # so it is an input-only format — exclude it from outputs.
         self.supported_formats = {
             "input": list(settings.AUDIO_FORMATS),
-            "output": list(settings.AUDIO_FORMATS),
+            "output": [f for f in settings.AUDIO_FORMATS if f != "ape"],
         }
 
     async def get_supported_formats(self) -> Dict[str, list]:
@@ -72,9 +74,12 @@ class AudioConverter(BaseConverter):
             "aac": "aac",
             "m4a": "aac",
             "ogg": "libvorbis",
+            "opus": "libopus",
             "flac": "flac",
+            "alac": "alac",
             "wav": "pcm_s16le",
             "wma": "wmav2",
+            "mka": "libmp3lame",  # Matroska audio container holding MP3
         }
         return codec_map.get(output_format, "libmp3lame")
 
@@ -111,7 +116,9 @@ class AudioConverter(BaseConverter):
         total_duration = await self.get_audio_duration(input_path)
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         await self.send_progress(session_id, 5, "converting", "Preparing conversion")
 
@@ -170,8 +177,13 @@ class AudioConverter(BaseConverter):
         # Add codec
         cmd.extend(["-c:a", codec])
 
-        # Add bitrate (not applicable for lossless formats like FLAC, WAV)
-        if output_format not in ["flac", "wav"]:
+        # ALAC has no native muxer keyed off the .alac extension; force the
+        # iTunes/MP4-style 'ipod' container so FFmpeg knows how to write it.
+        if output_format == "alac":
+            cmd.extend(["-f", "ipod"])
+
+        # Add bitrate (not applicable for lossless formats like FLAC/WAV/ALAC)
+        if output_format not in ["flac", "wav", "alac"]:
             cmd.extend(["-b:a", bitrate])
 
         # Add sample rate if specified

@@ -75,7 +75,9 @@ class DataConverter(BaseConverter):
             raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         # Get options
         encoding = options.get("encoding", "utf-8")
@@ -216,7 +218,16 @@ class DataConverter(BaseConverter):
         if output_format in ["yaml", "yml"]:
             data = df.to_dict("records")
             with open(output_path, "w", encoding=encoding) as f:
-                yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
+                # sort_keys=False preserves the source field order; PyYAML
+                # otherwise alphabetizes keys, scrambling column order on
+                # round-trips (e.g. csv -> yaml -> csv).
+                yaml.dump(
+                    data,
+                    f,
+                    default_flow_style=False,
+                    allow_unicode=True,
+                    sort_keys=False,
+                )
             return
         if output_format == "toml":
             if len(df) == 0:

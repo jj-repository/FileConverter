@@ -102,6 +102,7 @@ class TestImageConversion:
         assert converted_img.size == (100, 100)
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()
 
@@ -129,6 +130,7 @@ class TestImageConversion:
         assert converted_img.format == "JPEG"
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()
 
@@ -261,6 +263,7 @@ class TestImageResize:
         assert resized_img.height == 300
 
         # Clean up
+        resized_img.close()
         if result.exists():
             result.unlink()
 
@@ -288,6 +291,7 @@ class TestImageResize:
         assert resized_img.width == 400
 
         # Clean up
+        resized_img.close()
         if result.exists():
             result.unlink()
 
@@ -313,6 +317,7 @@ class TestImageResize:
         assert resized_img.height == 200
 
         # Clean up
+        resized_img.close()
         if result.exists():
             result.unlink()
 
@@ -490,6 +495,7 @@ class TestImageSpecialFormats:
         assert converted_img.mode == "RGB"  # Should be converted from RGBA
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()
 
@@ -553,6 +559,7 @@ class TestSVGConversion:
             assert converted_img.size == (200, 200)
 
             # Clean up
+            converted_img.close()
             if result.exists():
                 result.unlink()
         else:
@@ -682,6 +689,7 @@ class TestTransparencyHandling:
         assert converted_img.mode == "RGB"
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()
 
@@ -706,6 +714,7 @@ class TestTransparencyHandling:
         assert converted_img.mode == "RGB"
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()
 
@@ -729,6 +738,7 @@ class TestTransparencyHandling:
         assert converted_img.mode == "RGB"
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()
 
@@ -760,6 +770,7 @@ class TestWebPQuality:
         assert converted_img.format == "WEBP"
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()
 
@@ -931,6 +942,7 @@ class TestDimensionValidation:
         assert converted_img.size == (10000, 10000)
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()
 
@@ -962,6 +974,7 @@ class TestFormatMapping:
         assert converted_img.format == "JPEG"
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()
 
@@ -985,6 +998,7 @@ class TestFormatMapping:
         assert converted_img.format == "JPEG"
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()
 
@@ -1324,5 +1338,6 @@ class TestImageEdgeCases:
         assert converted_img.mode == "RGB"
 
         # Clean up
+        converted_img.close()
         if result.exists():
             result.unlink()

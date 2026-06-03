@@ -13,6 +13,22 @@ try:
 except ImportError:
     OPENPYXL_AVAILABLE = False
 
+# Legacy .xls support (read via xlrd, write via xlwt — pandas 3.x dropped the
+# xlwt write engine, so .xls is written directly with xlwt).
+try:
+    import xlrd  # noqa: F401
+
+    XLRD_AVAILABLE = True
+except ImportError:
+    XLRD_AVAILABLE = False
+
+try:
+    import xlwt
+
+    XLWT_AVAILABLE = True
+except ImportError:
+    XLWT_AVAILABLE = False
+
 # ODS support
 try:
     from odf import opendocument
@@ -71,7 +87,9 @@ class SpreadsheetConverter(BaseConverter):
             raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         # Get options
         sheet_name = options.get("sheet_name")
@@ -83,9 +101,13 @@ class SpreadsheetConverter(BaseConverter):
 
         try:
             # Read input file (wrap pandas I/O in thread pool)
-            if input_format in ["xlsx", "xls"]:
+            if input_format == "xlsx":
                 if not OPENPYXL_AVAILABLE:
                     raise ValueError("Excel support not available. Install openpyxl.")
+                df = await self._read_excel(input_path, sheet_name)
+            elif input_format == "xls":
+                if not XLRD_AVAILABLE:
+                    raise ValueError("XLS reading not available. Install xlrd.")
                 df = await self._read_excel(input_path, sheet_name)
             elif input_format == "ods":
                 if not ODF_AVAILABLE:
@@ -108,15 +130,15 @@ class SpreadsheetConverter(BaseConverter):
             await self.send_progress(session_id, 60, "converting", "Converting spreadsheet format")
 
             # Write output file (wrap pandas I/O in thread pool)
-            if output_format in ["xlsx", "xls"]:
+            if output_format == "xlsx":
                 if not OPENPYXL_AVAILABLE:
                     raise ValueError("Excel support not available. Install openpyxl.")
-                # openpyxl only writes XLSX, not XLS
-                if output_format == "xls":
-                    raise ValueError(
-                        "XLS output not supported. Use XLSX instead. (XLS reading is supported)"
-                    )
                 await asyncio.to_thread(df.to_excel, output_path, index=False, engine="openpyxl")
+            elif output_format == "xls":
+                # pandas 3.x has no xlwt write engine; write .xls directly.
+                if not XLWT_AVAILABLE:
+                    raise ValueError("XLS output not available. Install xlwt.")
+                await asyncio.to_thread(self._write_xls, df, output_path)
             elif output_format == "ods":
                 if not ODF_AVAILABLE:
                     raise ValueError("ODS support not available. Install odfpy.")
@@ -150,14 +172,40 @@ class SpreadsheetConverter(BaseConverter):
             raise
 
     async def _read_excel(self, file_path: Path, sheet_name: str = None) -> pd.DataFrame:
-        """Read Excel file (XLSX or XLS)"""
+        """Read Excel file. openpyxl reads .xlsx; legacy .xls needs xlrd."""
+        engine = "xlrd" if file_path.suffix.lower() == ".xls" else "openpyxl"
         if sheet_name:
             return await asyncio.to_thread(
-                pd.read_excel, file_path, sheet_name=sheet_name, engine="openpyxl"
+                pd.read_excel, file_path, sheet_name=sheet_name, engine=engine
             )
         else:
             # Read first sheet by default
-            return await asyncio.to_thread(pd.read_excel, file_path, engine="openpyxl")
+            return await asyncio.to_thread(pd.read_excel, file_path, engine=engine)
+
+    def _write_xls(self, df: pd.DataFrame, output_path: Path):
+        """Write a DataFrame to legacy .xls using xlwt (pandas 3.x dropped it).
+
+        .xls is capped at 65536 rows / 256 columns; raise a clear error rather
+        than silently truncating.
+        """
+        if len(df) + 1 > 65536 or len(df.columns) > 256:
+            raise ValueError(
+                "Spreadsheet too large for .xls (max 65536 rows / 256 cols). Use .xlsx."
+            )
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet("Sheet1")
+        for c, col in enumerate(df.columns):
+            ws.write(0, c, str(col))
+        for r, row in enumerate(df.itertuples(index=False, name=None), start=1):
+            for c, value in enumerate(row):
+                if pd.isna(value):
+                    cell = ""
+                elif isinstance(value, (int, float, str, bool)):
+                    cell = value
+                else:
+                    cell = str(value)
+                ws.write(r, c, cell)
+        wb.save(str(output_path))
 
     async def _read_ods(self, file_path: Path, sheet_name: str = None) -> pd.DataFrame:
         """Read ODS file"""

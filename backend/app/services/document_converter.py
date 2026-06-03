@@ -4,7 +4,7 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from app.config import settings
 from app.services.base_converter import BaseConverter
@@ -84,6 +84,24 @@ class DocumentConverter(BaseConverter):
 
         await self.send_progress(session_id, 10, "converting", "Preparing conversion")
 
+        # Pandoc cannot read PDF. For PDF input, extract the text with pypdf
+        # and feed it to Pandoc as Markdown (best-effort: layout/images are
+        # lost, text is preserved). pdf -> txt is written directly.
+        pandoc_input = input_path
+        pandoc_input_format = input_format
+        temp_extracted: Optional[Path] = None
+        if input_format == "pdf":
+            await self.send_progress(session_id, 15, "converting", "Extracting text from PDF")
+            text = await asyncio.to_thread(self._extract_pdf_text, input_path)
+            if output_format == "txt":
+                await asyncio.to_thread(output_path.write_text, text, encoding="utf-8")
+                await self.send_progress(session_id, 100, "completed", "PDF text extracted")
+                return output_path
+            temp_extracted = settings.TEMP_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.md"
+            await asyncio.to_thread(temp_extracted.write_text, text, encoding="utf-8")
+            pandoc_input = temp_extracted
+            pandoc_input_format = "md"
+
         # Build Pandoc command.
         # --sandbox disables Lua/custom-reader loading for input-parsing safety,
         # but blocks access to pandoc's packaged template data on Debian-style
@@ -97,11 +115,11 @@ class DocumentConverter(BaseConverter):
         if output_format not in _TEMPLATE_OUTPUTS:
             cmd.append("--sandbox")
         cmd += [
-            str(input_path),
+            str(pandoc_input),
             "-o",
             str(output_path),
             "-f",
-            self._get_pandoc_format(input_format),
+            self._get_pandoc_format(pandoc_input_format),
             "-t",
             self._get_pandoc_format(output_format),
         ]
@@ -187,6 +205,24 @@ class DocumentConverter(BaseConverter):
         except Exception as e:
             await self.send_progress(session_id, 0, "failed", f"Conversion failed: {str(e)}")
             raise
+        finally:
+            if temp_extracted is not None and temp_extracted.exists():
+                try:
+                    temp_extracted.unlink()
+                except OSError:
+                    pass  # Best-effort cleanup of the extracted-text temp file
+
+    def _extract_pdf_text(self, file_path: Path) -> str:
+        """Extract text from a PDF as Markdown-ish plain text using pypdf."""
+        from pypdf import PdfReader
+
+        reader = PdfReader(str(file_path))
+        pages = []
+        for page in reader.pages:
+            pages.append(page.extract_text() or "")
+        text = "\n\n".join(pages).strip()
+        # Pandoc needs non-empty input; scanned/image-only PDFs yield no text.
+        return text if text else "*(No extractable text found in PDF.)*"
 
     def _get_pandoc_format(self, format_ext: str) -> str:
         """Map file extension to Pandoc format identifier"""

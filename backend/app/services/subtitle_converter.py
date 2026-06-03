@@ -50,26 +50,19 @@ class SubtitleConverter(BaseConverter):
         Returns:
             Path to converted subtitle file
         """
-        await self.send_progress(
-            session_id, 0, "converting", "Starting subtitle conversion"
-        )
+        await self.send_progress(session_id, 0, "converting", "Starting subtitle conversion")
 
         if not PYSUBS2_AVAILABLE:
             raise ValueError("Subtitle support not available. Install pysubs2.")
 
         # Validate format
         input_format = input_path.suffix.lower().lstrip(".")
-        if not self.validate_format(
-            input_format, output_format, self.supported_formats
-        ):
-            raise ValueError(
-                f"Unsupported conversion: {input_format} to {output_format}"
-            )
+        if not self.validate_format(input_format, output_format, self.supported_formats):
+            raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
         # Generate output path
         output_path = (
-            settings.UPLOAD_DIR
-            / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
         )
 
         # Get options
@@ -84,35 +77,32 @@ class SubtitleConverter(BaseConverter):
             # Load subtitle file
             subs = pysubs2.load(str(input_path), encoding=encoding, fps=fps)
 
-            await self.send_progress(
-                session_id, 60, "converting", "Converting subtitle format"
-            )
+            await self.send_progress(session_id, 60, "converting", "Converting subtitle format")
+
+            # Map file extensions to pysubs2 format identifiers. pysubs2
+            # auto-detects these on load (by extension) but needs the explicit
+            # identifier on save — ".sub" is MicroDVD, not a registered id.
+            format_id = {"sub": "microdvd"}.get(output_format, output_format)
 
             # Save in target format
             subs.save(
                 str(output_path),
                 encoding=encoding,
-                format_=output_format,
+                format_=format_id,
                 fps=fps,
                 keep_html_tags=keep_html_tags,
                 keep_unknown_html_tags=keep_unknown_html_tags,
             )
 
-            await self.send_progress(
-                session_id, 100, "completed", "Subtitle conversion completed"
-            )
+            await self.send_progress(session_id, 100, "completed", "Subtitle conversion completed")
 
             return output_path
 
         except Exception as e:
-            await self.send_progress(
-                session_id, 0, "failed", f"Conversion failed: {str(e)}"
-            )
+            await self.send_progress(session_id, 0, "failed", f"Conversion failed: {str(e)}")
             raise
 
-    async def adjust_timing(
-        self, input_path: Path, offset_ms: int, session_id: str
-    ) -> Path:
+    async def adjust_timing(self, input_path: Path, offset_ms: int, session_id: str) -> Path:
         """
         Adjust subtitle timing by offset (in milliseconds)
 
@@ -127,9 +117,7 @@ class SubtitleConverter(BaseConverter):
         if not PYSUBS2_AVAILABLE:
             raise ValueError("Subtitle support not available. Install pysubs2.")
 
-        await self.send_progress(
-            session_id, 0, "converting", "Adjusting subtitle timing"
-        )
+        await self.send_progress(session_id, 0, "converting", "Adjusting subtitle timing")
 
         input_format = input_path.suffix.lower().lstrip(".")
         output_path = settings.UPLOAD_DIR / f"{input_path.stem}_adjusted.{input_format}"
@@ -138,9 +126,7 @@ class SubtitleConverter(BaseConverter):
             # Load subtitle file
             subs = pysubs2.load(str(input_path))
 
-            await self.send_progress(
-                session_id, 50, "converting", "Applying time offset"
-            )
+            await self.send_progress(session_id, 50, "converting", "Applying time offset")
 
             # Shift all subtitles by offset
             subs.shift(ms=offset_ms)
@@ -148,16 +134,12 @@ class SubtitleConverter(BaseConverter):
             # Save adjusted subtitles
             subs.save(str(output_path))
 
-            await self.send_progress(
-                session_id, 100, "completed", "Timing adjustment completed"
-            )
+            await self.send_progress(session_id, 100, "completed", "Timing adjustment completed")
 
             return output_path
 
         except Exception as e:
-            await self.send_progress(
-                session_id, 0, "failed", f"Adjustment failed: {str(e)}"
-            )
+            await self.send_progress(session_id, 0, "failed", f"Adjustment failed: {str(e)}")
             raise
 
     async def get_subtitle_info(self, file_path: Path) -> Dict[str, Any]:

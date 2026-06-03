@@ -95,37 +95,73 @@ class VideoConverter(BaseConverter):
     #   audio_codec:     audio codec to emit. Forced (user can't override) so the
     #                    container's mux constraints aren't violated.
     _FORMAT_PROFILES = {
-        "mp4":  {"muxer": None,     "video_codecs": ["libx264", "libx265", "mpeg4", "h264"], "audio_codec": "aac"},
-        "mkv":  {"muxer": None,     "video_codecs": ["libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4"], "audio_codec": "aac"},
-        "mov":  {"muxer": None,     "video_codecs": ["libx264", "libx265", "mpeg4", "h264"], "audio_codec": "aac"},
-        "m4v":  {"muxer": None,     "video_codecs": ["libx264", "libx265", "mpeg4", "h264"], "audio_codec": "aac"},
-        "avi":  {"muxer": None,     "video_codecs": ["libx264", "mpeg4", "h264"],            "audio_codec": "libmp3lame"},
-        "flv":  {"muxer": None,     "video_codecs": ["libx264", "h264"],                     "audio_codec": "aac"},
-        "wmv":  {"muxer": None,     "video_codecs": ["wmv2"],                                "audio_codec": "wmav2"},
-        "webm": {"muxer": None,     "video_codecs": ["libvpx-vp9", "libvpx"],                "audio_codec": "libvorbis"},
-        "3gp":  {"muxer": None,     "video_codecs": ["libx264", "h264", "mpeg4"],            "audio_codec": "aac"},
-        "3g2":  {"muxer": None,     "video_codecs": ["libx264", "h264", "mpeg4"],            "audio_codec": "aac"},
+        "mp4": {
+            "muxer": None,
+            "video_codecs": ["libx264", "libx265", "mpeg4", "h264"],
+            "audio_codec": "aac",
+        },
+        "mkv": {
+            "muxer": None,
+            "video_codecs": ["libx264", "libx265", "libvpx", "libvpx-vp9", "mpeg4"],
+            "audio_codec": "aac",
+        },
+        "mov": {
+            "muxer": None,
+            "video_codecs": ["libx264", "libx265", "mpeg4", "h264"],
+            "audio_codec": "aac",
+        },
+        "m4v": {
+            "muxer": None,
+            "video_codecs": ["libx264", "libx265", "mpeg4", "h264"],
+            "audio_codec": "aac",
+        },
+        "avi": {
+            "muxer": None,
+            "video_codecs": ["libx264", "mpeg4", "h264"],
+            "audio_codec": "libmp3lame",
+        },
+        "flv": {"muxer": None, "video_codecs": ["libx264", "h264"], "audio_codec": "aac"},
+        "wmv": {"muxer": None, "video_codecs": ["wmv2"], "audio_codec": "wmav2"},
+        "webm": {
+            "muxer": None,
+            "video_codecs": ["libvpx-vp9", "libvpx"],
+            "audio_codec": "libvorbis",
+        },
+        "3gp": {"muxer": None, "video_codecs": ["libx264", "h264", "mpeg4"], "audio_codec": "aac"},
+        "3g2": {"muxer": None, "video_codecs": ["libx264", "h264", "mpeg4"], "audio_codec": "aac"},
         # AC-3 is the canonical audio for transport-stream containers (BD/ATSC).
         # Some Windows-native players refuse to demux AAC inside mpegts, so
         # ac3 is the safer default here even though aac is technically valid.
-        "mts":  {"muxer": "mpegts", "video_codecs": ["libx264", "libx265", "h264"],          "audio_codec": "ac3"},
-        "m2ts": {"muxer": "mpegts", "video_codecs": ["libx264", "libx265", "h264"],          "audio_codec": "ac3"},
-        "ts":   {"muxer": "mpegts", "video_codecs": ["libx264", "libx265", "h264"],          "audio_codec": "ac3"},
-        "vob":  {"muxer": "vob",    "video_codecs": ["mpeg2video"],                          "audio_codec": "mp2"},
-        "ogv":  {"muxer": "ogg",    "video_codecs": ["libtheora"],                           "audio_codec": "libvorbis"},
+        "mts": {
+            "muxer": "mpegts",
+            "video_codecs": ["libx264", "libx265", "h264"],
+            "audio_codec": "ac3",
+        },
+        "m2ts": {
+            "muxer": "mpegts",
+            "video_codecs": ["libx264", "libx265", "h264"],
+            "audio_codec": "ac3",
+        },
+        "ts": {
+            "muxer": "mpegts",
+            "video_codecs": ["libx264", "libx265", "h264"],
+            "audio_codec": "ac3",
+        },
+        "vob": {"muxer": "vob", "video_codecs": ["mpeg2video"], "audio_codec": "mp2"},
+        "ogv": {"muxer": "ogg", "video_codecs": ["libtheora"], "audio_codec": "libvorbis"},
     }
 
     # Audio-extraction profile: when the user picks an audio container as the
     # output, we drop the video stream and re-encode the first audio stream.
     _AUDIO_EXTRACT_PROFILES = {
-        "mp3":  {"codec": "libmp3lame", "use_bitrate": True},
-        "aac":  {"codec": "aac",        "use_bitrate": True},
-        "m4a":  {"codec": "aac",        "use_bitrate": True},
-        "ogg":  {"codec": "libvorbis",  "use_bitrate": True},
-        "opus": {"codec": "libopus",    "use_bitrate": True},
-        "flac": {"codec": "flac",       "use_bitrate": False},
-        "wav":  {"codec": "pcm_s16le",  "use_bitrate": False},
-        "wma":  {"codec": "wmav2",      "use_bitrate": True},
+        "mp3": {"codec": "libmp3lame", "use_bitrate": True},
+        "aac": {"codec": "aac", "use_bitrate": True},
+        "m4a": {"codec": "aac", "use_bitrate": True},
+        "ogg": {"codec": "libvorbis", "use_bitrate": True},
+        "opus": {"codec": "libopus", "use_bitrate": True},
+        "flac": {"codec": "flac", "use_bitrate": False},
+        "wav": {"codec": "pcm_s16le", "use_bitrate": False},
+        "wma": {"codec": "wmav2", "use_bitrate": True},
     }
 
     @classmethod
@@ -189,11 +225,24 @@ class VideoConverter(BaseConverter):
         if not self.validate_format(input_format, output_format, self.supported_formats):
             raise ValueError(f"Unsupported conversion: {input_format} to {output_format}")
 
+        # Reject a user-supplied codec that isn't a real, whitelisted codec
+        # (guards against garbage / shell-injection strings). A valid-but-
+        # container-incompatible codec is still allowed here and silently
+        # overridden later by get_video_codec_for_format().
+        user_codec = options.get("codec")
+        if user_codec and user_codec not in settings.ALLOWED_VIDEO_CODECS:
+            raise ValueError(
+                f"Invalid codec: {user_codec}. "
+                f"Allowed values: {sorted(settings.ALLOWED_VIDEO_CODECS)}"
+            )
+
         # Get video duration for progress tracking
         total_duration = await self.get_video_duration(input_path)
 
         # Generate output path
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         await self.send_progress(session_id, 5, "converting", "Preparing conversion")
 
@@ -382,7 +431,9 @@ class VideoConverter(BaseConverter):
             raise ValueError(f"Invalid bitrate: {bitrate}")
 
         total_duration = await self.get_video_duration(input_path)
-        output_path = settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        output_path = (
+            settings.UPLOAD_DIR / f"{input_path.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
+        )
 
         await self.send_progress(session_id, 5, "converting", "Preparing extraction")
 
@@ -458,7 +509,9 @@ class VideoConverter(BaseConverter):
 
             if process.returncode != 0:
                 error_msg = (
-                    stderr_output.decode("utf-8", errors="ignore") if stderr_output else "Unknown error"
+                    stderr_output.decode("utf-8", errors="ignore")
+                    if stderr_output
+                    else "Unknown error"
                 )
                 logger.error("FFmpeg audio extraction failed (full stderr):\n%s", error_msg)
                 raise Exception(f"Audio extraction failed: {error_msg[-500:]}")

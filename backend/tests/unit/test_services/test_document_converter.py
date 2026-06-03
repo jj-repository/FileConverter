@@ -285,9 +285,12 @@ class TestDocumentConversion:
                         session_id="test-session",
                     )
 
-                    # Verify --pdf-engine flag
+                    # Verify the bundled typst PDF engine is passed (the app
+                    # ships typst, not a TeX toolchain like pdflatex).
                     call_args = mock_subprocess.call_args[0]
-                    assert "--pdf-engine=pdflatex" in call_args
+                    assert any(
+                        a.startswith("--pdf-engine=") and "typst" in a.lower() for a in call_args
+                    )
 
     @pytest.mark.asyncio
     async def test_convert_toc_only_for_supported_formats(self, temp_dir):

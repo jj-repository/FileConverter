@@ -207,10 +207,15 @@ class ImageConverter(BaseConverter):
                     )
                     await asyncio.to_thread(output_path.write_text, svg_doc, encoding="utf-8")
                 else:
-                    # Map format names for PIL (PIL uses 'JPEG' not 'JPG')
+                    # Map format names to PIL's encoder identifiers (e.g. PIL
+                    # uses 'JPEG' not 'JPG', and pillow-heif registers 'HEIF'
+                    # for both .heic and .heif outputs).
                     pil_format = output_format.upper()
-                    if pil_format == "JPG":
-                        pil_format = "JPEG"
+                    pil_format = {
+                        "JPG": "JPEG",
+                        "HEIC": "HEIF",
+                        "HEIF": "HEIF",
+                    }.get(pil_format, pil_format)
 
                     # Save image (run in thread pool to avoid blocking)
                     await asyncio.to_thread(

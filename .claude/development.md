@@ -16,6 +16,8 @@ cd frontend && npm run electron:build
 ```
 
 ## Testing
+
+### Frontend
 ```bash
 npm run test             # Vitest unit tests
 npm run test:watch
@@ -25,6 +27,27 @@ npm run test:e2e         # Playwright
 npm run test:e2e:headed
 npm run test:e2e:debug
 ```
+
+### Backend
+```bash
+cd backend
+pip install -r requirements-dev.txt   # pytest + asyncio + cov + httpx
+python -m pytest tests/               # default suite (matrix excluded via -m "not matrix")
+```
+
+### Conversion matrix (tests/matrix/)
+End-to-end sweep of every `input→output` pair each converter advertises
+(~670 pairs, ~50s). Finds broken conversions in one run instead of one upload
+at a time. Excluded from the default suite; run explicitly:
+```bash
+python scripts/run_matrix.py          # full sweep
+python scripts/run_matrix.py -k image # one category
+```
+Writes `tests/matrix/conversion-matrix.md` (pass/fail grid + failure details).
+Known-but-unfixed gaps live in `tests/matrix/known_gaps.py` (xfailed, so only
+NEW regressions turn the suite red). Fix a converter → rerun the sweep then
+`python scripts/gen_known_gaps.py` to shrink the baseline. See
+`tests/matrix/README.md` for the current list of gaps found.
 
 ## Platform Notes
 - Linux: AppImage/deb, system or bundled Python

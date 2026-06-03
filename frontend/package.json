@@ -67,7 +67,8 @@
   "overrides": {
     "@xmldom/xmldom": ">=0.8.13",
     "ip-address": ">=10.1.1",
-    "follow-redirects": ">=1.16.0"
+    "follow-redirects": ">=1.16.0",
+    "tmp": ">=0.2.6"
   },
   "build": {
     "appId": "com.fileconverter.app",
